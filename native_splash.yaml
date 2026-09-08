@@ -1,0 +1,24 @@
+flutter_native_splash:
+  android: true
+  ios: true
+  web: false            # biasanya tak perlu untuk web
+
+  # --- Light theme ---
+  color: "#121212"      # atau pakai background_image (pilih salah satu)
+  image: assets/splash/logo.png
+  branding: assets/splash/branding.png   # opsional
+
+  # --- Dark theme (opsional, kalau app punya dark mode) ---
+  color_dark: "#121212"
+  image_dark: assets/splash/logo_dark.png
+  branding_dark: assets/splash/branding_dark.png
+
+  # --- Android 12 (WAJIB isi image sendiri) ---
+  android_12:
+    image: assets/splash/logo_android12.png
+    branding: assets/splash/branding_android12.png
+    icon_background_color: "#121212"
+
+  # Penataan (opsional, default sudah oke)
+  android_gravity: center
+  ios_content_mode: center

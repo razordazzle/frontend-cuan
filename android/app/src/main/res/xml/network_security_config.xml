@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- emulator host -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+    <!-- kalau pakai device fisik, ganti ke IP LAN servermu -->
+    <!--
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">192.168.1.23</domain>
+    </domain-config>
+    -->
+</network-security-config>

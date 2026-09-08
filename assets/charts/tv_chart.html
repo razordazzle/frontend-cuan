@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+
+        #chart {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #chart a {
+            display: none !important;
+            pointer-events: none !important;
+        }
+    </style>
+    <script src="lightweight-charts.standalone.production.js"></script>
+</head>
+
+<body>
+    <div id="chart-container" style="position: relative; width: 100vw; height: 100vh; overflow: hidden;">
+        <div id="chart" style="width: 100%; height: 100%;"></div>
+        <canvas id="fib-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></canvas>
+    </div>
+    <script>
+        let chart = null;
+        let candleSeries = null;
+        let areaSeries = null;
+        let volumeSeries = null;
+        let smaSeries = null;
+        let rsiSeries = null;
+        let currentType = 'candle';
+        let currentShowSma = false;
+        let currentShowRsi = false;
+        let currentShowVolume = false;
+        let currentShowFib = false;
+        let isDrawingFib = false;
+        let fibPoint1 = null; // { time, price }
+        let fibPoint2 = null; // { time, price }
+        let rawCandlesData = [];
+        let pendingData = null;
+
+        let fibDrawState = 0; // 0: idle, 1: waiting for anchor 1, 2: waiting for anchor 2
+        let pointerDownPos = { x: 0, y: 0 };
+        let pointerDownTime = 0;
+        let dragMode = 0; // 0: none, 1: reposition anchor 1, 2: reposition anchor 2
+        let isPointerDown = false;
+
+        const FIB_LEVELS = [
+            { level: -0.27, label: '-27.00%', color: '#26A69A', fill: 'transparent' },
+            { level: 0.0,   label: '0.00%',   color: '#787B86', fill: 'rgba(120, 123, 134, 0.05)' },
+            { level: 0.236, label: '23.60%',  color: '#F23645', fill: 'rgba(242, 54, 69, 0.06)' },
+            { level: 0.382, label: '38.20%',  color: '#FF9800', fill: 'rgba(255, 152, 0, 0.06)' },
+            { level: 0.5,   label: '50.00%',  color: '#4CAF50', fill: 'rgba(76, 175, 80, 0.06)' },
+            { level: 0.618, label: '61.80%',  color: '#089981', fill: 'rgba(8, 153, 129, 0.08)' },
+            { level: 0.786, label: '78.60%',  color: '#00BCD4', fill: 'rgba(0, 188, 212, 0.06)' },
+            { level: 1.0,   label: '100.00%', color: '#787B86', fill: 'transparent' },
+        ];
+
+        function resizeFibCanvas() {
+            const canvas = document.getElementById('fib-canvas');
+            if (!canvas) return;
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = Math.round(rect.width * dpr);
+            canvas.height = Math.round(rect.height * dpr);
+            const ctx = canvas.getContext('2d');
+            ctx.resetTransform?.();
+            ctx.scale(dpr, dpr);
+            renderFib();
+        }
+        window.addEventListener('resize', resizeFibCanvas);
+
+        function getTimeAtX(x) {
+            if (!chart) return null;
+            const t = chart.timeScale().coordinateToTime(x);
+            if (t !== null && t !== undefined) {
+                if (typeof t === 'number') return t;
+                if (typeof t === 'object' && t.year) {
+                    return Math.floor(Date.UTC(t.year, t.month - 1, t.day) / 1000);
+                }
+            }
+            if (rawCandlesData && rawCandlesData.length > 0) {
+                let closest = rawCandlesData[0];
+                let minDist = Infinity;
+                for (let i = 0; i < rawCandlesData.length; i++) {
+                    const cx = chart.timeScale().timeToCoordinate(rawCandlesData[i].time);
+                    if (cx !== null) {
+                        const dist = Math.abs(cx - x);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closest = rawCandlesData[i];
+                        }
+                    }
+                }
+                return closest.time;
+            }
+            return null;
+        }
+
+        function getPriceAtY(y) {
+            if (!candleSeries) return null;
+            return candleSeries.coordinateToPrice(y);
+        }
+
+        function initFibPointerEvents() {
+            const canvas = document.getElementById('fib-canvas');
+            const chartContainer = document.getElementById('chart-container');
+            if (!canvas) return;
+
+            // Hover detection to allow grabbing existing anchor handles
+            if (chartContainer) {
+                chartContainer.addEventListener('pointermove', (e) => {
+                    if (isDrawingFib || fibDrawState !== 0 || isPointerDown) return;
+                    if (!currentShowFib || !fibPoint1 || !fibPoint2 || !chart || !candleSeries) {
+                        canvas.style.pointerEvents = 'none';
+                        canvas.style.cursor = 'default';
+                        return;
+                    }
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const x1 = chart.timeScale().timeToCoordinate(fibPoint1.time);
+                    const y1 = candleSeries.priceToCoordinate(fibPoint1.price);
+                    const x2 = chart.timeScale().timeToCoordinate(fibPoint2.time);
+                    const y2 = candleSeries.priceToCoordinate(fibPoint2.price);
+
+                    const near1 = x1 !== null && y1 !== null && Math.hypot(x - x1, y - y1) <= 22;
+                    const near2 = x2 !== null && y2 !== null && Math.hypot(x - x2, y - y2) <= 22;
+
+                    if (near1 || near2) {
+                        canvas.style.pointerEvents = 'auto';
+                        canvas.style.cursor = 'grab';
+                    } else {
+                        canvas.style.pointerEvents = 'none';
+                        canvas.style.cursor = 'default';
+                    }
+                });
+            }
+
+            canvas.addEventListener('pointerdown', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                pointerDownPos = { x, y };
+                pointerDownTime = Date.now();
+
+                // 1. Check if clicking on an existing anchor handle to reposition
+                if (fibDrawState === 0 && fibPoint1 && fibPoint2) {
+                    const x1 = chart.timeScale().timeToCoordinate(fibPoint1.time);
+                    const y1 = candleSeries.priceToCoordinate(fibPoint1.price);
+                    const x2 = chart.timeScale().timeToCoordinate(fibPoint2.time);
+                    const y2 = candleSeries.priceToCoordinate(fibPoint2.price);
+
+                    if (x1 !== null && y1 !== null && Math.hypot(x - x1, y - y1) <= 24) {
+                        dragMode = 1;
+                        isPointerDown = true;
+                        canvas.setPointerCapture?.(e.pointerId);
+                        if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                        return;
+                    }
+                    if (x2 !== null && y2 !== null && Math.hypot(x - x2, y - y2) <= 24) {
+                        dragMode = 2;
+                        isPointerDown = true;
+                        canvas.setPointerCapture?.(e.pointerId);
+                        if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                        return;
+                    }
+                }
+
+                // 2. Click 1: Place Anchor 1
+                if (fibDrawState === 1) {
+                    const time = getTimeAtX(x);
+                    const price = getPriceAtY(y);
+                    if (time && price !== null) {
+                        fibPoint1 = { time, price };
+                        fibPoint2 = { time, price };
+                        fibDrawState = 2; // Now waiting for click 2 (Anchor 2)
+                        isPointerDown = true;
+                        canvas.setPointerCapture?.(e.pointerId);
+                        if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                        renderFib();
+                    }
+                    return;
+                }
+
+                // 3. Click 2: Place Anchor 2 (No hold required!)
+                if (fibDrawState === 2) {
+                    const time = getTimeAtX(x);
+                    const price = getPriceAtY(y);
+                    if (time && price !== null) {
+                        fibPoint2 = { time, price };
+                        fibDrawState = 0;
+                        isDrawingFib = false;
+                        isPointerDown = false;
+                        if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
+                        canvas.style.cursor = 'default';
+                        canvas.style.pointerEvents = 'none';
+                        renderFib();
+
+                        if (window.flutter_inappwebview?.callHandler) {
+                            window.flutter_inappwebview.callHandler('onFibDrawn', true);
+                        }
+                        window.parent?.postMessage(JSON.stringify({ type: 'onFibDrawn', payload: true }), '*');
+                    }
+                    return;
+                }
+            });
+
+            canvas.addEventListener('pointermove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                if (dragMode === 1) {
+                    const time = getTimeAtX(x);
+                    const price = getPriceAtY(y);
+                    if (time && price !== null) {
+                        fibPoint1 = { time, price };
+                        renderFib();
+                    }
+                    return;
+                }
+                if (dragMode === 2) {
+                    const time = getTimeAtX(x);
+                    const price = getPriceAtY(y);
+                    if (time && price !== null) {
+                        fibPoint2 = { time, price };
+                        renderFib();
+                    }
+                    return;
+                }
+
+                // While in state 2: live preview as cursor/finger moves (NO HOLDING NEEDED)
+                if (fibDrawState === 2) {
+                    const time = getTimeAtX(x);
+                    const price = getPriceAtY(y);
+                    if (time && price !== null) {
+                        fibPoint2 = { time, price };
+                        renderFib();
+                    }
+                }
+            });
+
+            const onPointerUp = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const dist = Math.hypot(x - pointerDownPos.x, y - pointerDownPos.y);
+
+                if (dragMode === 1 || dragMode === 2) {
+                    dragMode = 0;
+                    isPointerDown = false;
+                    if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
+                    canvas.style.cursor = 'default';
+                    renderFib();
+                    return;
+                }
+
+                if (fibDrawState === 2) {
+                    // If user dragged and released with distance >= 20px, finalize immediately (Drag gesture fallback)
+                    if (dist >= 20 && fibPoint1 && fibPoint2 && Math.abs(fibPoint2.price - fibPoint1.price) > 0.001) {
+                        fibDrawState = 0;
+                        isDrawingFib = false;
+                        isPointerDown = false;
+                        if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
+                        canvas.style.cursor = 'default';
+                        canvas.style.pointerEvents = 'none';
+                        renderFib();
+
+                        if (window.flutter_inappwebview?.callHandler) {
+                            window.flutter_inappwebview.callHandler('onFibDrawn', true);
+                        }
+                        window.parent?.postMessage(JSON.stringify({ type: 'onFibDrawn', payload: true }), '*');
+                        return;
+                    }
+
+                    // If it was just a tap for Anchor 1:
+                    // Release pointer capture so cursor/touch movement tracks freely WITHOUT needing to hold!
+                    isPointerDown = false;
+                    try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
+                    renderFib();
+                    return;
+                }
+            };
+
+            canvas.addEventListener('pointerup', onPointerUp);
+            canvas.addEventListener('pointercancel', onPointerUp);
+        }
+
+        function renderFib() {
+            const canvas = document.getElementById('fib-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const width = canvas.width / dpr;
+            const height = canvas.height / dpr;
+
+            ctx.clearRect(0, 0, width, height);
+
+            if (!currentShowFib || !chart || !candleSeries) return;
+
+            if (isDrawingFib) {
+                // If Anchor 1 is set and waiting for Anchor 2, render Anchor 1 handle
+                if (fibPoint1 && fibDrawState === 2 && (!fibPoint2 || Math.abs(fibPoint2.price - fibPoint1.price) < 0.001)) {
+                    const x1 = chart.timeScale().timeToCoordinate(fibPoint1.time);
+                    const y1 = candleSeries.priceToCoordinate(fibPoint1.price);
+                    if (x1 !== null && y1 !== null) {
+                        ctx.fillStyle = '#FFB300';
+                        ctx.beginPath();
+                        ctx.arc(x1, y1, 7, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.beginPath();
+                        ctx.arc(x1, y1, 3.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    return;
+                }
+            }
+
+            if (!fibPoint1 || !fibPoint2) return;
+
+            const priceDiff = fibPoint1.price - fibPoint2.price;
+            if (Math.abs(priceDiff) < 0.001) return;
+
+            const x1 = chart.timeScale().timeToCoordinate(fibPoint1.time);
+            const y1 = candleSeries.priceToCoordinate(fibPoint1.price);
+            const x2 = chart.timeScale().timeToCoordinate(fibPoint2.time);
+            const y2 = candleSeries.priceToCoordinate(fibPoint2.price);
+
+            if (x1 === null || y1 === null || x2 === null || y2 === null) return;
+
+            // In TradingView: Horizontal lines span between the X coordinates of the anchors!
+            const minX = Math.min(x1, x2);
+            const maxX = Math.max(x1, x2);
+            const lineStartX = minX;
+            const lineEndX = Math.max(minX + 40, maxX);
+            const lineWidth = lineEndX - lineStartX;
+
+            // Calculate Y positions for all levels:
+            // Anchor 2 = 0.00% (end of move)
+            // Anchor 1 = 100.00% (origin of move)
+            // price = p2 + (p1 - p2) * level
+            const levelYs = [];
+            for (let i = 0; i < FIB_LEVELS.length; i++) {
+                const item = FIB_LEVELS[i];
+                const price = fibPoint2.price + (priceDiff * item.level);
+                const y = candleSeries.priceToCoordinate(price);
+                levelYs.push({ ...item, price, y });
+            }
+
+            // Draw filled zones between levels (from lineStartX to lineEndX)
+            // Sort by level to get consecutive bands
+            const sortedLevels = [...levelYs].sort((a, b) => b.level - a.level);
+            for (let i = 0; i < sortedLevels.length - 1; i++) {
+                const curr = sortedLevels[i];
+                const next = sortedLevels[i + 1];
+                if (curr.y !== null && next.y !== null && curr.fill !== 'transparent') {
+                    ctx.fillStyle = curr.fill;
+                    const topY = Math.min(curr.y, next.y);
+                    const bandHeight = Math.abs(curr.y - next.y);
+                    ctx.fillRect(lineStartX, topY, lineWidth, bandHeight);
+                }
+            }
+
+            // Draw level lines and TradingView-style clean text labels
+            ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textBaseline = 'bottom';
+
+            for (let i = 0; i < levelYs.length; i++) {
+                const item = levelYs[i];
+                if (item.y === null || item.y < 0 || item.y > height) continue;
+
+                // Horizontal line (between anchors)
+                ctx.beginPath();
+                ctx.strokeStyle = item.color;
+                ctx.lineWidth = 1.0;
+                ctx.moveTo(lineStartX, item.y);
+                ctx.lineTo(lineEndX, item.y);
+                ctx.stroke();
+
+                // TradingView label text: positioned at lineStartX above the line
+                const priceFormatted = item.price >= 1000
+                    ? Math.round(item.price).toLocaleString('en-US')
+                    : item.price.toFixed(2);
+                const text = `${item.label} (${priceFormatted})`;
+
+                ctx.fillStyle = item.color;
+                ctx.fillText(text, lineStartX + 4, item.y - 3);
+            }
+
+            // Trendline connecting Anchor 1 and Anchor 2
+            ctx.beginPath();
+            ctx.strokeStyle = '#9E9E9E';
+            ctx.lineWidth = 1.4;
+            ctx.setLineDash([5, 4]);
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Anchor 1 Handle (Origin - 100%)
+            ctx.fillStyle = '#FFB300';
+            ctx.beginPath();
+            ctx.arc(x1, y1, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(x1, y1, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Anchor 2 Handle (Peak - 0%)
+            ctx.fillStyle = '#FFB300';
+            ctx.beginPath();
+            ctx.arc(x2, y2, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(x2, y2, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function setFibonacci(showFib) {
+            currentShowFib = Boolean(showFib);
+            const canvas = document.getElementById('fib-canvas');
+            if (currentShowFib) {
+                if (!fibPoint1 || !fibPoint2) {
+                    startFibDrawing();
+                } else {
+                    renderFib();
+                }
+            } else {
+                isDrawingFib = false;
+                fibDrawState = 0;
+                fibPoint1 = null;
+                fibPoint2 = null;
+                if (canvas) {
+                    canvas.style.pointerEvents = 'none';
+                    canvas.style.cursor = 'default';
+                }
+                renderFib();
+            }
+        }
+
+        function clearFibonacci() {
+            setFibonacci(false);
+        }
+
+        function resetFibonacci() {
+            startFibDrawing();
+        }
+
+        function startFibDrawing() {
+            isDrawingFib = true;
+            currentShowFib = true;
+            fibPoint1 = null;
+            fibPoint2 = null;
+            fibDrawState = 1; // Waiting for Anchor 1 click
+            dragMode = 0;
+            const canvas = document.getElementById('fib-canvas');
+            if (canvas) {
+                canvas.style.pointerEvents = 'auto';
+                canvas.style.cursor = 'crosshair';
+            }
+            renderFib();
+        }
+
+        function initChart(upColor, downColor, gridColor, interactive) {
+            if (chart) return;
+            upColor = upColor || '#21C07A';
+            downColor = downColor || '#E53935';
+            gridColor = gridColor || 'rgba(128, 128, 128, 0.15)';
+            if (interactive === undefined || interactive === null) interactive = true;
+
+            const container = document.getElementById('chart');
+            if (!container) return;
+
+            chart = LightweightCharts.createChart(container, {
+                layout: {
+                    background: { color: 'transparent' },
+                    textColor: '#9aa0a6',
+                    fontSize: 11,
+                },
+                grid: {
+                    vertLines: { color: gridColor },
+                    horzLines: { color: gridColor },
+                },
+                timeScale: {
+                    timeVisible: true,
+                    secondsVisible: false,
+                    borderVisible: false,
+                    rightOffset: 5,
+                    barSpacing: 8,
+                    minBarSpacing: 3,
+                },
+                rightPriceScale: {
+                    borderVisible: false,
+                    scaleMargins: { top: 0.1, bottom: currentShowRsi ? 0.25 : 0.08 },
+                    autoScale: true,
+                },
+                crosshair: {
+                    mode: LightweightCharts.CrosshairMode.Normal,
+                    vertLine: { visible: interactive, labelVisible: interactive, color: gridColor },
+                    horzLine: { visible: interactive, labelVisible: interactive, color: gridColor },
+                },
+                handleScroll: interactive,
+                handleScale: interactive,
+            });
+
+            candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
+                upColor: upColor,
+                downColor: downColor,
+                borderVisible: false,
+                wickUpColor: upColor,
+                wickDownColor: downColor,
+                priceFormat: { type: 'price', precision: 0, minMove: 1 },
+            });
+
+            areaSeries = chart.addSeries(LightweightCharts.AreaSeries, {
+                lineColor: upColor,
+                topColor: upColor + '55',
+                bottomColor: upColor + '05',
+                lineWidth: 2,
+            });
+
+            volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries, {
+                priceFormat: { type: 'volume' },
+                priceScaleId: 'volume-scale',
+                visible: currentShowVolume,
+            });
+
+            // Initialize indicator series (default visibility: false)
+            smaSeries = chart.addSeries(LightweightCharts.LineSeries, {
+                color: '#2962FF',
+                lineWidth: 2,
+                title: 'SMA 20',
+                visible: currentShowSma,
+            });
+
+            rsiSeries = chart.addSeries(LightweightCharts.LineSeries, {
+                color: '#E91E63',
+                lineWidth: 2,
+                title: 'RSI 14',
+                priceScaleId: 'rsi-scale',
+                visible: currentShowRsi,
+            });
+
+            setSeriesType(currentType);
+            setIndicators(currentShowSma, currentShowRsi, currentShowVolume);
+
+            chart.subscribeCrosshairMove(param => {
+                if (!param.time) {
+                    if (window.flutter_inappwebview?.callHandler) {
+                        window.flutter_inappwebview.callHandler('onCrosshair', null);
+                    }
+                    window.parent?.postMessage(JSON.stringify({ type: 'onCrosshair', payload: null }), '*');
+                    return;
+                }
+                const bar = param.seriesData.get(candleSeries) || param.seriesData.get(areaSeries);
+                if (bar) {
+                    const payloadStr = JSON.stringify({ time: param.time, ...bar });
+                    if (window.flutter_inappwebview?.callHandler) {
+                        window.flutter_inappwebview.callHandler('onCrosshair', payloadStr);
+                    }
+                    window.parent?.postMessage(JSON.stringify({ type: 'onCrosshair', payload: payloadStr }), '*');
+                }
+            });
+
+            // Subscriptions to keep Fibonacci canvas locked with chart movements at 60fps
+            chart.timeScale().subscribeVisibleTimeRangeChange(() => renderFib());
+            chart.timeScale().subscribeVisibleLogicalRangeChange(() => renderFib());
+
+            // Click listener for interactive tap-to-draw
+            chart.subscribeClick(param => {
+                if (!isDrawingFib || !param.time || !param.point) return;
+                const price = candleSeries.coordinateToPrice(param.point.y);
+                if (price === null) return;
+
+                if (!fibPoint1) {
+                    fibPoint1 = { time: param.time, price: price };
+                    renderFib();
+                } else {
+                    fibPoint2 = { time: param.time, price: price };
+                    isDrawingFib = false;
+                    renderFib();
+                    if (window.flutter_inappwebview?.callHandler) {
+                        window.flutter_inappwebview.callHandler('onFibDrawn', JSON.stringify({ p1: fibPoint1, p2: fibPoint2 }));
+                    }
+                }
+            });
+
+            setTimeout(resizeFibCanvas, 100);
+            initFibPointerEvents();
+
+            if (pendingData) {
+                const p = pendingData;
+                pendingData = null;
+                setDataWithIndicators(p);
+            }
+        }
+
+        function setSeriesType(type) {
+            currentType = type;
+            if (candleSeries) candleSeries.applyOptions({ visible: type === 'candle' });
+            if (areaSeries) areaSeries.applyOptions({ visible: type === 'area' });
+        }
+
+        function updateLayoutMargins() {
+            if (!candleSeries) return;
+
+            if (currentShowRsi && currentShowVolume) {
+                // Keduanya aktif: Candle di atas, RSI di tengah, Volume di bawah
+                // Main Candle: batas bawah dinaikkan 42% agar tidak tabrakan
+                candleSeries.priceScale().applyOptions({
+                    scaleMargins: { top: 0.08, bottom: 0.42 }
+                });
+                if (rsiSeries) {
+                    rsiSeries.priceScale().applyOptions({
+                        scaleMargins: { top: 0.60, bottom: 0.22 }
+                    });
+                }
+                if (volumeSeries) {
+                    volumeSeries.priceScale().applyOptions({
+                        scaleMargins: { top: 0.80, bottom: 0.0 }
+                    });
+                }
+            } else if (currentShowRsi && !currentShowVolume) {
+                // Hanya RSI aktif: Main Candle dinaikkan 26%
+                candleSeries.priceScale().applyOptions({
+                    scaleMargins: { top: 0.08, bottom: 0.26 }
+                });
+                if (rsiSeries) {
+                    rsiSeries.priceScale().applyOptions({
+                        scaleMargins: { top: 0.76, bottom: 0.0 }
+                    });
+                }
+            } else if (!currentShowRsi && currentShowVolume) {
+                // Hanya Volume aktif: Main Candle dinaikkan 22% agar tidak tabrakan dengan bar volume
+                candleSeries.priceScale().applyOptions({
+                    scaleMargins: { top: 0.08, bottom: 0.22 }
+                });
+                if (volumeSeries) {
+                    volumeSeries.priceScale().applyOptions({
+                        scaleMargins: { top: 0.80, bottom: 0.0 }
+                    });
+                }
+            } else {
+                // Keduanya nonaktif: Full-height clean view
+                candleSeries.priceScale().applyOptions({
+                    scaleMargins: { top: 0.08, bottom: 0.06 }
+                });
+            }
+
+            renderFib();
+        }
+
+        function setIndicators(showSma, showRsi, showVolume) {
+            currentShowSma = Boolean(showSma);
+            currentShowRsi = Boolean(showRsi);
+            if (showVolume !== undefined && showVolume !== null) {
+                currentShowVolume = Boolean(showVolume);
+            }
+
+            if (smaSeries) {
+                smaSeries.applyOptions({ visible: currentShowSma });
+            }
+            if (rsiSeries) {
+                rsiSeries.applyOptions({ visible: currentShowRsi });
+            }
+            if (volumeSeries) {
+                volumeSeries.applyOptions({ visible: currentShowVolume });
+            }
+
+            updateLayoutMargins();
+        }
+
+        function setData(candlesJson, volumesJson) {
+            if (!chart) initChart();
+            const candles = typeof candlesJson === 'string' ? JSON.parse(candlesJson) : candlesJson;
+            rawCandlesData = candles;
+            candleSeries.setData(candles);
+            areaSeries.setData(candles.map(c => ({ time: c.time, value: c.close })));
+            if (volumesJson) {
+                const vols = typeof volumesJson === 'string' ? JSON.parse(volumesJson) : volumesJson;
+                volumeSeries.setData(vols);
+            }
+            if (currentShowFib && (!fibPoint1 || !fibPoint2)) {
+                startFibDrawing();
+            }
+            updateLayoutMargins();
+            chart.timeScale().fitContent();
+            renderFib();
+        }
+
+        function setDataWithIndicators(payloadInput) {
+            if (!chart) {
+                pendingData = payloadInput;
+                initChart();
+                return;
+            }
+
+            const payload = typeof payloadInput === 'string' ? JSON.parse(payloadInput) : payloadInput;
+
+            if (payload.candles && Array.isArray(payload.candles) && payload.candles.length > 0) {
+                rawCandlesData = payload.candles;
+                candleSeries.setData(payload.candles);
+                areaSeries.setData(payload.candles.map(c => ({ time: c.time, value: c.close })));
+
+                const volData = payload.candles.map(c => ({
+                    time: c.time,
+                    value: c.volume || 0,
+                    color: c.close >= c.open ? '#26a69a88' : '#ef535088'
+                }));
+                volumeSeries.setData(volData);
+            }
+
+            if (payload.indicators) {
+                if (payload.indicators.sma20 && Array.isArray(payload.indicators.sma20)) {
+                    smaSeries.setData(payload.indicators.sma20);
+                }
+                if (payload.indicators.rsi14 && Array.isArray(payload.indicators.rsi14)) {
+                    rsiSeries.setData(payload.indicators.rsi14);
+                }
+            }
+
+            if (currentShowFib && (!fibPoint1 || !fibPoint2)) {
+                startFibDrawing();
+            }
+            setIndicators(currentShowSma, currentShowRsi, currentShowVolume);
+            chart.timeScale().fitContent();
+            renderFib();
+        }
+
+        function updateBar(barInput, volBarInput) {
+            if (!chart) return;
+            const bar = typeof barInput === 'string' ? JSON.parse(barInput) : barInput;
+            candleSeries.update(bar);
+            areaSeries.update({ time: bar.time, value: bar.close });
+            if (volBarInput) {
+                const vol = typeof volBarInput === 'string' ? JSON.parse(volBarInput) : volBarInput;
+                volumeSeries.update(vol);
+            }
+            renderFib();
+        }
+
+        function setVisibleRange(fromSec, toSec) {
+            if (chart) chart.timeScale().setVisibleRange({ from: fromSec, to: toSec });
+            renderFib();
+        }
+
+        // Auto-initialize when document loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => initChart());
+        } else {
+            initChart();
+        }
+
+        // Cross-window message listener for web compatibility
+        window.addEventListener('message', function(event) {
+            try {
+                const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+                if (!data || !data.type) return;
+
+                if (data.type === 'setDataWithIndicators') {
+                    setDataWithIndicators(data.payload);
+                } else if (data.type === 'setIndicators') {
+                    setIndicators(data.showSma, data.showRsi, data.showVolume);
+                } else if (data.type === 'setFibonacci') {
+                    setFibonacci(data.showFib);
+                } else if (data.type === 'resetFibonacci') {
+                    resetFibonacci();
+                } else if (data.type === 'startFibDrawing') {
+                    startFibDrawing();
+                } else if (data.type === 'setData') {
+                    setData(data.candles, data.volumes);
+                } else if (data.type === 'setSeriesType') {
+                    setSeriesType(data.seriesType);
+                } else if (data.type === 'initChart') {
+                    initChart(data.upColor, data.downColor, data.gridColor, data.interactive);
+                }
+            } catch (e) {
+                console.error("tv_chart message error:", e);
+            }
+        });
+    </script>
+</body>
+
+</html>
