@@ -20,10 +20,16 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
   bool _showVolume = false;
   bool _showFibonacci = false;
   bool _isDrawingFib = false;
+  final List<double> _horizontalLines = <double>[];
+  bool _isDrawingHorizontalLine = false;
+  final List<Map<String, dynamic>> _trendlines = <Map<String, dynamic>>[];
+  bool _isDrawingTrendline = false;
   Map<String, dynamic>? _crosshair;
 
   void _toggleFibonacci() {
     setState(() {
+      _isDrawingHorizontalLine = false;
+      _isDrawingTrendline = false;
       if (_showFibonacci) {
         _showFibonacci = false;
         _isDrawingFib = false;
@@ -34,10 +40,19 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
     });
   }
 
-  void _startDrawingFibonacci() {
+  void _startDrawingHorizontalLine() {
     setState(() {
-      _showFibonacci = true;
-      _isDrawingFib = true;
+      _isDrawingFib = false;
+      _isDrawingTrendline = false;
+      _isDrawingHorizontalLine = true;
+    });
+  }
+
+  void _startDrawingTrendline() {
+    setState(() {
+      _isDrawingFib = false;
+      _isDrawingHorizontalLine = false;
+      _isDrawingTrendline = true;
     });
   }
 
@@ -143,6 +158,32 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                         isSelected: _showFibonacci,
                         onTap: _toggleFibonacci,
                       ),
+                      const SizedBox(width: 8),
+                      _IndicatorChip(
+                        label: 'S/R',
+                        color: const Color(0xFF00E5FF),
+                        isSelected: _isDrawingHorizontalLine,
+                        onTap: () {
+                          if (_isDrawingHorizontalLine) {
+                            setState(() => _isDrawingHorizontalLine = false);
+                          } else {
+                            _startDrawingHorizontalLine();
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      _IndicatorChip(
+                        label: 'TL',
+                        color: const Color(0xFF7C4DFF),
+                        isSelected: _isDrawingTrendline,
+                        onTap: () {
+                          if (_isDrawingTrendline) {
+                            setState(() => _isDrawingTrendline = false);
+                          } else {
+                            _startDrawingTrendline();
+                          }
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -165,6 +206,44 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                           setState(() => _isDrawingFib = false);
                         }
                       },
+                      horizontalLines: _horizontalLines,
+                      isDrawingHorizontalLine: _isDrawingHorizontalLine,
+                      onHorizontalLineAdded: (double price) {
+                        if (mounted) {
+                          setState(() {
+                            _horizontalLines.add(price);
+                            _isDrawingHorizontalLine = false;
+                          });
+                        }
+                      },
+                      onHorizontalLinesChanged: (List<double> updated) {
+                        if (mounted) {
+                          setState(() {
+                            _horizontalLines.clear();
+                            _horizontalLines.addAll(updated);
+                            _isDrawingHorizontalLine = false;
+                          });
+                        }
+                      },
+                      trendlines: _trendlines,
+                      isDrawingTrendline: _isDrawingTrendline,
+                      onTrendlineAdded: (Map<String, dynamic> line) {
+                        if (mounted) {
+                          setState(() {
+                            _trendlines.add(line);
+                            _isDrawingTrendline = false;
+                          });
+                        }
+                      },
+                      onTrendlinesChanged: (List<Map<String, dynamic>> updated) {
+                        if (mounted) {
+                          setState(() {
+                            _trendlines.clear();
+                            _trendlines.addAll(updated);
+                            _isDrawingTrendline = false;
+                          });
+                        }
+                      },
                       upColor: upColor,
                       downColor: downColor,
                       gridColor: cs.outline.withValues(alpha: .15),
@@ -173,15 +252,6 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                       onCrosshairMove: (Map<String, dynamic>? v) =>
                           setState(() => _crosshair = v),
                     ),
-                    if (_showFibonacci && !_isDrawingFib)
-                      Positioned(
-                        top: 10,
-                        right: 64,
-                        child: _FibonacciFloatingToolbar(
-                          onRedraw: _startDrawingFibonacci,
-                          onDelete: _toggleFibonacci,
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -277,92 +347,4 @@ class _Legend extends StatelessWidget {
     return Row(children: [kv('O', o), kv('H', h), kv('L', l), kv('C', c)]);
   }
 }
-
-class _FibonacciFloatingToolbar extends StatelessWidget {
-  final VoidCallback onRedraw;
-  final VoidCallback onDelete;
-
-  const _FibonacciFloatingToolbar({
-    required this.onRedraw,
-    required this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme cs = theme.colorScheme;
-    const Color fibColor = Color(0xFFFFB300);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: fibColor.withValues(alpha: 0.6),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          InkWell(
-              onTap: onRedraw,
-              borderRadius: BorderRadius.circular(6),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.edit_outlined, size: 14, color: fibColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Tarik Ulang',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: cs.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Container(
-              width: 1,
-              height: 16,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              color: cs.outline.withValues(alpha: 0.25),
-            ),
-            InkWell(
-              onTap: onDelete,
-              borderRadius: BorderRadius.circular(6),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.close, size: 14, color: cs.error),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Hapus',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: cs.error,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
+
