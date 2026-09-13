@@ -182,9 +182,17 @@
         function initFibPointerEvents() {
             const canvas = document.getElementById('fib-canvas');
             const chartContainer = document.getElementById('chart-container');
-            if (!canvas) return;
+            if (!canvas || !chartContainer) return;
 
-            // Hover detection to allow grabbing existing anchor handles, trendlines, & horizontal lines
+            // Ergonomic Hitbox Constants (Generous sizes optimized for smartphone touchscreens)
+            const HITBOX_FIB_ANCHOR = 38; // 38px radius (76px diameter touch target for mobile fingers/thumbs)
+            const HITBOX_HLINE = 28;      // 28px vertical distance (56px tall touch target)
+            const HITBOX_HLINE_DEL = 36;  // 36px touch zone at right edge for delete
+            const HITBOX_TL_ANCHOR = 32;  // 32px radius for trendline anchors
+            const HITBOX_TL_DEL = 28;     // 28px radius for trendline delete button
+            const HITBOX_TL_BODY = 22;    // 22px distance for trendline body
+
+            // Hover detection to allow grabbing existing anchor handles, trendlines, & horizontal lines on desktop
             function updateHoverState(e) {
                 if (isDrawingHorizontalLine || isDrawingTrendline || isDrawingFib || fibDrawState !== 0 || trendlineDrawState !== 0 || isPointerDown || dragHorizontalLineIndex !== -1 || dragTrendlineIndex !== -1 || dragMode !== 0) {
                     return;
@@ -206,9 +214,9 @@
                 if (horizontalLines && horizontalLines.length > 0 && activeSeries) {
                     for (let i = 0; i < horizontalLines.length; i++) {
                         const lineY = activeSeries.priceToCoordinate(horizontalLines[i]);
-                        if (lineY !== null && Math.abs(y - lineY) <= 14) {
+                        if (lineY !== null && Math.abs(y - lineY) <= HITBOX_HLINE) {
                             canvas.style.pointerEvents = 'auto';
-                            if (x >= rect.width - 28) {
+                            if (x >= rect.width - HITBOX_HLINE_DEL) {
                                 canvas.style.cursor = 'pointer';
                             } else {
                                 canvas.style.cursor = 'ns-resize';
@@ -228,35 +236,25 @@
                         const y2 = activeSeries.priceToCoordinate(t.p2.price);
                         if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
                             if (i === selectedTrendlineIndex) {
-                                // Midpoint delete button
                                 const mx = (x1 + x2) / 2;
                                 const my = (y1 + y2) / 2;
-                                if (Math.hypot(x - mx, y - my) <= 14) {
+                                if (Math.hypot(x - mx, y - my) <= HITBOX_TL_DEL) {
                                     canvas.style.pointerEvents = 'auto';
                                     canvas.style.cursor = 'pointer';
                                     return;
                                 }
-                                // Anchor 1
-                                if (Math.hypot(x - x1, y - y1) <= 14) {
+                                if (Math.hypot(x - x1, y - y1) <= HITBOX_TL_ANCHOR || Math.hypot(x - x2, y - y2) <= HITBOX_TL_ANCHOR) {
                                     canvas.style.pointerEvents = 'auto';
                                     canvas.style.cursor = 'grab';
                                     return;
                                 }
-                                // Anchor 2
-                                if (Math.hypot(x - x2, y - y2) <= 14) {
-                                    canvas.style.pointerEvents = 'auto';
-                                    canvas.style.cursor = 'grab';
-                                    return;
-                                }
-                                // Line body
-                                if (distToSegment(x, y, x1, y1, x2, y2) <= 8) {
+                                if (distToSegment(x, y, x1, y1, x2, y2) <= HITBOX_TL_BODY) {
                                     canvas.style.pointerEvents = 'auto';
                                     canvas.style.cursor = 'move';
                                     return;
                                 }
                             } else {
-                                // Unselected: only hover on line body to allow click-to-select
-                                if (distToSegment(x, y, x1, y1, x2, y2) <= 8) {
+                                if (distToSegment(x, y, x1, y1, x2, y2) <= HITBOX_TL_BODY) {
                                     canvas.style.pointerEvents = 'auto';
                                     canvas.style.cursor = 'pointer';
                                     return;
@@ -273,8 +271,8 @@
                     const x2 = chart.timeScale().timeToCoordinate(fibPoint2.time);
                     const y2 = activeSeries.priceToCoordinate(fibPoint2.price);
 
-                    const near1 = x1 !== null && y1 !== null && Math.hypot(x - x1, y - y1) <= 22;
-                    const near2 = x2 !== null && y2 !== null && Math.hypot(x - x2, y - y2) <= 22;
+                    const near1 = x1 !== null && y1 !== null && Math.hypot(x - x1, y - y1) <= HITBOX_FIB_ANCHOR;
+                    const near2 = x2 !== null && y2 !== null && Math.hypot(x - x2, y - y2) <= HITBOX_FIB_ANCHOR;
 
                     if (near1 || near2) {
                         canvas.style.pointerEvents = 'auto';
@@ -291,8 +289,10 @@
             if (chartContainer) {
                 chartContainer.addEventListener('pointermove', updateHoverState);
 
+                // Mobile-first capture-phase touch interceptor:
+                // Intercepts touches on drawing elements BEFORE LightweightCharts can handle them as pan/scroll!
                 chartContainer.addEventListener('pointerdown', (e) => {
-                    // Do nothing if in active drawing tool mode
+                    // If user is placing a brand new tool, let canvas handle placement
                     if (isDrawingHorizontalLine || isDrawingTrendline || isDrawingFib || fibDrawState !== 0 || trendlineDrawState !== 0) {
                         return;
                     }
@@ -300,10 +300,64 @@
                     const rect = canvas.getBoundingClientRect();
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
-                    const activeSeries = candleSeries || areaSeries;
+                    pointerDownPos = { x, y };
+                    pointerDownTime = Date.now();
 
-                    let hitTrendline = false;
-                    if (trendlines && trendlines.length > 0 && activeSeries && chart) {
+                    const activeSeries = candleSeries || areaSeries;
+                    if (!activeSeries || !chart) return;
+
+                    // 1. FIBONACCI RESIZE HIT TEST (Comfortable 76px touch zone)
+                    if (currentShowFib && fibPoint1 && fibPoint2) {
+                        const x1 = chart.timeScale().timeToCoordinate(fibPoint1.time);
+                        const y1 = activeSeries.priceToCoordinate(fibPoint1.price);
+                        const x2 = chart.timeScale().timeToCoordinate(fibPoint2.time);
+                        const y2 = activeSeries.priceToCoordinate(fibPoint2.price);
+
+                        const hit1 = x1 !== null && y1 !== null && Math.hypot(x - x1, y - y1) <= HITBOX_FIB_ANCHOR;
+                        const hit2 = x2 !== null && y2 !== null && Math.hypot(x - x2, y - y2) <= HITBOX_FIB_ANCHOR;
+
+                        if (hit1 || hit2) {
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            e.preventDefault();
+
+                            dragMode = hit1 ? 1 : 2;
+                            isPointerDown = true;
+                            try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                            chart.applyOptions({ handleScroll: false, handleScale: false });
+                            renderFib();
+                            return;
+                        }
+                    }
+
+                    // 2. HORIZONTAL LINE HIT TEST (56px tall vertical touch zone)
+                    if (horizontalLines && horizontalLines.length > 0) {
+                        for (let i = 0; i < horizontalLines.length; i++) {
+                            const lineY = activeSeries.priceToCoordinate(horizontalLines[i]);
+                            if (lineY !== null && Math.abs(y - lineY) <= HITBOX_HLINE) {
+                                e.stopPropagation();
+                                e.stopImmediatePropagation();
+                                e.preventDefault();
+
+                                if (x >= rect.width - HITBOX_HLINE_DEL) {
+                                    horizontalLines.splice(i, 1);
+                                    renderFib();
+                                    notifyHorizontalLinesChanged();
+                                    return;
+                                }
+
+                                dragHorizontalLineIndex = i;
+                                isPointerDown = true;
+                                try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                chart.applyOptions({ handleScroll: false, handleScale: false });
+                                renderFib();
+                                return;
+                            }
+                        }
+                    }
+
+                    // 3. TRENDLINE HIT TEST (Generous touch zones for anchors, delete button, and body)
+                    if (trendlines && trendlines.length > 0) {
                         for (let i = 0; i < trendlines.length; i++) {
                             const t = trendlines[i];
                             const x1 = chart.timeScale().timeToCoordinate(t.p1.time);
@@ -314,54 +368,87 @@
                                 if (i === selectedTrendlineIndex) {
                                     const mx = (x1 + x2) / 2;
                                     const my = (y1 + y2) / 2;
-                                    if (Math.hypot(x - mx, y - my) <= 18) {
+                                    if (Math.hypot(x - mx, y - my) <= HITBOX_TL_DEL) {
+                                        e.stopPropagation();
+                                        e.stopImmediatePropagation();
+                                        e.preventDefault();
                                         trendlines.splice(i, 1);
                                         selectedTrendlineIndex = -1;
-                                        canvas.style.cursor = 'default';
-                                        canvas.style.pointerEvents = 'none';
                                         renderFib();
                                         notifyTrendlinesChanged();
-                                        hitTrendline = true;
-                                        break;
+                                        return;
                                     }
-                                    if (Math.hypot(x - x1, y - y1) <= 18 || Math.hypot(x - x2, y - y2) <= 18 || distToSegment(x, y, x1, y1, x2, y2) <= 12) {
-                                        hitTrendline = true;
-                                        canvas.style.pointerEvents = 'auto';
-                                        break;
+                                    if (Math.hypot(x - x1, y - y1) <= HITBOX_TL_ANCHOR) {
+                                        e.stopPropagation();
+                                        e.stopImmediatePropagation();
+                                        e.preventDefault();
+                                        dragTrendlineIndex = i;
+                                        dragTrendlinePart = 1;
+                                        isPointerDown = true;
+                                        try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                        chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        renderFib();
+                                        return;
+                                    }
+                                    if (Math.hypot(x - x2, y - y2) <= HITBOX_TL_ANCHOR) {
+                                        e.stopPropagation();
+                                        e.stopImmediatePropagation();
+                                        e.preventDefault();
+                                        dragTrendlineIndex = i;
+                                        dragTrendlinePart = 2;
+                                        isPointerDown = true;
+                                        try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                        chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        renderFib();
+                                        return;
+                                    }
+                                    if (distToSegment(x, y, x1, y1, x2, y2) <= HITBOX_TL_BODY) {
+                                        e.stopPropagation();
+                                        e.stopImmediatePropagation();
+                                        e.preventDefault();
+                                        dragTrendlineIndex = i;
+                                        dragTrendlinePart = 3;
+                                        dragTrendlineStartPos = {
+                                            x, y,
+                                            origP1: { time: t.p1.time, price: t.p1.price },
+                                            origP2: { time: t.p2.time, price: t.p2.price }
+                                        };
+                                        isPointerDown = true;
+                                        try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                        chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        renderFib();
+                                        return;
                                     }
                                 } else {
-                                    if (distToSegment(x, y, x1, y1, x2, y2) <= 12) {
+                                    if (distToSegment(x, y, x1, y1, x2, y2) <= HITBOX_TL_BODY) {
+                                        e.stopPropagation();
+                                        e.stopImmediatePropagation();
+                                        e.preventDefault();
                                         selectedTrendlineIndex = i;
-                                        hitTrendline = true;
-                                        canvas.style.pointerEvents = 'auto';
+                                        dragTrendlineIndex = i;
+                                        dragTrendlinePart = 3;
+                                        dragTrendlineStartPos = {
+                                            x, y,
+                                            origP1: { time: t.p1.time, price: t.p1.price },
+                                            origP2: { time: t.p2.time, price: t.p2.price }
+                                        };
+                                        isPointerDown = true;
+                                        try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                        chart.applyOptions({ handleScroll: false, handleScale: false });
                                         renderFib();
-                                        break;
+                                        return;
                                     }
                                 }
                             }
                         }
                     }
 
-                    let hitHLine = false;
-                    if (horizontalLines && horizontalLines.length > 0 && activeSeries) {
-                        for (let i = 0; i < horizontalLines.length; i++) {
-                            const lineY = activeSeries.priceToCoordinate(horizontalLines[i]);
-                            if (lineY !== null && Math.abs(y - lineY) <= 16) {
-                                hitHLine = true;
-                                canvas.style.pointerEvents = 'auto';
-                                break;
-                            }
-                        }
+                    // If tapped empty space on chart while a trendline was selected, deselect it
+                    if (selectedTrendlineIndex !== -1) {
+                        selectedTrendlineIndex = -1;
+                        renderFib();
                     }
-
-                    // If tapped outside any trendline and outside any drawing element:
-                    if (!hitTrendline && !hitHLine) {
-                        if (selectedTrendlineIndex !== -1) {
-                            selectedTrendlineIndex = -1;
-                            renderFib();
-                        }
-                    }
-                });
+                }, { capture: true });
             }
 
             canvas.addEventListener('pointerdown', (e) => {
@@ -395,9 +482,9 @@
                 if (horizontalLines && horizontalLines.length > 0 && activeSeries) {
                     for (let i = 0; i < horizontalLines.length; i++) {
                         const lineY = activeSeries.priceToCoordinate(horizontalLines[i]);
-                        if (lineY !== null && Math.abs(y - lineY) <= 14) {
+                        if (lineY !== null && Math.abs(y - lineY) <= HITBOX_HLINE) {
                             // Check if clicked the delete button at the right edge
-                            if (x >= rect.width - 28) {
+                            if (x >= rect.width - HITBOX_HLINE_DEL) {
                                 horizontalLines.splice(i, 1);
                                 canvas.style.cursor = 'default';
                                 canvas.style.pointerEvents = 'none';
@@ -476,7 +563,7 @@
                                 // Midpoint delete button tap
                                 const mx = (x1 + x2) / 2;
                                 const my = (y1 + y2) / 2;
-                                if (Math.hypot(x - mx, y - my) <= 16) {
+                                if (Math.hypot(x - mx, y - my) <= HITBOX_TL_DEL) {
                                     trendlines.splice(i, 1);
                                     selectedTrendlineIndex = -1;
                                     canvas.style.cursor = 'default';
@@ -486,7 +573,7 @@
                                     return;
                                 }
                                 // Anchor 1 grab
-                                if (Math.hypot(x - x1, y - y1) <= 16) {
+                                if (Math.hypot(x - x1, y - y1) <= HITBOX_TL_ANCHOR) {
                                     dragTrendlineIndex = i;
                                     dragTrendlinePart = 1;
                                     isPointerDown = true;
@@ -496,7 +583,7 @@
                                     return;
                                 }
                                 // Anchor 2 grab
-                                if (Math.hypot(x - x2, y - y2) <= 16) {
+                                if (Math.hypot(x - x2, y - y2) <= HITBOX_TL_ANCHOR) {
                                     dragTrendlineIndex = i;
                                     dragTrendlinePart = 2;
                                     isPointerDown = true;
@@ -506,7 +593,7 @@
                                     return;
                                 }
                                 // Line body grab (parallel translation)
-                                if (distToSegment(x, y, x1, y1, x2, y2) <= 10) {
+                                if (distToSegment(x, y, x1, y1, x2, y2) <= HITBOX_TL_BODY) {
                                     dragTrendlineIndex = i;
                                     dragTrendlinePart = 3;
                                     dragTrendlineStartPos = {
@@ -522,7 +609,7 @@
                                 }
                             } else {
                                 // Click on unselected trendline body to select into Edit Mode!
-                                if (distToSegment(x, y, x1, y1, x2, y2) <= 10) {
+                                if (distToSegment(x, y, x1, y1, x2, y2) <= HITBOX_TL_BODY) {
                                     selectedTrendlineIndex = i;
                                     dragTrendlineIndex = i;
                                     dragTrendlinePart = 3;
@@ -550,18 +637,20 @@
                     const x2 = chart.timeScale().timeToCoordinate(fibPoint2.time);
                     const y2 = candleSeries.priceToCoordinate(fibPoint2.price);
 
-                    if (x1 !== null && y1 !== null && Math.hypot(x - x1, y - y1) <= 24) {
+                    if (x1 !== null && y1 !== null && Math.hypot(x - x1, y - y1) <= HITBOX_FIB_ANCHOR) {
                         dragMode = 1;
                         isPointerDown = true;
                         canvas.setPointerCapture?.(e.pointerId);
                         if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                        renderFib();
                         return;
                     }
-                    if (x2 !== null && y2 !== null && Math.hypot(x - x2, y - y2) <= 24) {
+                    if (x2 !== null && y2 !== null && Math.hypot(x - x2, y - y2) <= HITBOX_FIB_ANCHOR) {
                         dragMode = 2;
                         isPointerDown = true;
                         canvas.setPointerCapture?.(e.pointerId);
                         if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                        renderFib();
                         return;
                     }
                 }
@@ -613,7 +702,7 @@
                 canvas.style.cursor = 'default';
             });
 
-            canvas.addEventListener('pointermove', (e) => {
+            const onPointerMove = (e) => {
                 if (!isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingFib && fibDrawState === 0 && trendlineDrawState === 0 && !isPointerDown && dragHorizontalLineIndex === -1 && dragTrendlineIndex === -1 && dragMode === 0) {
                     updateHoverState(e);
                     return;
@@ -733,7 +822,12 @@
                         renderFib();
                     }
                 }
-            });
+            };
+
+            canvas.addEventListener('pointermove', onPointerMove);
+            if (chartContainer) {
+                chartContainer.addEventListener('pointermove', onPointerMove);
+            }
 
             canvas.addEventListener('pointerleave', () => {
                 if (crosshairPos !== null) {
@@ -758,6 +852,7 @@
                     dragTrendlineStartPos = null;
                     isPointerDown = false;
                     try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
+                    try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
                     if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
                     canvas.style.cursor = 'default';
                     canvas.style.pointerEvents = 'none';
@@ -770,6 +865,7 @@
                     dragHorizontalLineIndex = -1;
                     isPointerDown = false;
                     try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
+                    try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
                     if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
                     canvas.style.cursor = 'default';
                     canvas.style.pointerEvents = 'none';
@@ -781,10 +877,16 @@
                 if (dragMode === 1 || dragMode === 2) {
                     dragMode = 0;
                     isPointerDown = false;
+                    try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
+                    try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
                     if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
                     canvas.style.cursor = 'default';
                     canvas.style.pointerEvents = 'none';
                     renderFib();
+                    if (window.flutter_inappwebview?.callHandler) {
+                        window.flutter_inappwebview.callHandler('onFibDrawn', true);
+                    }
+                    window.parent?.postMessage(JSON.stringify({ type: 'onFibDrawn', payload: true }), '*');
                     return;
                 }
 
@@ -801,6 +903,7 @@
                         crosshairPos = null;
                         isPointerDown = false;
                         try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
+                        try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
                         if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
                         canvas.style.cursor = 'default';
                         canvas.style.pointerEvents = 'none';
@@ -816,6 +919,7 @@
                     // If it was just a tap for Anchor 1:
                     isPointerDown = false;
                     try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
+                    try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
                     renderFib();
                     return;
                 }
@@ -827,6 +931,8 @@
                         fibDrawState = 0;
                         isDrawingFib = false;
                         isPointerDown = false;
+                        try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
+                        try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
                         if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
                         canvas.style.cursor = 'default';
                         canvas.style.pointerEvents = 'none';
@@ -843,6 +949,7 @@
                     // Release pointer capture so cursor/touch movement tracks freely WITHOUT needing to hold!
                     isPointerDown = false;
                     try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
+                    try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
                     renderFib();
                     return;
                 }
@@ -850,6 +957,10 @@
 
             canvas.addEventListener('pointerup', onPointerUp);
             canvas.addEventListener('pointercancel', onPointerUp);
+            if (chartContainer) {
+                chartContainer.addEventListener('pointerup', onPointerUp);
+                chartContainer.addEventListener('pointercancel', onPointerUp);
+            }
         }
 
         function renderFib() {
@@ -982,9 +1093,9 @@
                     ctx.fillText(text, badgeX + 5, y);
 
                     // Delete button circle (✕)
-                    const delCenterX = width - 13;
+                    const delCenterX = width - 15;
                     const delCenterY = y;
-                    const delRadius = 8;
+                    const delRadius = 11;
 
                     ctx.beginPath();
                     ctx.arc(delCenterX, delCenterY, delRadius, 0, Math.PI * 2);
@@ -994,8 +1105,8 @@
                     // '✕' icon lines
                     ctx.beginPath();
                     ctx.strokeStyle = '#FFFFFF';
-                    ctx.lineWidth = 1.6;
-                    const arm = 3.5;
+                    ctx.lineWidth = 1.8;
+                    const arm = 4.2;
                     ctx.moveTo(delCenterX - arm, delCenterY - arm);
                     ctx.lineTo(delCenterX + arm, delCenterY + arm);
                     ctx.moveTo(delCenterX + arm, delCenterY - arm);
@@ -1029,29 +1140,49 @@
                     // Only render anchor handles and midpoint delete button when in EDIT MODE (isSelected)
                     if (isSelected) {
                         // Anchor 1 handle
-                        ctx.fillStyle = '#7C4DFF';
+                        ctx.save();
                         ctx.beginPath();
-                        ctx.arc(x1, y1, 5, 0, Math.PI * 2);
+                        ctx.arc(x1, y1, 8, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(124, 77, 255, 0.25)';
                         ctx.fill();
+                        ctx.strokeStyle = '#7C4DFF';
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+
+                        ctx.beginPath();
+                        ctx.arc(x1, y1, 4, 0, Math.PI * 2);
                         ctx.fillStyle = '#FFFFFF';
-                        ctx.beginPath();
-                        ctx.arc(x1, y1, 2.5, 0, Math.PI * 2);
                         ctx.fill();
+                        ctx.beginPath();
+                        ctx.arc(x1, y1, 2, 0, Math.PI * 2);
+                        ctx.fillStyle = '#7C4DFF';
+                        ctx.fill();
+                        ctx.restore();
 
                         // Anchor 2 handle
-                        ctx.fillStyle = '#7C4DFF';
+                        ctx.save();
                         ctx.beginPath();
-                        ctx.arc(x2, y2, 5, 0, Math.PI * 2);
+                        ctx.arc(x2, y2, 8, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(124, 77, 255, 0.25)';
                         ctx.fill();
+                        ctx.strokeStyle = '#7C4DFF';
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+
+                        ctx.beginPath();
+                        ctx.arc(x2, y2, 4, 0, Math.PI * 2);
                         ctx.fillStyle = '#FFFFFF';
-                        ctx.beginPath();
-                        ctx.arc(x2, y2, 2.5, 0, Math.PI * 2);
                         ctx.fill();
+                        ctx.beginPath();
+                        ctx.arc(x2, y2, 2, 0, Math.PI * 2);
+                        ctx.fillStyle = '#7C4DFF';
+                        ctx.fill();
+                        ctx.restore();
 
                         // Midpoint delete button (✕)
                         const mx = (x1 + x2) / 2;
                         const my = (y1 + y2) / 2;
-                        const delRadius = 8;
+                        const delRadius = 11;
 
                         ctx.beginPath();
                         ctx.arc(mx, my, delRadius, 0, Math.PI * 2);
@@ -1060,8 +1191,8 @@
 
                         ctx.beginPath();
                         ctx.strokeStyle = '#FFFFFF';
-                        ctx.lineWidth = 1.6;
-                        const arm = 3.5;
+                        ctx.lineWidth = 1.8;
+                        const arm = 4.2;
                         ctx.moveTo(mx - arm, my - arm);
                         ctx.lineTo(mx + arm, my + arm);
                         ctx.moveTo(mx + arm, my - arm);
@@ -1215,24 +1346,46 @@
             ctx.setLineDash([]);
 
             // Anchor 1 Handle (Origin - 100%)
-            ctx.fillStyle = '#FFB300';
+            const isA1Active = (dragMode === 1);
+            ctx.save();
             ctx.beginPath();
-            ctx.arc(x1, y1, 5, 0, Math.PI * 2);
+            ctx.arc(x1, y1, isA1Active ? 12 : 9, 0, Math.PI * 2);
+            ctx.fillStyle = isA1Active ? 'rgba(255, 179, 0, 0.45)' : 'rgba(255, 179, 0, 0.25)';
             ctx.fill();
+            ctx.strokeStyle = '#FFB300';
+            ctx.lineWidth = isA1Active ? 2 : 1.5;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(x1, y1, 4.5, 0, Math.PI * 2);
             ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
             ctx.beginPath();
             ctx.arc(x1, y1, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFB300';
             ctx.fill();
+            ctx.restore();
 
             // Anchor 2 Handle (Peak - 0%)
-            ctx.fillStyle = '#FFB300';
+            const isA2Active = (dragMode === 2);
+            ctx.save();
             ctx.beginPath();
-            ctx.arc(x2, y2, 5, 0, Math.PI * 2);
+            ctx.arc(x2, y2, isA2Active ? 12 : 9, 0, Math.PI * 2);
+            ctx.fillStyle = isA2Active ? 'rgba(255, 179, 0, 0.45)' : 'rgba(255, 179, 0, 0.25)';
             ctx.fill();
+            ctx.strokeStyle = '#FFB300';
+            ctx.lineWidth = isA2Active ? 2 : 1.5;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(x2, y2, 4.5, 0, Math.PI * 2);
             ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
             ctx.beginPath();
             ctx.arc(x2, y2, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFB300';
             ctx.fill();
+            ctx.restore();
 
             } finally {
                 // Restore clipping state
