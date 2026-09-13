@@ -75,6 +75,7 @@
         let isDrawingHorizontalLine = false;
         let dragHorizontalLineIndex = -1;
         let crosshairPos = null;
+        let currentCrosshairColor = 'rgba(255, 255, 255, 0.75)';
 
         let trendlines = []; // Array of { id, p1: { time, price }, p2: { time, price } }
         let isDrawingTrendline = false;
@@ -887,9 +888,9 @@
                 const price = getPriceAtY(hy);
 
                 ctx.save();
-                ctx.strokeStyle = isDrawingTrendline ? 'rgba(124, 77, 255, 0.65)' : 'rgba(140, 150, 165, 0.75)';
+                ctx.strokeStyle = isDrawingTrendline ? 'rgba(124, 77, 255, 0.85)' : (currentCrosshairColor || 'rgba(255, 255, 255, 0.85)');
                 ctx.lineWidth = 1;
-                ctx.setLineDash([4, 4]);
+                ctx.setLineDash([6, 6]);
 
                 // Horizontal dashed guideline
                 ctx.beginPath();
@@ -1375,12 +1376,13 @@
             notifyTrendlinesChanged();
         }
 
-        function initChart(upColor, downColor, gridColor, interactive) {
+        function initChart(upColor, downColor, gridColor, interactive, crosshairColor) {
             if (chart) return;
             upColor = upColor || '#21C07A';
             downColor = downColor || '#E53935';
             gridColor = gridColor || 'rgba(128, 128, 128, 0.15)';
             if (interactive === undefined || interactive === null) interactive = true;
+            if (crosshairColor) currentCrosshairColor = crosshairColor;
 
             const container = document.getElementById('chart');
             if (!container) return;
@@ -1416,8 +1418,22 @@
                 },
                 crosshair: {
                     mode: LightweightCharts.CrosshairMode.Normal,
-                    vertLine: { visible: interactive, labelVisible: interactive, color: gridColor },
-                    horzLine: { visible: interactive, labelVisible: interactive, color: gridColor },
+                    vertLine: {
+                        visible: interactive,
+                        labelVisible: interactive,
+                        color: currentCrosshairColor,
+                        width: 1,
+                        style: LightweightCharts.LineStyle.LargeDashed,
+                        labelBackgroundColor: '#2962FF',
+                    },
+                    horzLine: {
+                        visible: interactive,
+                        labelVisible: interactive,
+                        color: currentCrosshairColor,
+                        width: 1,
+                        style: LightweightCharts.LineStyle.LargeDashed,
+                        labelBackgroundColor: '#2962FF',
+                    },
                 },
                 handleScroll: interactive ? {
                     mouseWheel: true,
@@ -1521,6 +1537,26 @@
             currentType = type;
             if (candleSeries) candleSeries.applyOptions({ visible: type === 'candle' });
             if (areaSeries) areaSeries.applyOptions({ visible: type === 'area' });
+        }
+
+        function setCrosshairColor(color) {
+            if (!color) return;
+            currentCrosshairColor = color;
+            if (chart) {
+                chart.applyOptions({
+                    crosshair: {
+                        vertLine: {
+                            color: color,
+                            style: LightweightCharts.LineStyle.LargeDashed,
+                        },
+                        horzLine: {
+                            color: color,
+                            style: LightweightCharts.LineStyle.LargeDashed,
+                        },
+                    }
+                });
+            }
+            renderFib();
         }
 
         function updatePanes() {

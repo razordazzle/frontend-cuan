@@ -28,6 +28,7 @@ class TvChartWidget extends StatefulWidget {
   final Color upColor;
   final Color downColor;
   final Color gridColor;
+  final Color? crosshairColor;
   final Ohlc? liveBar; // bar terakhir yg lagi jalan (dari WS)
   final bool interactive; // false di home (preview doang)
   final ValueChanged<Map<String, dynamic>?>? onCrosshairMove;
@@ -54,6 +55,7 @@ class TvChartWidget extends StatefulWidget {
     required this.upColor,
     required this.downColor,
     required this.gridColor,
+    this.crosshairColor,
     this.liveBar,
     this.interactive = true,
     this.onCrosshairMove,
@@ -142,10 +144,15 @@ class _TvChartWidgetState extends State<TvChartWidget> {
     if (_ctrl == null) return;
     debugPrint("TV_CHART_DART: _pushAll called, candles=${widget.candles.length}, hasPayload=${widget.payload != null}");
 
+    final Color crosshair = widget.crosshairColor ??
+        (Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFFD1D4DC)
+            : const Color(0xFF4A4E5A));
+
     // Pastikan initChart terpanggil dengan parameter warna tema
     await _ctrl!.evaluateJavascript(
       source:
-          "if (typeof initChart === 'function') initChart('${_hex(widget.upColor)}', '${_hex(widget.downColor)}', '${_hex(widget.gridColor)}', ${widget.interactive});",
+          "if (typeof initChart === 'function') initChart('${_hex(widget.upColor)}', '${_hex(widget.downColor)}', '${_hex(widget.gridColor)}', ${widget.interactive}, '${_rgba(crosshair, 0.85)}');",
     );
 
     if (widget.payload != null) {
@@ -254,6 +261,8 @@ class _TvChartWidgetState extends State<TvChartWidget> {
     final bool drawTrendlineChanged =
         old.isDrawingTrendline != widget.isDrawingTrendline;
 
+    final bool crosshairChanged = old.crosshairColor != widget.crosshairColor;
+
     if (dataChanged) {
       _pushAll();
     } else {
@@ -306,6 +315,16 @@ class _TvChartWidgetState extends State<TvChartWidget> {
             source: "cancelTrendlineDrawing();",
           );
         }
+      }
+      if (crosshairChanged) {
+        final Color crosshair = widget.crosshairColor ??
+            (Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFD1D4DC)
+                : const Color(0xFF4A4E5A));
+        _ctrl?.evaluateJavascript(
+          source:
+              "if (typeof setCrosshairColor === 'function') setCrosshairColor('${_rgba(crosshair, 0.85)}');",
+        );
       }
       if (widget.liveBar != null &&
           (old.liveBar?.close != widget.liveBar?.close)) {

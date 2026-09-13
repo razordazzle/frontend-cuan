@@ -247,6 +247,9 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                       upColor: upColor,
                       downColor: downColor,
                       gridColor: cs.outline.withValues(alpha: .15),
+                      crosshairColor: t.brightness == Brightness.dark
+                          ? const Color(0xFFD1D4DC)
+                          : const Color(0xFF4A4E5A),
                       liveBar: liveBar,
                       interactive: true,
                       onCrosshairMove: (Map<String, dynamic>? v) =>
