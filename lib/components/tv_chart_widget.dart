@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../pages/screen/home_page.dart' show Ohlc; 
@@ -138,6 +140,7 @@ class _TvChartWidgetState extends State<TvChartWidget> {
 
   Future<void> _pushAll() async {
     if (_ctrl == null) return;
+    debugPrint("TV_CHART_DART: _pushAll called, candles=${widget.candles.length}, hasPayload=${widget.payload != null}");
 
     // Pastikan initChart terpanggil dengan parameter warna tema
     await _ctrl!.evaluateJavascript(
@@ -321,13 +324,18 @@ class _TvChartWidgetState extends State<TvChartWidget> {
       initialFile: 'assets/charts/tv_chart.html',
       initialSettings: InAppWebViewSettings(
         transparentBackground: true,
-        disableVerticalScroll: true,
+        disableVerticalScroll: false,
+        disableHorizontalScroll: false,
         supportZoom: false,
         builtInZoomControls: false,
         displayZoomControls: false,
         useWideViewPort: false,
-        disableHorizontalScroll: !widget.interactive,
       ),
+      gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+        Factory<OneSequenceGestureRecognizer>(
+          () => EagerGestureRecognizer(),
+        ),
+      },
       onWebViewCreated: (InAppWebViewController c) {
         _ctrl = c;
         c.addJavaScriptHandler(
@@ -409,6 +417,19 @@ class _TvChartWidgetState extends State<TvChartWidget> {
       onConsoleMessage: (InAppWebViewController controller, ConsoleMessage consoleMessage) {
         debugPrint("TV_CHART_JS: ${consoleMessage.messageLevel}: ${consoleMessage.message}");
       },
+      onLoadStart: (InAppWebViewController controller, WebUri? url) {
+        debugPrint("TV_CHART_DART: onLoadStart: $url");
+      },
+      onLoadStop: (InAppWebViewController c, WebUri? url) async {
+        debugPrint("TV_CHART_DART: onLoadStop: $url");
+        await _pushAll();
+      },
+      onReceivedError: (InAppWebViewController controller, WebResourceRequest request, WebResourceError error) {
+        debugPrint("TV_CHART_DART: onReceivedError: ${error.description} for ${request.url}");
+      },
+      onReceivedHttpError: (InAppWebViewController controller, WebResourceRequest request, WebResourceResponse errorResponse) {
+        debugPrint("TV_CHART_DART: onReceivedHttpError: ${errorResponse.statusCode} for ${request.url}");
+      },
       shouldOverrideUrlLoading: (InAppWebViewController controller, NavigationAction action) async {
         final String url = action.request.url.toString();
         if (url.contains('tv_chart.html') ||
@@ -417,13 +438,11 @@ class _TvChartWidgetState extends State<TvChartWidget> {
             url.startsWith('file://') ||
             url.startsWith('about:') ||
             url.startsWith('blob:') ||
-            url.startsWith('data:')) {
+            url.startsWith('data:') ||
+            url.startsWith('chrome-extension://')) {
           return NavigationActionPolicy.ALLOW;
         }
         return NavigationActionPolicy.CANCEL;
-      },
-      onLoadStop: (InAppWebViewController c, WebUri? url) async {
-        await _pushAll();
       },
     );
 

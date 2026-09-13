@@ -13,6 +13,16 @@
             overflow: hidden;
             width: 100%;
             height: 100%;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        #chart-container,
+        #chart,
+        #fib-canvas {
+            touch-action: none;
         }
 
         #chart {
@@ -34,6 +44,14 @@
         <canvas id="fib-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></canvas>
     </div>
     <script>
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.error("TV_CHART_JS_ERROR: " + msg + " at " + lineNo + ":" + columnNo + (error ? " " + error.stack : ""));
+            return false;
+        };
+        window.onunhandledrejection = function(event) {
+            console.error("TV_CHART_JS_REJECTION: " + event.reason);
+        };
+
         let chart = null;
         let candleSeries = null;
         let areaSeries = null;
@@ -49,6 +67,8 @@
         let fibPoint1 = null; // { time, price }
         let fibPoint2 = null; // { time, price }
         let rawCandlesData = [];
+        let currentRsiData = [];
+        let currentVolumeData = [];
         let pendingData = null;
 
         let horizontalLines = []; // Array of prices: [7650, 7820]
@@ -151,6 +171,10 @@
         function getPriceAtY(y) {
             const series = candleSeries || areaSeries;
             if (!series) return null;
+            if (chart && chart.panes && chart.panes().length > 1) {
+                const pane0Height = chart.panes()[0]?.getHeight();
+                if (pane0Height && y > pane0Height) return null;
+            }
             return series.coordinateToPrice(y);
         }
 
@@ -840,6 +864,22 @@
             const activeSeries = candleSeries || areaSeries;
             if (!chart || !activeSeries) return;
 
+            // Clip all drawings strictly to Pane 0 (never spill into sub-panes)
+            let pane0Height = height;
+            try {
+                if (typeof chart.panes === 'function' && chart.panes().length > 0) {
+                    const p0 = chart.panes()[0]?.getHeight();
+                    if (p0 && p0 > 0) pane0Height = p0;
+                }
+            } catch (_) {}
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, 0, width, pane0Height);
+            ctx.clip();
+
+            try {
+
             // 0. Render Crosshair Guidelines during tool drawing (like TradingView)
             if ((isDrawingHorizontalLine || (isDrawingFib && fibDrawState > 0) || (isDrawingTrendline && trendlineDrawState > 0)) && crosshairPos) {
                 const hx = crosshairPos.x;
@@ -1192,6 +1232,11 @@
             ctx.beginPath();
             ctx.arc(x2, y2, 2.5, 0, Math.PI * 2);
             ctx.fill();
+
+            } finally {
+                // Restore clipping state
+                ctx.restore();
+            }
         }
 
         function setFibonacci(showFib) {
@@ -1341,10 +1386,16 @@
             if (!container) return;
 
             chart = LightweightCharts.createChart(container, {
+                autoSize: true,
                 layout: {
                     background: { color: 'transparent' },
                     textColor: '#9aa0a6',
                     fontSize: 11,
+                    panes: {
+                        enableResize: true,
+                        separatorColor: 'rgba(128, 128, 128, 0.25)',
+                        separatorHoverColor: '#2962FF',
+                    },
                 },
                 grid: {
                     vertLines: { color: gridColor },
@@ -1360,7 +1411,7 @@
                 },
                 rightPriceScale: {
                     borderVisible: false,
-                    scaleMargins: { top: 0.1, bottom: currentShowRsi ? 0.25 : 0.08 },
+                    scaleMargins: { top: 0.08, bottom: 0.08 },
                     autoScale: true,
                 },
                 crosshair: {
@@ -1368,8 +1419,24 @@
                     vertLine: { visible: interactive, labelVisible: interactive, color: gridColor },
                     horzLine: { visible: interactive, labelVisible: interactive, color: gridColor },
                 },
-                handleScroll: interactive,
-                handleScale: interactive,
+                handleScroll: interactive ? {
+                    mouseWheel: true,
+                    pressedMouseMove: true,
+                    horzTouchDrag: true,
+                    vertTouchDrag: true,
+                } : false,
+                handleScale: interactive ? {
+                    axisPressedMouseMove: {
+                        time: true,
+                        price: true,
+                    },
+                    axisDoubleClickReset: {
+                        time: true,
+                        price: true,
+                    },
+                    mouseWheel: true,
+                    pinch: true,
+                } : false,
             });
 
             candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
@@ -1379,39 +1446,25 @@
                 wickUpColor: upColor,
                 wickDownColor: downColor,
                 priceFormat: { type: 'price', precision: 0, minMove: 1 },
-            });
+            }, 0);
 
             areaSeries = chart.addSeries(LightweightCharts.AreaSeries, {
                 lineColor: upColor,
                 topColor: upColor + '55',
                 bottomColor: upColor + '05',
                 lineWidth: 2,
-            });
+            }, 0);
 
-            volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries, {
-                priceFormat: { type: 'volume' },
-                priceScaleId: 'volume-scale',
-                visible: currentShowVolume,
-            });
-
-            // Initialize indicator series (default visibility: false)
+            // Initialize SMA series in pane 0
             smaSeries = chart.addSeries(LightweightCharts.LineSeries, {
                 color: '#2962FF',
                 lineWidth: 2,
                 title: 'SMA 20',
                 visible: currentShowSma,
-            });
-
-            rsiSeries = chart.addSeries(LightweightCharts.LineSeries, {
-                color: '#E91E63',
-                lineWidth: 2,
-                title: 'RSI 14',
-                priceScaleId: 'rsi-scale',
-                visible: currentShowRsi,
-            });
+            }, 0);
 
             setSeriesType(currentType);
-            setIndicators(currentShowSma, currentShowRsi, currentShowVolume);
+            updatePanes();
 
             chart.subscribeCrosshairMove(param => {
                 if (!param.time) {
@@ -1470,53 +1523,121 @@
             if (areaSeries) areaSeries.applyOptions({ visible: type === 'area' });
         }
 
-        function updateLayoutMargins() {
-            if (!candleSeries) return;
+        function updatePanes() {
+            try {
+                if (!chart || !candleSeries) return;
 
-            if (currentShowRsi && currentShowVolume) {
-                // Keduanya aktif: Candle di atas, RSI di tengah, Volume di bawah
-                // Main Candle: batas bawah dinaikkan 42% agar tidak tabrakan
-                candleSeries.priceScale().applyOptions({
-                    scaleMargins: { top: 0.08, bottom: 0.42 }
-                });
-                if (rsiSeries) {
-                    rsiSeries.priceScale().applyOptions({
-                        scaleMargins: { top: 0.60, bottom: 0.22 }
-                    });
+                // Remove series that are toggled off
+                if (!currentShowRsi && rsiSeries) {
+                    try { chart.removeSeries(rsiSeries); } catch (_) {}
+                    rsiSeries = null;
                 }
-                if (volumeSeries) {
-                    volumeSeries.priceScale().applyOptions({
-                        scaleMargins: { top: 0.80, bottom: 0.0 }
-                    });
+                if (!currentShowVolume && volumeSeries) {
+                    try { chart.removeSeries(volumeSeries); } catch (_) {}
+                    volumeSeries = null;
                 }
-            } else if (currentShowRsi && !currentShowVolume) {
-                // Hanya RSI aktif: Main Candle dinaikkan 26%
-                candleSeries.priceScale().applyOptions({
-                    scaleMargins: { top: 0.08, bottom: 0.26 }
-                });
-                if (rsiSeries) {
-                    rsiSeries.priceScale().applyOptions({
-                        scaleMargins: { top: 0.76, bottom: 0.0 }
-                    });
+
+                // Determine dynamic pane indices
+                let nextPaneIndex = 1;
+                let targetRsiPane = null;
+                let targetVolumePane = null;
+
+                if (currentShowRsi) {
+                    targetRsiPane = nextPaneIndex++;
                 }
-            } else if (!currentShowRsi && currentShowVolume) {
-                // Hanya Volume aktif: Main Candle dinaikkan 22% agar tidak tabrakan dengan bar volume
-                candleSeries.priceScale().applyOptions({
-                    scaleMargins: { top: 0.08, bottom: 0.22 }
-                });
-                if (volumeSeries) {
-                    volumeSeries.priceScale().applyOptions({
-                        scaleMargins: { top: 0.80, bottom: 0.0 }
-                    });
+                if (currentShowVolume) {
+                    targetVolumePane = nextPaneIndex++;
                 }
-            } else {
-                // Keduanya nonaktif: Full-height clean view
+
+                // Create or position RSI series
+                if (currentShowRsi) {
+                    if (!rsiSeries) {
+                        rsiSeries = chart.addSeries(LightweightCharts.LineSeries, {
+                            color: '#E91E63',
+                            lineWidth: 2,
+                            title: 'RSI 14',
+                            priceScaleId: 'rsi-scale',
+                            priceFormat: {
+                                type: 'custom',
+                                minMove: 0.01,
+                                formatter: (p) => p.toFixed(1),
+                            },
+                        }, targetRsiPane);
+
+                        rsiSeries.createPriceLine({
+                            price: 70,
+                            color: 'rgba(233, 30, 99, 0.4)',
+                            lineWidth: 1,
+                            lineStyle: LightweightCharts.LineStyle.Dashed,
+                            axisLabelVisible: true,
+                            title: '70',
+                        });
+                        rsiSeries.createPriceLine({
+                            price: 30,
+                            color: 'rgba(233, 30, 99, 0.4)',
+                            lineWidth: 1,
+                            lineStyle: LightweightCharts.LineStyle.Dashed,
+                            axisLabelVisible: true,
+                            title: '30',
+                        });
+                        rsiSeries.priceScale().applyOptions({
+                            scaleMargins: { top: 0.1, bottom: 0.1 },
+                        });
+
+                        if (currentRsiData && currentRsiData.length > 0) {
+                            rsiSeries.setData(currentRsiData);
+                        }
+                    } else if (rsiSeries.getPane && rsiSeries.getPane().paneIndex() !== targetRsiPane) {
+                        rsiSeries.moveToPane(targetRsiPane);
+                    }
+                }
+
+                // Create or position Volume series
+                if (currentShowVolume) {
+                    if (!volumeSeries) {
+                        volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries, {
+                            priceFormat: { type: 'volume' },
+                            priceScaleId: 'volume-scale',
+                            title: 'VOL',
+                        }, targetVolumePane);
+
+                        volumeSeries.priceScale().applyOptions({
+                            scaleMargins: { top: 0.15, bottom: 0 },
+                        });
+
+                        if (currentVolumeData && currentVolumeData.length > 0) {
+                            volumeSeries.setData(currentVolumeData);
+                        }
+                    } else if (volumeSeries.getPane && volumeSeries.getPane().paneIndex() !== targetVolumePane) {
+                        volumeSeries.moveToPane(targetVolumePane);
+                    }
+                }
+
+                // Configure stretch factors based on active panes:
+                try {
+                    const panes = chart.panes();
+                    if (panes && panes.length === 1) {
+                        panes[0].setStretchFactor(1);
+                    } else if (panes && panes.length === 2) {
+                        panes[0].setStretchFactor(4);
+                        panes[1].setStretchFactor(1.2);
+                    } else if (panes && panes.length >= 3) {
+                        panes[0].setStretchFactor(5);
+                        panes[1].setStretchFactor(1.4);
+                        panes[2].setStretchFactor(1.2);
+                    }
+                } catch (paneErr) {
+                    console.warn("setStretchFactor warning:", paneErr);
+                }
+
                 candleSeries.priceScale().applyOptions({
-                    scaleMargins: { top: 0.08, bottom: 0.06 }
+                    scaleMargins: { top: 0.08, bottom: 0.08 }
                 });
+
+                renderFib();
+            } catch (err) {
+                console.error("updatePanes error:", err);
             }
-
-            renderFib();
         }
 
         function setIndicators(showSma, showRsi, showVolume) {
@@ -1529,14 +1650,8 @@
             if (smaSeries) {
                 smaSeries.applyOptions({ visible: currentShowSma });
             }
-            if (rsiSeries) {
-                rsiSeries.applyOptions({ visible: currentShowRsi });
-            }
-            if (volumeSeries) {
-                volumeSeries.applyOptions({ visible: currentShowVolume });
-            }
 
-            updateLayoutMargins();
+            updatePanes();
         }
 
         function setData(candlesJson, volumesJson) {
@@ -1547,12 +1662,15 @@
             areaSeries.setData(candles.map(c => ({ time: c.time, value: c.close })));
             if (volumesJson) {
                 const vols = typeof volumesJson === 'string' ? JSON.parse(volumesJson) : volumesJson;
-                volumeSeries.setData(vols);
+                currentVolumeData = vols;
+                if (volumeSeries) {
+                    volumeSeries.setData(vols);
+                }
             }
             if (currentShowFib && (!fibPoint1 || !fibPoint2)) {
                 startFibDrawing();
             }
-            updateLayoutMargins();
+            updatePanes();
             chart.timeScale().fitContent();
             renderFib();
         }
@@ -1576,7 +1694,10 @@
                     value: c.volume || 0,
                     color: c.close >= c.open ? '#26a69a88' : '#ef535088'
                 }));
-                volumeSeries.setData(volData);
+                currentVolumeData = volData;
+                if (volumeSeries) {
+                    volumeSeries.setData(volData);
+                }
             }
 
             if (payload.indicators) {
@@ -1584,7 +1705,10 @@
                     smaSeries.setData(payload.indicators.sma20);
                 }
                 if (payload.indicators.rsi14 && Array.isArray(payload.indicators.rsi14)) {
-                    rsiSeries.setData(payload.indicators.rsi14);
+                    currentRsiData = payload.indicators.rsi14;
+                    if (rsiSeries) {
+                        rsiSeries.setData(payload.indicators.rsi14);
+                    }
                 }
             }
 
@@ -1603,7 +1727,17 @@
             areaSeries.update({ time: bar.time, value: bar.close });
             if (volBarInput) {
                 const vol = typeof volBarInput === 'string' ? JSON.parse(volBarInput) : volBarInput;
-                volumeSeries.update(vol);
+                if (currentVolumeData && currentVolumeData.length > 0) {
+                    const lastIdx = currentVolumeData.length - 1;
+                    if (currentVolumeData[lastIdx].time === vol.time) {
+                        currentVolumeData[lastIdx] = vol;
+                    } else {
+                        currentVolumeData.push(vol);
+                    }
+                }
+                if (volumeSeries) {
+                    volumeSeries.update(vol);
+                }
             }
             renderFib();
         }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:cuan_app/config/app_config.dart';
 import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/data/model/broker_summary_row.dart';
 import 'package:cuan_app/data/model/candle_item.dart';
@@ -63,7 +64,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
         candleLimit: initialLimit,
       );
 
-      const wsBaseUrl = 'ws://10.0.2.2:8000';
+      final wsBaseUrl = AppConfig.wsBaseUrl;
       context.read<StockDetailProvider>().startLive(
         wsBaseUrl: wsBaseUrl,
         symbol: widget.ticker,
@@ -382,7 +383,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                                   );
 
                                   context.read<StockDetailProvider>().startLive(
-                                    wsBaseUrl: 'ws://10.0.2.2:8000',
+                                    wsBaseUrl: AppConfig.wsBaseUrl,
                                     symbol: widget.ticker,
                                   );
                                 }
