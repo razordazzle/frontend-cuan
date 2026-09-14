@@ -67,6 +67,8 @@ class TvChartWidget extends StatefulWidget {
 
 class _TvChartWidgetState extends State<TvChartWidget> {
   InAppWebViewController? _ctrl;
+  List<double>? _lastReceivedHorizLines;
+  List<Map<String, dynamic>>? _lastReceivedTrendlines;
 
   @override
   void initState() {
@@ -83,6 +85,7 @@ class _TvChartWidgetState extends State<TvChartWidget> {
               .whereType<num>()
               .map((num e) => e.toDouble())
               .toList();
+          _lastReceivedHorizLines = List<double>.from(updated);
           widget.onHorizontalLinesChanged?.call(updated);
         }
       } else if (type == 'onFibDrawn') {
@@ -97,6 +100,7 @@ class _TvChartWidgetState extends State<TvChartWidget> {
               .whereType<Map>()
               .map((Map e) => Map<String, dynamic>.from(e))
               .toList();
+          _lastReceivedTrendlines = List<Map<String, dynamic>>.from(updated);
           widget.onTrendlinesChanged?.call(updated);
         }
       } else if (type == 'onCrosshair') {
@@ -252,12 +256,12 @@ class _TvChartWidgetState extends State<TvChartWidget> {
     final bool drawFibChanged = old.isDrawingFib != widget.isDrawingFib;
 
     final bool horizLinesChanged =
-        old.horizontalLines.length != widget.horizontalLines.length;
+        !listEquals(old.horizontalLines, widget.horizontalLines);
     final bool drawHorizChanged =
         old.isDrawingHorizontalLine != widget.isDrawingHorizontalLine;
 
     final bool trendlinesChanged =
-        old.trendlines.length != widget.trendlines.length;
+        !listEquals(old.trendlines, widget.trendlines);
     final bool drawTrendlineChanged =
         old.isDrawingTrendline != widget.isDrawingTrendline;
 
@@ -283,10 +287,12 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         );
       }
       if (horizLinesChanged) {
-        final String horizJson = jsonEncode(widget.horizontalLines);
-        _ctrl?.evaluateJavascript(
-          source: "setHorizontalLines($horizJson);",
-        );
+        if (!listEquals(widget.horizontalLines, _lastReceivedHorizLines)) {
+          final String horizJson = jsonEncode(widget.horizontalLines);
+          _ctrl?.evaluateJavascript(
+            source: "setHorizontalLines($horizJson);",
+          );
+        }
       }
       if (drawHorizChanged) {
         if (widget.isDrawingHorizontalLine) {
@@ -300,10 +306,12 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         }
       }
       if (trendlinesChanged) {
-        final String trendJson = jsonEncode(widget.trendlines);
-        _ctrl?.evaluateJavascript(
-          source: "setTrendlines($trendJson);",
-        );
+        if (!listEquals(widget.trendlines, _lastReceivedTrendlines)) {
+          final String trendJson = jsonEncode(widget.trendlines);
+          _ctrl?.evaluateJavascript(
+            source: "setTrendlines($trendJson);",
+          );
+        }
       }
       if (drawTrendlineChanged) {
         if (widget.isDrawingTrendline) {

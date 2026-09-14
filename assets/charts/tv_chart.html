@@ -64,6 +64,7 @@
         let currentShowVolume = false;
         let currentShowFib = false;
         let isDrawingFib = false;
+        let isFibSelected = false; // true: Edit Mode (large handles, dashed line), false: Non-Edit Mode (subtle dots)
         let fibPoint1 = null; // { time, price }
         let fibPoint2 = null; // { time, price }
         let rawCandlesData = [];
@@ -73,6 +74,7 @@
 
         let horizontalLines = []; // Array of prices: [7650, 7820]
         let isDrawingHorizontalLine = false;
+        let selectedHorizontalLineIndex = -1; // -1: none, >= 0: index of horizontal line in edit mode
         let dragHorizontalLineIndex = -1;
         let crosshairPos = null;
         let currentCrosshairColor = 'rgba(255, 255, 255, 0.75)';
@@ -179,6 +181,54 @@
             return series.coordinateToPrice(y);
         }
 
+        function getTrendlineActionPillPos(x1, y1, x2, y2, containerWidth, containerHeight) {
+            const mx = (x1 + x2) / 2;
+            const my = (y1 + y2) / 2;
+            const maxW = containerWidth || 360;
+            const maxH = containerHeight || 500;
+
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            let len = Math.hypot(dx, dy);
+            if (len < 1) len = 1;
+
+            // Perpendicular unit normal vector (nx, ny)
+            let nx = -dy / len;
+            let ny = dx / len;
+
+            // Standardize normal to point "upward" (negative Y) away from the line
+            if (Math.abs(ny) < 0.05) {
+                // For steep or purely vertical lines: offset horizontally into open space
+                nx = (mx > maxW / 2) ? -1 : 1;
+                ny = 0;
+            } else if (ny > 0) {
+                // Invert downwards-pointing normal so it points upwards away from line
+                nx = -nx;
+                ny = -ny;
+            }
+
+            const offsetDist = 38;
+            let px = mx + (nx * offsetDist);
+            let py = my + (ny * offsetDist);
+
+            // If too close to the top boundary (< 42px), flip normal to opposite side of line
+            if (py < 42) {
+                px = mx - (nx * offsetDist);
+                py = my - (ny * offsetDist);
+            }
+            // If flipped below chart bottom edge, push back up
+            if (py > maxH - 35) {
+                px = mx + (nx * offsetDist);
+                py = my + (ny * offsetDist);
+            }
+
+            // Clamp coordinates safely within canvas bounds
+            px = Math.max(35, Math.min(maxW - 35, px));
+            py = Math.max(25, Math.min(maxH - 25, py));
+
+            return { x: px, y: py, mx, my };
+        }
+
         function initFibPointerEvents() {
             const canvas = document.getElementById('fib-canvas');
             const chartContainer = document.getElementById('chart-container');
@@ -216,10 +266,14 @@
                         const lineY = activeSeries.priceToCoordinate(horizontalLines[i]);
                         if (lineY !== null && Math.abs(y - lineY) <= HITBOX_HLINE) {
                             canvas.style.pointerEvents = 'auto';
-                            if (x >= rect.width - HITBOX_HLINE_DEL) {
-                                canvas.style.cursor = 'pointer';
+                            if (i === selectedHorizontalLineIndex) {
+                                if (x >= rect.width - HITBOX_HLINE_DEL) {
+                                    canvas.style.cursor = 'pointer';
+                                } else {
+                                    canvas.style.cursor = 'ns-resize';
+                                }
                             } else {
-                                canvas.style.cursor = 'ns-resize';
+                                canvas.style.cursor = 'pointer';
                             }
                             return;
                         }
@@ -236,9 +290,8 @@
                         const y2 = activeSeries.priceToCoordinate(t.p2.price);
                         if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
                             if (i === selectedTrendlineIndex) {
-                                const mx = (x1 + x2) / 2;
-                                const my = (y1 + y2) / 2;
-                                if (Math.hypot(x - mx, y - my) <= HITBOX_TL_DEL) {
+                                const pillPos = getTrendlineActionPillPos(x1, y1, x2, y2, rect.width, rect.height);
+                                if (Math.hypot(x - pillPos.x, y - pillPos.y) <= HITBOX_TL_DEL) {
                                     canvas.style.pointerEvents = 'auto';
                                     canvas.style.cursor = 'pointer';
                                     return;
@@ -315,16 +368,28 @@
 
                         const hit1 = x1 !== null && y1 !== null && Math.hypot(x - x1, y - y1) <= HITBOX_FIB_ANCHOR;
                         const hit2 = x2 !== null && y2 !== null && Math.hypot(x - x2, y - y2) <= HITBOX_FIB_ANCHOR;
+                        const hitDiagonal = (x1 !== null && y1 !== null && x2 !== null && y2 !== null) && distToSegment(x, y, x1, y1, x2, y2) <= 24;
 
                         if (hit1 || hit2) {
                             e.stopPropagation();
                             e.stopImmediatePropagation();
                             e.preventDefault();
 
+                            isFibSelected = true;
+                            selectedTrendlineIndex = -1;
                             dragMode = hit1 ? 1 : 2;
                             isPointerDown = true;
                             try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
                             chart.applyOptions({ handleScroll: false, handleScale: false });
+                            renderFib();
+                            return;
+                        } else if (hitDiagonal) {
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            e.preventDefault();
+
+                            isFibSelected = true;
+                            selectedTrendlineIndex = -1;
                             renderFib();
                             return;
                         }
@@ -339,19 +404,31 @@
                                 e.stopImmediatePropagation();
                                 e.preventDefault();
 
-                                if (x >= rect.width - HITBOX_HLINE_DEL) {
-                                    horizontalLines.splice(i, 1);
+                                if (i === selectedHorizontalLineIndex) {
+                                    // In edit mode: check if tapped the delete button
+                                    if (x >= rect.width - HITBOX_HLINE_DEL) {
+                                        horizontalLines.splice(i, 1);
+                                        selectedHorizontalLineIndex = -1;
+                                        renderFib();
+                                        notifyHorizontalLinesChanged();
+                                        return;
+                                    }
+
+                                    // In edit mode: allow dragging vertically
+                                    dragHorizontalLineIndex = i;
+                                    isPointerDown = true;
+                                    try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                    chart.applyOptions({ handleScroll: false, handleScale: false });
                                     renderFib();
-                                    notifyHorizontalLinesChanged();
+                                    return;
+                                } else {
+                                    // In non-edit mode: tap to enter edit mode!
+                                    selectedHorizontalLineIndex = i;
+                                    selectedTrendlineIndex = -1;
+                                    isFibSelected = false;
+                                    renderFib();
                                     return;
                                 }
-
-                                dragHorizontalLineIndex = i;
-                                isPointerDown = true;
-                                try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
-                                chart.applyOptions({ handleScroll: false, handleScale: false });
-                                renderFib();
-                                return;
                             }
                         }
                     }
@@ -366,9 +443,8 @@
                             const y2 = activeSeries.priceToCoordinate(t.p2.price);
                             if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
                                 if (i === selectedTrendlineIndex) {
-                                    const mx = (x1 + x2) / 2;
-                                    const my = (y1 + y2) / 2;
-                                    if (Math.hypot(x - mx, y - my) <= HITBOX_TL_DEL) {
+                                    const pillPos = getTrendlineActionPillPos(x1, y1, x2, y2, chartContainer.clientWidth, chartContainer.clientHeight);
+                                    if (Math.hypot(x - pillPos.x, y - pillPos.y) <= HITBOX_TL_DEL) {
                                         e.stopPropagation();
                                         e.stopImmediatePropagation();
                                         e.preventDefault();
@@ -443,9 +519,21 @@
                         }
                     }
 
-                    // If tapped empty space on chart while a trendline was selected, deselect it
+                    // If tapped empty space on chart while a trendline, fib, or horizontal line was selected, deselect it
+                    let needsDeselect = false;
                     if (selectedTrendlineIndex !== -1) {
                         selectedTrendlineIndex = -1;
+                        needsDeselect = true;
+                    }
+                    if (isFibSelected) {
+                        isFibSelected = false;
+                        needsDeselect = true;
+                    }
+                    if (selectedHorizontalLineIndex !== -1) {
+                        selectedHorizontalLineIndex = -1;
+                        needsDeselect = true;
+                    }
+                    if (needsDeselect) {
                         renderFib();
                     }
                 }, { capture: true });
@@ -464,6 +552,9 @@
                     crosshairPos = null;
                     if (price !== null) {
                         horizontalLines.push(price);
+                        selectedHorizontalLineIndex = horizontalLines.length - 1; // Enter edit mode immediately upon placement!
+                        selectedTrendlineIndex = -1;
+                        isFibSelected = false;
                         isDrawingHorizontalLine = false;
                         canvas.style.cursor = 'default';
                         canvas.style.pointerEvents = 'none';
@@ -483,22 +574,33 @@
                     for (let i = 0; i < horizontalLines.length; i++) {
                         const lineY = activeSeries.priceToCoordinate(horizontalLines[i]);
                         if (lineY !== null && Math.abs(y - lineY) <= HITBOX_HLINE) {
-                            // Check if clicked the delete button at the right edge
-                            if (x >= rect.width - HITBOX_HLINE_DEL) {
-                                horizontalLines.splice(i, 1);
+                            if (i === selectedHorizontalLineIndex) {
+                                // Check if clicked the delete button at the right edge
+                                if (x >= rect.width - HITBOX_HLINE_DEL) {
+                                    horizontalLines.splice(i, 1);
+                                    selectedHorizontalLineIndex = -1;
+                                    canvas.style.cursor = 'default';
+                                    canvas.style.pointerEvents = 'none';
+                                    renderFib();
+                                    notifyHorizontalLinesChanged();
+                                    return;
+                                }
+                                // Otherwise start vertical dragging
+                                dragHorizontalLineIndex = i;
+                                isPointerDown = true;
+                                canvas.setPointerCapture?.(e.pointerId);
+                                if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                                canvas.style.cursor = 'ns-resize';
+                                return;
+                            } else {
+                                // In non-edit mode: tap to enter edit mode!
+                                selectedHorizontalLineIndex = i;
+                                selectedTrendlineIndex = -1;
+                                isFibSelected = false;
                                 canvas.style.cursor = 'default';
-                                canvas.style.pointerEvents = 'none';
                                 renderFib();
-                                notifyHorizontalLinesChanged();
                                 return;
                             }
-                            // Otherwise start vertical dragging
-                            dragHorizontalLineIndex = i;
-                            isPointerDown = true;
-                            canvas.setPointerCapture?.(e.pointerId);
-                            if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
-                            canvas.style.cursor = 'ns-resize';
-                            return;
                         }
                     }
                 }
@@ -560,10 +662,9 @@
                         const y2 = activeSeries.priceToCoordinate(t.p2.price);
                         if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
                             if (i === selectedTrendlineIndex) {
-                                // Midpoint delete button tap
-                                const mx = (x1 + x2) / 2;
-                                const my = (y1 + y2) / 2;
-                                if (Math.hypot(x - mx, y - my) <= HITBOX_TL_DEL) {
+                                // Floating context action pill tap (TradingView Mobile Style)
+                                const pillPos = getTrendlineActionPillPos(x1, y1, x2, y2, chartContainer.clientWidth, chartContainer.clientHeight);
+                                if (Math.hypot(x - pillPos.x, y - pillPos.y) <= HITBOX_TL_DEL) {
                                     trendlines.splice(i, 1);
                                     selectedTrendlineIndex = -1;
                                     canvas.style.cursor = 'default';
@@ -679,6 +780,7 @@
                         fibPoint2 = { time, price };
                         fibDrawState = 0;
                         isDrawingFib = false;
+                        isFibSelected = true;
                         isPointerDown = false;
                         if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
                         canvas.style.cursor = 'default';
@@ -694,8 +796,20 @@
                 }
 
                 // If tapped on empty canvas space outside all drawings:
+                let canvasNeedsDeselect = false;
                 if (selectedTrendlineIndex !== -1) {
                     selectedTrendlineIndex = -1;
+                    canvasNeedsDeselect = true;
+                }
+                if (isFibSelected) {
+                    isFibSelected = false;
+                    canvasNeedsDeselect = true;
+                }
+                if (selectedHorizontalLineIndex !== -1) {
+                    selectedHorizontalLineIndex = -1;
+                    canvasNeedsDeselect = true;
+                }
+                if (canvasNeedsDeselect) {
                     renderFib();
                 }
                 canvas.style.pointerEvents = 'none';
@@ -930,6 +1044,7 @@
                     if (dist >= 20 && fibPoint1 && fibPoint2 && Math.abs(fibPoint2.price - fibPoint1.price) > 0.001) {
                         fibDrawState = 0;
                         isDrawingFib = false;
+                        isFibSelected = true;
                         isPointerDown = false;
                         try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
                         try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
@@ -1057,15 +1172,17 @@
                     const y = activeSeries.priceToCoordinate(price);
                     if (y === null || y < 0 || y > height) continue;
 
+                    const isSelected = (i === selectedHorizontalLineIndex);
+
                     // Solid horizontal line across full width
                     ctx.beginPath();
                     ctx.strokeStyle = '#00E5FF';
-                    ctx.lineWidth = 1.5;
+                    ctx.lineWidth = isSelected ? 2.0 : 1.5;
                     ctx.moveTo(0, y);
                     ctx.lineTo(width, y);
                     ctx.stroke();
 
-                    // Right price pill badge + delete button
+                    // Price text formatting
                     const priceFormatted = price >= 1000
                         ? Math.round(price).toLocaleString('en-US')
                         : price.toFixed(2);
@@ -1073,45 +1190,91 @@
                     const textWidth = ctx.measureText(text).width;
                     const badgeHeight = 20;
                     const badgeWidth = textWidth + 10;
-                    const delButtonWidth = 18;
-                    const totalWidth = badgeWidth + delButtonWidth + 4;
-                    const badgeX = width - totalWidth - 4;
-                    const badgeY = y - (badgeHeight / 2);
 
-                    // Price pill background
-                    ctx.fillStyle = '#00E5FF';
-                    if (ctx.roundRect) {
+                    if (isSelected) {
+                        // EDIT MODE: Price badge AND trash can delete button
+                        const delButtonWidth = 18;
+                        const totalWidth = badgeWidth + delButtonWidth + 4;
+                        const badgeX = width - totalWidth - 4;
+                        const badgeY = y - (badgeHeight / 2);
+
+                        // Price pill background
+                        ctx.fillStyle = '#00E5FF';
+                        if (ctx.roundRect) {
+                            ctx.beginPath();
+                            ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
+                            ctx.fill();
+                        } else {
+                            ctx.fillRect(badgeX, badgeY, badgeWidth, badgeHeight);
+                        }
+
+                        // Price text
+                        ctx.fillStyle = '#051B24';
+                        ctx.fillText(text, badgeX + 5, y);
+
+                        // Delete button circle (✕)
+                        const delCenterX = width - 15;
+                        const delCenterY = y;
+                        const delRadius = 11;
+
                         ctx.beginPath();
-                        ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
+                        ctx.arc(delCenterX, delCenterY, delRadius, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(239, 83, 80, 0.95)';
                         ctx.fill();
+
+                        // Unified Vector Trash Can Icon in white
+                        ctx.save();
+                        ctx.strokeStyle = '#FFFFFF';
+                        ctx.lineWidth = 1.3;
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+
+                        // Lid handle
+                        ctx.beginPath();
+                        ctx.moveTo(delCenterX - 2, delCenterY - 5);
+                        ctx.lineTo(delCenterX + 2, delCenterY - 5);
+                        ctx.stroke();
+
+                        // Lid rim
+                        ctx.beginPath();
+                        ctx.moveTo(delCenterX - 5, delCenterY - 3.5);
+                        ctx.lineTo(delCenterX + 5, delCenterY - 3.5);
+                        ctx.stroke();
+
+                        // Can body
+                        ctx.beginPath();
+                        ctx.moveTo(delCenterX - 4, delCenterY - 2.5);
+                        ctx.lineTo(delCenterX - 3, delCenterY + 4.5);
+                        ctx.lineTo(delCenterX + 3, delCenterY + 4.5);
+                        ctx.lineTo(delCenterX + 4, delCenterY - 2.5);
+                        ctx.stroke();
+
+                        // 2 inner ribs
+                        ctx.beginPath();
+                        ctx.moveTo(delCenterX - 1.4, delCenterY - 1);
+                        ctx.lineTo(delCenterX - 1.4, delCenterY + 3);
+                        ctx.moveTo(delCenterX + 1.4, delCenterY - 1);
+                        ctx.lineTo(delCenterX + 1.4, delCenterY + 3);
+                        ctx.stroke();
+
+                        ctx.restore();
                     } else {
-                        ctx.fillRect(badgeX, badgeY, badgeWidth, badgeHeight);
+                        // NON-EDIT MODE: Clean, subtle price pill without delete button
+                        const badgeX = width - badgeWidth - 6;
+                        const badgeY = y - (badgeHeight / 2);
+
+                        ctx.fillStyle = 'rgba(0, 229, 255, 0.9)';
+                        if (ctx.roundRect) {
+                            ctx.beginPath();
+                            ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
+                            ctx.fill();
+                        } else {
+                            ctx.fillRect(badgeX, badgeY, badgeWidth, badgeHeight);
+                        }
+
+                        ctx.fillStyle = '#051B24';
+                        ctx.fillText(text, badgeX + 5, y);
                     }
-
-                    // Price text
-                    ctx.fillStyle = '#051B24';
-                    ctx.fillText(text, badgeX + 5, y);
-
-                    // Delete button circle (✕)
-                    const delCenterX = width - 15;
-                    const delCenterY = y;
-                    const delRadius = 11;
-
-                    ctx.beginPath();
-                    ctx.arc(delCenterX, delCenterY, delRadius, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(239, 83, 80, 0.95)';
-                    ctx.fill();
-
-                    // '✕' icon lines
-                    ctx.beginPath();
-                    ctx.strokeStyle = '#FFFFFF';
-                    ctx.lineWidth = 1.8;
-                    const arm = 4.2;
-                    ctx.moveTo(delCenterX - arm, delCenterY - arm);
-                    ctx.lineTo(delCenterX + arm, delCenterY + arm);
-                    ctx.moveTo(delCenterX + arm, delCenterY - arm);
-                    ctx.lineTo(delCenterX - arm, delCenterY + arm);
-                    ctx.stroke();
                 }
                 ctx.restore();
             }
@@ -1179,25 +1342,93 @@
                         ctx.fill();
                         ctx.restore();
 
-                        // Midpoint delete button (✕)
-                        const mx = (x1 + x2) / 2;
-                        const my = (y1 + y2) / 2;
-                        const delRadius = 11;
+                        // Floating Context Action Pill (TradingView Mobile Style)
+                        const pillPos = getTrendlineActionPillPos(x1, y1, x2, y2, width);
+                        const px = pillPos.x;
+                        const py = pillPos.y;
+
+                        ctx.save();
+                        // Capsule shadow
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+                        ctx.shadowBlur = 8;
+                        ctx.shadowOffsetY = 2;
+
+                        // Pill background capsule (width 40, height 28, radius 14)
+                        const pw = 40;
+                        const ph = 28;
+                        const pr = 14;
+                        const pillLeft = px - (pw / 2);
+                        const pillTop = py - (ph / 2);
 
                         ctx.beginPath();
-                        ctx.arc(mx, my, delRadius, 0, Math.PI * 2);
-                        ctx.fillStyle = 'rgba(239, 83, 80, 0.95)';
+                        if (ctx.roundRect) {
+                            ctx.roundRect(pillLeft, pillTop, pw, ph, pr);
+                        } else {
+                            ctx.arc(pillLeft + pr, py, pr, Math.PI / 2, Math.PI * 1.5);
+                            ctx.lineTo(pillLeft + pw - pr, pillTop);
+                            ctx.arc(pillLeft + pw - pr, py, pr, -Math.PI / 2, Math.PI / 2);
+                            ctx.lineTo(pillLeft + pr, pillTop + ph);
+                        }
+                        ctx.fillStyle = '#1E222D';
                         ctx.fill();
 
-                        ctx.beginPath();
-                        ctx.strokeStyle = '#FFFFFF';
-                        ctx.lineWidth = 1.8;
-                        const arm = 4.2;
-                        ctx.moveTo(mx - arm, my - arm);
-                        ctx.lineTo(mx + arm, my + arm);
-                        ctx.moveTo(mx + arm, my - arm);
-                        ctx.lineTo(mx - arm, my + arm);
+                        // Border stroke
+                        ctx.shadowColor = 'transparent';
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+                        ctx.lineWidth = 1.2;
                         ctx.stroke();
+
+                        // Pointer indicator line pointing towards midpoint (mx, my)
+                        const angleToMid = Math.atan2(pillPos.my - py, pillPos.mx - px);
+                        const ptrStartX = px + Math.cos(angleToMid) * (pr + 1);
+                        const ptrStartY = py + Math.sin(angleToMid) * (pr + 1);
+                        const ptrEndX = px + Math.cos(angleToMid) * (pr + 7);
+                        const ptrEndY = py + Math.sin(angleToMid) * (pr + 7);
+
+                        ctx.beginPath();
+                        ctx.moveTo(ptrStartX, ptrStartY);
+                        ctx.lineTo(ptrEndX, ptrEndY);
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+                        ctx.lineWidth = 1.4;
+                        ctx.stroke();
+
+                        // Vector Trash Can Icon (🗑️) inside pill
+                        ctx.save();
+                        ctx.strokeStyle = '#EF5350';
+                        ctx.lineWidth = 1.6;
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+
+                        // Lid handle
+                        ctx.beginPath();
+                        ctx.moveTo(px - 2.5, py - 6);
+                        ctx.lineTo(px + 2.5, py - 6);
+                        ctx.stroke();
+
+                        // Lid rim
+                        ctx.beginPath();
+                        ctx.moveTo(px - 6.5, py - 4);
+                        ctx.lineTo(px + 6.5, py - 4);
+                        ctx.stroke();
+
+                        // Can body
+                        ctx.beginPath();
+                        ctx.moveTo(px - 5, py - 3);
+                        ctx.lineTo(px - 4, py + 5.5);
+                        ctx.lineTo(px + 4, py + 5.5);
+                        ctx.lineTo(px + 5, py - 3);
+                        ctx.stroke();
+
+                        // 2 inner ribs
+                        ctx.beginPath();
+                        ctx.moveTo(px - 1.8, py - 1.5);
+                        ctx.lineTo(px - 1.8, py + 3.5);
+                        ctx.moveTo(px + 1.8, py - 1.5);
+                        ctx.lineTo(px + 1.8, py + 3.5);
+                        ctx.stroke();
+
+                        ctx.restore();
+                        ctx.restore();
                     }
                 }
                 ctx.restore();
@@ -1335,57 +1566,79 @@
                 ctx.fillText(text, lineStartX + 4, item.y - 3);
             }
 
-            // Trendline connecting Anchor 1 and Anchor 2
-            ctx.beginPath();
-            ctx.strokeStyle = '#9E9E9E';
-            ctx.lineWidth = 1.4;
-            ctx.setLineDash([5, 4]);
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            ctx.stroke();
-            ctx.setLineDash([]);
+            // In Edit mode, show guideline and prominent grab handles; in non-edit mode, show subtle minimal endpoint dots
+            if (isFibSelected) {
+                // Trendline connecting Anchor 1 and Anchor 2
+                ctx.beginPath();
+                ctx.strokeStyle = '#9E9E9E';
+                ctx.lineWidth = 1.4;
+                ctx.setLineDash([5, 4]);
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+                ctx.setLineDash([]);
 
-            // Anchor 1 Handle (Origin - 100%)
-            const isA1Active = (dragMode === 1);
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(x1, y1, isA1Active ? 12 : 9, 0, Math.PI * 2);
-            ctx.fillStyle = isA1Active ? 'rgba(255, 179, 0, 0.45)' : 'rgba(255, 179, 0, 0.25)';
-            ctx.fill();
-            ctx.strokeStyle = '#FFB300';
-            ctx.lineWidth = isA1Active ? 2 : 1.5;
-            ctx.stroke();
+                // Anchor 1 Handle (Edit mode: large ergonomic grab handle)
+                const isA1Active = (dragMode === 1);
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(x1, y1, isA1Active ? 12 : 9, 0, Math.PI * 2);
+                ctx.fillStyle = isA1Active ? 'rgba(255, 179, 0, 0.45)' : 'rgba(255, 179, 0, 0.25)';
+                ctx.fill();
+                ctx.strokeStyle = '#FFB300';
+                ctx.lineWidth = isA1Active ? 2 : 1.5;
+                ctx.stroke();
 
-            ctx.beginPath();
-            ctx.arc(x1, y1, 4.5, 0, Math.PI * 2);
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(x1, y1, 2.5, 0, Math.PI * 2);
-            ctx.fillStyle = '#FFB300';
-            ctx.fill();
-            ctx.restore();
+                ctx.beginPath();
+                ctx.arc(x1, y1, 4.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(x1, y1, 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFB300';
+                ctx.fill();
+                ctx.restore();
 
-            // Anchor 2 Handle (Peak - 0%)
-            const isA2Active = (dragMode === 2);
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(x2, y2, isA2Active ? 12 : 9, 0, Math.PI * 2);
-            ctx.fillStyle = isA2Active ? 'rgba(255, 179, 0, 0.45)' : 'rgba(255, 179, 0, 0.25)';
-            ctx.fill();
-            ctx.strokeStyle = '#FFB300';
-            ctx.lineWidth = isA2Active ? 2 : 1.5;
-            ctx.stroke();
+                // Anchor 2 Handle (Edit mode: large ergonomic grab handle)
+                const isA2Active = (dragMode === 2);
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(x2, y2, isA2Active ? 12 : 9, 0, Math.PI * 2);
+                ctx.fillStyle = isA2Active ? 'rgba(255, 179, 0, 0.45)' : 'rgba(255, 179, 0, 0.25)';
+                ctx.fill();
+                ctx.strokeStyle = '#FFB300';
+                ctx.lineWidth = isA2Active ? 2 : 1.5;
+                ctx.stroke();
 
-            ctx.beginPath();
-            ctx.arc(x2, y2, 4.5, 0, Math.PI * 2);
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(x2, y2, 2.5, 0, Math.PI * 2);
-            ctx.fillStyle = '#FFB300';
-            ctx.fill();
-            ctx.restore();
+                ctx.beginPath();
+                ctx.arc(x2, y2, 4.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(x2, y2, 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFB300';
+                ctx.fill();
+                ctx.restore();
+            } else {
+                // Non-Edit Mode: Small, clean, non-intrusive endpoint dots
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(x1, y1, 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFB300';
+                ctx.fill();
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 1.0;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(x2, y2, 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFB300';
+                ctx.fill();
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 1.0;
+                ctx.stroke();
+                ctx.restore();
+            }
 
             } finally {
                 // Restore clipping state
@@ -1425,6 +1678,7 @@
 
         function startFibDrawing() {
             isDrawingHorizontalLine = false;
+            selectedHorizontalLineIndex = -1;
             cancelTrendlineDrawing();
             isDrawingFib = true;
             currentShowFib = true;
@@ -1443,6 +1697,7 @@
         function startHorizontalLineDrawing() {
             isDrawingFib = false;
             fibDrawState = 0;
+            selectedHorizontalLineIndex = -1;
             cancelTrendlineDrawing();
             isDrawingHorizontalLine = true;
             const canvas = document.getElementById('fib-canvas');
@@ -1454,6 +1709,7 @@
 
         function cancelHorizontalLineDrawing() {
             isDrawingHorizontalLine = false;
+            selectedHorizontalLineIndex = -1;
             crosshairPos = null;
             const canvas = document.getElementById('fib-canvas');
             if (canvas && !isDrawingFib && !isDrawingTrendline) {
@@ -1466,11 +1722,15 @@
         function setHorizontalLines(linesInput) {
             const lines = typeof linesInput === 'string' ? JSON.parse(linesInput) : linesInput;
             horizontalLines = Array.isArray(lines) ? lines : [];
+            if (selectedHorizontalLineIndex >= horizontalLines.length) {
+                selectedHorizontalLineIndex = -1;
+            }
             renderFib();
         }
 
         function clearHorizontalLines() {
             horizontalLines = [];
+            selectedHorizontalLineIndex = -1;
             isDrawingHorizontalLine = false;
             crosshairPos = null;
             const canvas = document.getElementById('fib-canvas');
@@ -1484,6 +1744,7 @@
 
         function startTrendlineDrawing() {
             isDrawingHorizontalLine = false;
+            selectedHorizontalLineIndex = -1;
             isDrawingFib = false;
             fibDrawState = 0;
             selectedTrendlineIndex = -1;
@@ -1518,7 +1779,9 @@
         function setTrendlines(linesInput) {
             const lines = typeof linesInput === 'string' ? JSON.parse(linesInput) : linesInput;
             trendlines = Array.isArray(lines) ? lines : [];
-            selectedTrendlineIndex = -1;
+            if (selectedTrendlineIndex >= trendlines.length) {
+                selectedTrendlineIndex = -1;
+            }
             renderFib();
         }
 
@@ -1527,6 +1790,12 @@
             selectedTrendlineIndex = -1;
             cancelTrendlineDrawing();
             notifyTrendlinesChanged();
+        }
+
+        function clearAllDrawings() {
+            clearFibonacci();
+            clearHorizontalLines();
+            clearTrendlines();
         }
 
         function initChart(upColor, downColor, gridColor, interactive, crosshairColor) {
@@ -1657,6 +1926,74 @@
             chart.timeScale().subscribeVisibleTimeRangeChange(() => renderFib());
             chart.timeScale().subscribeVisibleLogicalRangeChange(() => renderFib());
 
+            // Real-time synchronization during vertical price scale dragging, pinch zoom, & inertia
+            let isUserInteractingWithChart = false;
+            let priceScaleRafId = null;
+            let lastKnownPriceY = null;
+
+            function syncDrawingsOnPriceScaleChange() {
+                const activeSeries = candleSeries || areaSeries;
+                if (activeSeries && chart) {
+                    const testPrice = (candles && candles.length > 0) ? candles[0].close : 1000;
+                    const curY = activeSeries.priceToCoordinate(testPrice);
+                    if (curY !== null && curY !== lastKnownPriceY) {
+                        lastKnownPriceY = curY;
+                        renderFib();
+                    }
+                }
+                if (isUserInteractingWithChart) {
+                    priceScaleRafId = requestAnimationFrame(syncDrawingsOnPriceScaleChange);
+                }
+            }
+
+            const chartWrapper = document.getElementById('chart-container');
+            if (chartWrapper) {
+                chartWrapper.addEventListener('pointerdown', () => {
+                    isUserInteractingWithChart = true;
+                    if (priceScaleRafId) cancelAnimationFrame(priceScaleRafId);
+                    priceScaleRafId = requestAnimationFrame(syncDrawingsOnPriceScaleChange);
+                }, { passive: true });
+
+                chartWrapper.addEventListener('touchstart', () => {
+                    isUserInteractingWithChart = true;
+                    if (priceScaleRafId) cancelAnimationFrame(priceScaleRafId);
+                    priceScaleRafId = requestAnimationFrame(syncDrawingsOnPriceScaleChange);
+                }, { passive: true });
+
+                chartWrapper.addEventListener('touchmove', () => {
+                    renderFib();
+                }, { passive: true });
+
+                window.addEventListener('pointerup', () => {
+                    isUserInteractingWithChart = false;
+                    let decayFrames = 30;
+                    function postReleaseSync() {
+                        if (isUserInteractingWithChart) return;
+                        const activeSeries = candleSeries || areaSeries;
+                        if (activeSeries && chart) {
+                            const testPrice = (candles && candles.length > 0) ? candles[0].close : 1000;
+                            const curY = activeSeries.priceToCoordinate(testPrice);
+                            if (curY !== null && curY !== lastKnownPriceY) {
+                                lastKnownPriceY = curY;
+                                renderFib();
+                            }
+                        }
+                        if (--decayFrames > 0) {
+                            requestAnimationFrame(postReleaseSync);
+                        }
+                    }
+                    requestAnimationFrame(postReleaseSync);
+                }, { passive: true });
+
+                window.addEventListener('touchend', () => {
+                    isUserInteractingWithChart = false;
+                }, { passive: true });
+
+                chartWrapper.addEventListener('wheel', () => {
+                    renderFib();
+                }, { passive: true });
+            }
+
             // Click listener for interactive tap-to-draw
             chart.subscribeClick(param => {
                 if (!isDrawingFib || !param.time || !param.point) return;
@@ -1669,6 +2006,7 @@
                 } else {
                     fibPoint2 = { time: param.time, price: price };
                     isDrawingFib = false;
+                    isFibSelected = true;
                     renderFib();
                     if (window.flutter_inappwebview?.callHandler) {
                         window.flutter_inappwebview.callHandler('onFibDrawn', JSON.stringify({ p1: fibPoint1, p2: fibPoint2 }));
@@ -1975,6 +2313,8 @@
                     setTrendlines(data.lines);
                 } else if (data.type === 'clearTrendlines') {
                     clearTrendlines();
+                } else if (data.type === 'clearAllDrawings') {
+                    clearAllDrawings();
                 } else if (data.type === 'setData') {
                     setData(data.candles, data.volumes);
                 } else if (data.type === 'setSeriesType') {
