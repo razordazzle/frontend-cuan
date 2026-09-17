@@ -417,6 +417,388 @@
             background: rgba(255, 255, 255, 0.08);
             margin: 6px 0;
         }
+
+        /* TradingView Mobile Trendline Settings Modal */
+        .tv-modal-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 1050;
+            opacity: 0;
+            transition: opacity 0.22s ease;
+            touch-action: none;
+        }
+
+        .tv-modal-backdrop.visible {
+            opacity: 1;
+        }
+
+        .tv-settings-modal {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            max-height: 90vh;
+            background: #1E1E1E;
+            border-top: 1px solid #2C2C2E;
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+            z-index: 1060;
+            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.75);
+            transform: translateY(100%);
+            transition: transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1);
+            user-select: none;
+            -webkit-user-select: none;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .tv-settings-modal.visible {
+            transform: translateY(0);
+        }
+
+        .tv-settings-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 20px 12px 20px;
+        }
+
+        .tv-settings-title-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #FFFFFF;
+            font-size: 19px;
+            font-weight: 600;
+        }
+
+        .tv-settings-close-btn {
+            background: transparent;
+            border: none;
+            color: #868993;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.12s;
+        }
+
+        .tv-settings-close-btn:active {
+            color: #FFFFFF;
+        }
+
+        .tv-settings-tabs {
+            display: flex;
+            border-bottom: 1px solid #2C2C2E;
+            padding: 0 20px;
+        }
+
+        .tv-settings-tab {
+            position: relative;
+            color: #FFFFFF;
+            font-size: 14.5px;
+            font-weight: 600;
+            padding: 10px 4px 12px 4px;
+            cursor: pointer;
+        }
+
+        .tv-settings-tab-indicator {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2.5px;
+            background: #FFFFFF;
+            border-radius: 1.5px;
+        }
+
+        .tv-settings-body {
+            padding: 18px 20px 12px 20px;
+            overflow-y: auto;
+            flex: 1;
+            box-sizing: border-box;
+            scrollbar-width: none;
+        }
+
+        .tv-settings-body::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Formatting row: Swatch, Size, Bold, Italic */
+        .tv-fmt-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .tv-fmt-color-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            border: 1px solid #3A3A3C;
+            background: #1E1E1E;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            padding: 4px;
+        }
+
+        .tv-fmt-color-preview {
+            width: 100%;
+            height: 100%;
+            border-radius: 4px;
+            background: #FFFFFF;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .tv-fmt-select-wrap {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tv-fmt-size-btn {
+            height: 36px;
+            min-width: 68px;
+            padding: 0 10px 0 12px;
+            border-radius: 6px;
+            border: 1px solid #3A3A3C;
+            background: #1E1E1E;
+            color: #FFFFFF;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            cursor: pointer;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: border-color 0.15s;
+        }
+
+        .tv-fmt-size-btn:hover, .tv-fmt-size-btn:focus {
+            border-color: #50535E;
+        }
+
+        .tv-size-chevron {
+            color: #868993;
+            transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1);
+            display: flex;
+            align-items: center;
+        }
+
+        .tv-size-chevron.open {
+            transform: rotate(180deg);
+        }
+
+        /* Size Dropdown Overlay (TradingView Mobile Style) */
+        .tv-size-dropdown-overlay {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            top: 138px;
+            background: #1E1E1E;
+            border-top: 1px solid #2C2C2E;
+            border-top-left-radius: 14px;
+            border-top-right-radius: 14px;
+            box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.7);
+            z-index: 30;
+            overflow-y: auto;
+            padding: 10px 14px 20px 14px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            scrollbar-width: none;
+        }
+
+        .tv-size-dropdown-overlay::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tv-size-item {
+            height: 42px;
+            min-height: 42px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            border-radius: 8px;
+            color: #D1D4DC;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background 0.12s, color 0.12s;
+            box-sizing: border-box;
+        }
+
+        .tv-size-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tv-size-item.selected {
+            background: #F0F3FA;
+            color: #121212;
+            font-weight: 600;
+        }
+
+        .tv-select-arrow {
+            position: absolute;
+            right: 9px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: #868993;
+            display: flex;
+        }
+
+        .tv-fmt-toggle-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            border: 1px solid #3A3A3C;
+            background: #1E1E1E;
+            color: #D1D4DC;
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.12s;
+        }
+
+        .tv-fmt-toggle-btn.active {
+            background: #2B2B2B;
+            border-color: #FFFFFF;
+            color: #FFFFFF;
+        }
+
+        /* Textarea */
+        .tv-settings-textarea {
+            width: 100%;
+            height: 110px;
+            border-radius: 8px;
+            border: 1px solid #3A3A3C;
+            background: #1E1E1E;
+            color: #FFFFFF;
+            font-family: inherit;
+            font-size: 14px;
+            padding: 12px;
+            box-sizing: border-box;
+            outline: none;
+            resize: none;
+            margin-bottom: 18px;
+            transition: border-color 0.15s;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        .tv-settings-textarea:focus {
+            border-color: #2962FF;
+        }
+
+        .tv-settings-textarea::placeholder {
+            color: #50535E;
+        }
+
+        /* Alignment row */
+        .tv-align-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .tv-align-label {
+            color: #D1D4DC;
+            font-size: 14px;
+            font-weight: 400;
+            flex: 1;
+        }
+
+        .tv-align-select {
+            height: 36px;
+            border-radius: 6px;
+            border: 1px solid #3A3A3C;
+            background: #1E1E1E;
+            color: #FFFFFF;
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 500;
+            padding: 0 30px 0 12px;
+            appearance: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+            outline: none;
+        }
+
+        /* Footer */
+        .tv-settings-footer {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 14px 20px 20px 20px;
+            border-top: 1px solid #2C2C2E;
+            background: #1E1E1E;
+        }
+
+        .tv-footer-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tv-footer-btn-cancel {
+            height: 36px;
+            padding: 0 16px;
+            border-radius: 6px;
+            border: 1px solid #3A3A3C;
+            background: transparent;
+            color: #FFFFFF;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.12s;
+        }
+
+        .tv-footer-btn-cancel:active {
+            background: #2B2B2B;
+        }
+
+        .tv-footer-btn-ok {
+            height: 36px;
+            padding: 0 20px;
+            border-radius: 6px;
+            border: none;
+            background: #FFFFFF;
+            color: #000000;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.12s;
+        }
+
+        .tv-footer-btn-ok:active {
+            opacity: 0.85;
+        }
     </style>
     <script src="lightweight-charts.standalone.production.js"></script>
 </head>
@@ -615,6 +997,120 @@
                     <circle cx="10" cy="10" r="2.5" />
                 </svg>
                 <span>Settings...</span>
+            </div>
+        </div>
+
+        <!-- TradingView Mobile Trendline Text Settings Modal -->
+        <div id="tv-settings-backdrop" class="tv-modal-backdrop" style="display: none;"></div>
+        <div id="tv-settings-modal" class="tv-settings-modal" style="display: none;">
+            <!-- Header -->
+            <div class="tv-settings-header">
+                <div class="tv-settings-title-group">
+                    <span>Trendline</span>
+                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#868993" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11.5 2.5a1.414 1.414 0 0 1 2 2L4.5 13.5l-3 1 1-3 9-9z" />
+                    </svg>
+                </div>
+                <button id="tv-settings-close" class="tv-settings-close-btn" title="Tutup">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="3" y1="3" x2="15" y2="15" />
+                        <line x1="15" y1="3" x2="3" y2="15" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Tabs: Text Tab only (User specified: cukup tab Text saja) -->
+            <div class="tv-settings-tabs">
+                <div class="tv-settings-tab">
+                    <span>Text</span>
+                    <div class="tv-settings-tab-indicator"></div>
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="tv-settings-body">
+                <!-- Formatting Controls: Color Swatch, Font size, Bold, Italic -->
+                <div class="tv-fmt-row">
+                    <button id="tv-text-color-btn" class="tv-fmt-color-btn" title="Warna Teks">
+                        <div id="tv-text-color-preview" class="tv-fmt-color-preview" style="background-color: #FFFFFF;"></div>
+                    </button>
+
+                    <div id="tv-text-size-btn" class="tv-fmt-size-btn" title="Ukuran Teks" tabindex="0">
+                        <span id="tv-text-size-val">14</span>
+                        <div id="tv-text-size-chevron" class="tv-size-chevron">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <button id="tv-text-btn-bold" class="tv-fmt-toggle-btn" title="Tebal (Bold)">
+                        <span>B</span>
+                    </button>
+
+                    <button id="tv-text-btn-italic" class="tv-fmt-toggle-btn" title="Miring (Italic)">
+                        <span style="font-style: italic;">I</span>
+                    </button>
+                </div>
+
+                <!-- Textarea -->
+                <textarea id="tv-text-content-input" class="tv-settings-textarea" placeholder="Add text"></textarea>
+
+                <!-- Alignment Row -->
+                <div class="tv-align-row">
+                    <span class="tv-align-label">Text alignment</span>
+
+                    <div class="tv-fmt-select-wrap">
+                        <select id="tv-text-valign-select" class="tv-align-select">
+                            <option value="top" selected>Top</option>
+                            <option value="middle">Middle</option>
+                            <option value="bottom">Bottom</option>
+                        </select>
+                        <div class="tv-select-arrow">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="tv-fmt-select-wrap">
+                        <select id="tv-text-halign-select" class="tv-align-select">
+                            <option value="left">Left</option>
+                            <option value="center" selected>Center</option>
+                            <option value="right">Right</option>
+                        </select>
+                        <div class="tv-select-arrow">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Font Size Dropdown Overlay (TradingView Mobile Style) -->
+            <div id="tv-text-size-dropdown" class="tv-size-dropdown-overlay" style="display: none;">
+                <div class="tv-size-item" data-size="8">8</div>
+                <div class="tv-size-item" data-size="10">10</div>
+                <div class="tv-size-item" data-size="11">11</div>
+                <div class="tv-size-item" data-size="12">12</div>
+                <div class="tv-size-item selected" data-size="14">14</div>
+                <div class="tv-size-item" data-size="16">16</div>
+                <div class="tv-size-item" data-size="18">18</div>
+                <div class="tv-size-item" data-size="20">20</div>
+                <div class="tv-size-item" data-size="22">22</div>
+                <div class="tv-size-item" data-size="24">24</div>
+                <div class="tv-size-item" data-size="28">28</div>
+                <div class="tv-size-item" data-size="32">32</div>
+                <div class="tv-size-item" data-size="40">40</div>
+            </div>
+
+            <!-- Footer -->
+            <div class="tv-settings-footer">
+                <div class="tv-footer-actions">
+                    <button id="tv-settings-btn-cancel" class="tv-footer-btn-cancel">Cancel</button>
+                    <button id="tv-settings-btn-ok" class="tv-footer-btn-ok">Ok</button>
+                </div>
             </div>
         </div>
     </div>
@@ -957,13 +1453,17 @@
             if (toolbar) toolbar.style.display = 'none';
             hideAllPopovers();
             closeMoreBottomSheet();
+            closeTrendlineSettingsModal();
         }
 
         function hideAllPopovers() {
             const popColor = document.getElementById('tv-popover-color');
             const popWidth = document.getElementById('tv-popover-width');
             const popStyle = document.getElementById('tv-popover-style');
-            if (popColor) popColor.style.display = 'none';
+            if (popColor) {
+                popColor.style.display = 'none';
+                popColor.style.zIndex = '60';
+            }
             if (popWidth) popWidth.style.display = 'none';
             if (popStyle) popStyle.style.display = 'none';
             ['tv-btn-line-color', 'tv-btn-text-color', 'tv-btn-width', 'tv-btn-style', 'tv-btn-more'].forEach(id => {
@@ -1010,11 +1510,143 @@
             }, 240);
         }
 
+        let modalPendingTextColor = '#FFFFFF';
+
+        function toggleSizeDropdown(e) {
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            const dropdown = document.getElementById('tv-text-size-dropdown');
+            const chevron = document.getElementById('tv-text-size-chevron');
+            const modal = document.getElementById('tv-settings-modal');
+            const fmtRow = document.querySelector('.tv-fmt-row');
+            if (!dropdown || !modal) return;
+
+            if (dropdown.style.display === 'flex') {
+                closeSizeDropdown();
+            } else {
+                hideAllPopovers();
+                if (fmtRow) {
+                    const modalRect = modal.getBoundingClientRect();
+                    const rowRect = fmtRow.getBoundingClientRect();
+                    dropdown.style.top = Math.round(rowRect.bottom - modalRect.top + 6) + 'px';
+                }
+                dropdown.style.display = 'flex';
+                if (chevron) chevron.classList.add('open');
+                const curVal = parseInt(document.getElementById('tv-text-size-val')?.textContent, 10) || 14;
+                updateSizeDropdownSelection(curVal);
+            }
+        }
+
+        function closeSizeDropdown() {
+            const dropdown = document.getElementById('tv-text-size-dropdown');
+            const chevron = document.getElementById('tv-text-size-chevron');
+            if (dropdown) dropdown.style.display = 'none';
+            if (chevron) chevron.classList.remove('open');
+        }
+
+        function updateSizeDropdownSelection(selectedSize) {
+            document.querySelectorAll('.tv-size-item').forEach(item => {
+                const s = parseInt(item.getAttribute('data-size'), 10);
+                const isSel = s === selectedSize;
+                item.classList.toggle('selected', isSel);
+                if (isSel) {
+                    setTimeout(() => item.scrollIntoView({ block: 'nearest' }), 30);
+                }
+            });
+        }
+
+        function openTrendlineSettingsModal() {
+            if (selectedTrendlineIndex < 0 || !trendlines[selectedTrendlineIndex]) return;
+            const t = trendlines[selectedTrendlineIndex];
+
+            const backdrop = document.getElementById('tv-settings-backdrop');
+            const modal = document.getElementById('tv-settings-modal');
+            if (!backdrop || !modal) return;
+
+            hideAllPopovers();
+            closeSizeDropdown();
+
+            // Populate current values
+            modalPendingTextColor = t.textColor || '#FFFFFF';
+            const colorPreview = document.getElementById('tv-text-color-preview');
+            if (colorPreview) colorPreview.style.backgroundColor = modalPendingTextColor;
+
+            const curSize = t.textSize || 14;
+            const sizeVal = document.getElementById('tv-text-size-val');
+            if (sizeVal) sizeVal.textContent = String(curSize);
+            updateSizeDropdownSelection(curSize);
+
+            const btnBold = document.getElementById('tv-text-btn-bold');
+            if (btnBold) btnBold.classList.toggle('active', !!t.textBold);
+
+            const btnItalic = document.getElementById('tv-text-btn-italic');
+            if (btnItalic) btnItalic.classList.toggle('active', !!t.textItalic);
+
+            const textInput = document.getElementById('tv-text-content-input');
+            if (textInput) textInput.value = t.text || '';
+
+            const valignSelect = document.getElementById('tv-text-valign-select');
+            if (valignSelect) valignSelect.value = t.textValign || 'top';
+
+            const halignSelect = document.getElementById('tv-text-halign-select');
+            if (halignSelect) halignSelect.value = t.textHalign || 'center';
+
+            backdrop.style.display = 'block';
+            modal.style.display = 'flex';
+
+            requestAnimationFrame(() => {
+                backdrop.classList.add('visible');
+                modal.classList.add('visible');
+            });
+        }
+
+        function closeTrendlineSettingsModal() {
+            const backdrop = document.getElementById('tv-settings-backdrop');
+            const modal = document.getElementById('tv-settings-modal');
+            hideAllPopovers();
+            closeSizeDropdown();
+            if (!backdrop || !modal) return;
+
+            backdrop.classList.remove('visible');
+            modal.classList.remove('visible');
+
+            setTimeout(() => {
+                backdrop.style.display = 'none';
+                modal.style.display = 'none';
+            }, 260);
+        }
+
+        function saveTrendlineSettings() {
+            if (selectedTrendlineIndex < 0 || !trendlines[selectedTrendlineIndex]) return;
+            const t = trendlines[selectedTrendlineIndex];
+
+            const textInput = document.getElementById('tv-text-content-input');
+            const sizeVal = document.getElementById('tv-text-size-val');
+            const btnBold = document.getElementById('tv-text-btn-bold');
+            const btnItalic = document.getElementById('tv-text-btn-italic');
+            const valignSelect = document.getElementById('tv-text-valign-select');
+            const halignSelect = document.getElementById('tv-text-halign-select');
+
+            t.text = textInput ? textInput.value : '';
+            t.textColor = modalPendingTextColor;
+            t.textSize = sizeVal ? (parseInt(sizeVal.textContent, 10) || 14) : 14;
+            t.textBold = btnBold ? btnBold.classList.contains('active') : false;
+            t.textItalic = btnItalic ? btnItalic.classList.contains('active') : false;
+            t.textValign = valignSelect ? valignSelect.value : 'top';
+            t.textHalign = halignSelect ? halignSelect.value : 'center';
+
+            const textInd = document.getElementById('tv-indicator-text-color');
+            if (textInd && t.textColor) textInd.style.backgroundColor = t.textColor;
+
+            closeTrendlineSettingsModal();
+            renderFib();
+            notifyTrendlinesChanged();
+        }
+
         function positionPopover(popover, targetBtn) {
             if (!popover || !targetBtn) return;
-            const tb = document.getElementById('tv-trendline-toolbar');
-            if (!tb) return;
-            const tbRect = tb.getBoundingClientRect();
             const btnRect = targetBtn.getBoundingClientRect();
             const container = document.getElementById('chart-container');
             const cRect = container ? container.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight };
@@ -1029,9 +1661,9 @@
                 left = cRect.width - popW - 8;
             }
 
-            let top = tbRect.bottom + 8;
+            let top = btnRect.bottom + 8;
             if (top + popH > cRect.height - 8) {
-                top = Math.max(8, tbRect.top - popH - 8);
+                top = Math.max(8, btnRect.top - popH - 8);
             }
 
             popover.style.left = Math.round(left) + 'px';
@@ -1055,9 +1687,14 @@
                 if (lineInd && t.color) lineInd.style.backgroundColor = t.color;
                 updateSliderGradient(t.color || '#7C4DFF');
             } else if (activeColorPickerTarget === 'text') {
-                if (colorHex) t.textColor = colorHex;
+                if (colorHex) {
+                    t.textColor = colorHex;
+                    modalPendingTextColor = colorHex;
+                }
                 const textInd = document.getElementById('tv-indicator-text-color');
                 if (textInd && t.textColor) textInd.style.backgroundColor = t.textColor;
+                const preview = document.getElementById('tv-text-color-preview');
+                if (preview && t.textColor) preview.style.backgroundColor = t.textColor;
             }
 
             // Update swatch selection highlight
@@ -1149,6 +1786,11 @@
                     opacity: src.opacity !== undefined ? src.opacity : 1.0,
                     text: src.text || '',
                     textColor: src.textColor || '#FFFFFF',
+                    textSize: src.textSize || 14,
+                    textBold: !!src.textBold,
+                    textItalic: !!src.textItalic,
+                    textValign: src.textValign || 'top',
+                    textHalign: src.textHalign || 'center',
                     showAngle: !!src.showAngle,
                     lockAngle: !!src.lockAngle
                 };
@@ -1505,15 +2147,113 @@
                     e.stopPropagation();
                     e.preventDefault();
                     closeMoreBottomSheet();
-                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
-                        const t = trendlines[selectedTrendlineIndex];
-                        const newText = prompt('Masukkan teks label trendline:', t.text || '');
-                        if (newText !== null) {
-                            t.text = newText;
-                            renderFib();
-                            notifyTrendlinesChanged();
-                        }
+                    openTrendlineSettingsModal();
+                };
+            }
+
+            // Settings Modal Event Listeners
+            const settingsModal = document.getElementById('tv-settings-modal');
+            const settingsBackdrop = document.getElementById('tv-settings-backdrop');
+            const btnSettingsClose = document.getElementById('tv-settings-close');
+            const btnSettingsCancel = document.getElementById('tv-settings-btn-cancel');
+            const btnSettingsOk = document.getElementById('tv-settings-btn-ok');
+            const btnTextBold = document.getElementById('tv-text-btn-bold');
+            const btnTextItalic = document.getElementById('tv-text-btn-italic');
+            const btnTextColorModal = document.getElementById('tv-text-color-btn');
+
+            if (settingsModal) {
+                settingsModal.onpointerdown = (e) => {
+                    e.stopPropagation();
+                    if (e.target && !e.target.closest('#tv-text-size-dropdown, #tv-text-size-btn')) {
+                        closeSizeDropdown();
                     }
+                };
+                settingsModal.ontouchstart = (e) => e.stopPropagation();
+                settingsModal.onclick = (e) => e.stopPropagation();
+            }
+
+            const btnTextSize = document.getElementById('tv-text-size-btn');
+            if (btnTextSize) {
+                btnTextSize.onclick = toggleSizeDropdown;
+            }
+
+            document.querySelectorAll('.tv-size-item').forEach(item => {
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const size = parseInt(item.getAttribute('data-size'), 10) || 14;
+                    const sizeValSpan = document.getElementById('tv-text-size-val');
+                    if (sizeValSpan) sizeValSpan.textContent = String(size);
+                    updateSizeDropdownSelection(size);
+                    closeSizeDropdown();
+                };
+            });
+
+            if (settingsBackdrop) {
+                settingsBackdrop.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    closeTrendlineSettingsModal();
+                };
+            }
+
+            if (btnSettingsClose) {
+                btnSettingsClose.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    closeTrendlineSettingsModal();
+                };
+            }
+
+            if (btnSettingsCancel) {
+                btnSettingsCancel.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    closeTrendlineSettingsModal();
+                };
+            }
+
+            if (btnSettingsOk) {
+                btnSettingsOk.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    saveTrendlineSettings();
+                };
+            }
+
+            if (btnTextBold) {
+                btnTextBold.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    btnTextBold.classList.toggle('active');
+                };
+            }
+
+            if (btnTextItalic) {
+                btnTextItalic.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    btnTextItalic.classList.toggle('active');
+                };
+            }
+
+            if (btnTextColorModal && popColor) {
+                btnTextColorModal.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (popColor.style.display === 'block' && activeColorPickerTarget === 'text') {
+                        hideAllPopovers();
+                        return;
+                    }
+                    hideAllPopovers();
+                    activeColorPickerTarget = 'text';
+                    popColor.style.zIndex = '1070';
+                    const curColor = modalPendingTextColor || '#FFFFFF';
+                    updateSliderGradient(curColor);
+                    document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
+                        sw.classList.toggle('selected', sw.getAttribute('data-color')?.toUpperCase() === curColor.toUpperCase());
+                    });
+                    positionPopover(popColor, btnTextColorModal);
                 };
             }
 
@@ -1765,7 +2505,7 @@
 
             if (chartContainer) {
                 chartContainer.addEventListener('pointermove', (e) => {
-                    if (e.target && e.target.closest && e.target.closest('#tv-trendline-toolbar, .tv-popover, #tv-more-bottom-sheet, #tv-more-sheet-backdrop')) {
+                    if (e.target && e.target.closest && e.target.closest('#tv-trendline-toolbar, .tv-popover, #tv-more-bottom-sheet, #tv-more-sheet-backdrop, #tv-settings-modal, #tv-settings-backdrop')) {
                         return;
                     }
                     updateHoverState(e);
@@ -1774,8 +2514,8 @@
                 // Mobile-first capture-phase touch interceptor:
                 // Intercepts touches on drawing elements BEFORE LightweightCharts can handle them as pan/scroll!
                 chartContainer.addEventListener('pointerdown', (e) => {
-                    // If touch was on the floating toolbar, popover, or bottom sheet, DO NOT INTERCEPT AT ALL!
-                    if (e.target && e.target.closest && e.target.closest('#tv-trendline-toolbar, .tv-popover, #tv-more-bottom-sheet, #tv-more-sheet-backdrop')) {
+                    // If touch was on the floating toolbar, popover, bottom sheet, or settings modal, DO NOT INTERCEPT AT ALL!
+                    if (e.target && e.target.closest && e.target.closest('#tv-trendline-toolbar, .tv-popover, #tv-more-bottom-sheet, #tv-more-sheet-backdrop, #tv-settings-modal, #tv-settings-backdrop')) {
                         return;
                     }
 
@@ -3303,13 +4043,62 @@
                     // Render optional text label
                     if (t.text) {
                         ctx.save();
-                        ctx.font = '500 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                        const fontSize = t.textSize || 14;
+                        const isBold = !!t.textBold;
+                        const isItalic = !!t.textItalic;
+                        ctx.font = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : '500 '}${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
                         ctx.fillStyle = t.textColor || '#FFFFFF';
-                        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
                         ctx.shadowBlur = 4;
-                        const midX = (x1 + x2) / 2;
-                        const midY = (y1 + y2) / 2;
-                        ctx.fillText(t.text, midX + 8, midY - 8);
+
+                        // Normalize anchors left to right for positioning
+                        let leftX = x1, leftY = y1, rightX = x2, rightY = y2;
+                        if (leftX > rightX) {
+                            leftX = x2; leftY = y2;
+                            rightX = x1; rightY = y1;
+                        }
+
+                        const halign = t.textHalign || 'center';
+                        let baseX = (leftX + rightX) / 2;
+                        let baseY = (leftY + rightY) / 2;
+
+                        if (halign === 'left') {
+                            baseX = leftX + 16;
+                            const progress = Math.min(1, 16 / Math.max(1, rightX - leftX));
+                            baseY = leftY + (rightY - leftY) * progress;
+                            ctx.textAlign = 'left';
+                        } else if (halign === 'right') {
+                            baseX = rightX - 16;
+                            const progress = Math.max(0, 1 - (16 / Math.max(1, rightX - leftX)));
+                            baseY = leftY + (rightY - leftY) * progress;
+                            ctx.textAlign = 'right';
+                        } else {
+                            ctx.textAlign = 'center';
+                        }
+
+                        const valign = t.textValign || 'top';
+                        const lines = String(t.text).split('\n');
+                        const lineHeight = Math.round(fontSize * 1.3);
+
+                        let startY = baseY;
+                        if (valign === 'top') {
+                            // Position above line
+                            startY = baseY - 8 - ((lines.length - 1) * lineHeight);
+                            ctx.textBaseline = 'bottom';
+                        } else if (valign === 'bottom') {
+                            // Position below line
+                            startY = baseY + 12;
+                            ctx.textBaseline = 'top';
+                        } else {
+                            // Middle
+                            const totalH = lines.length * lineHeight;
+                            startY = baseY - (totalH / 2) + (lineHeight / 2);
+                            ctx.textBaseline = 'middle';
+                        }
+
+                        for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+                            ctx.fillText(lines[lineIdx], baseX, startY + (lineIdx * lineHeight));
+                        }
                         ctx.restore();
                     }
 
