@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show FontFeature;
 
-import 'package:cuan_app/components/tv_chart_widget.dart';
 import 'package:cuan_app/config/app_config.dart';
 import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/data/model/stock_list_item.dart';
@@ -233,8 +232,7 @@ class _HomePageState extends State<HomePage> {
                         final error = p.errIndex;
                         final data = p.ihsgCandles;
 
-                        final useDummy =
-                            data.isEmpty && !loading && error == null;
+                        final useDummy = data.isEmpty;
 
                         final candles = useDummy
                             ? makeDummyCandles(60)

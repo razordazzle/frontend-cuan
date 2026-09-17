@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import '../pages/screen/home_page.dart' show Ohlc; 
+import '../pages/screen/home_page.dart' show Ohlc, makeDummyCandles; 
 import '../data/model/chart_payload.dart';
 import 'web_message_listener.dart';
 
@@ -25,6 +25,10 @@ class TvChartWidget extends StatefulWidget {
   final bool isDrawingTrendline;
   final ValueChanged<Map<String, dynamic>>? onTrendlineAdded;
   final ValueChanged<List<Map<String, dynamic>>>? onTrendlinesChanged;
+  final List<Map<String, dynamic>> rectangles;
+  final bool isDrawingRectangle;
+  final ValueChanged<Map<String, dynamic>>? onRectangleAdded;
+  final ValueChanged<List<Map<String, dynamic>>>? onRectanglesChanged;
   final Color upColor;
   final Color downColor;
   final Color gridColor;
@@ -52,6 +56,10 @@ class TvChartWidget extends StatefulWidget {
     this.isDrawingTrendline = false,
     this.onTrendlineAdded,
     this.onTrendlinesChanged,
+    this.rectangles = const <Map<String, dynamic>>[],
+    this.isDrawingRectangle = false,
+    this.onRectangleAdded,
+    this.onRectanglesChanged,
     required this.upColor,
     required this.downColor,
     required this.gridColor,
@@ -69,6 +77,7 @@ class _TvChartWidgetState extends State<TvChartWidget> {
   InAppWebViewController? _ctrl;
   List<double>? _lastReceivedHorizLines;
   List<Map<String, dynamic>>? _lastReceivedTrendlines;
+  List<Map<String, dynamic>>? _lastReceivedRectangles;
 
   @override
   void initState() {
@@ -102,6 +111,19 @@ class _TvChartWidgetState extends State<TvChartWidget> {
               .toList();
           _lastReceivedTrendlines = List<Map<String, dynamic>>.from(updated);
           widget.onTrendlinesChanged?.call(updated);
+        }
+      } else if (type == 'onRectangleAdded') {
+        if (payload is Map) {
+          widget.onRectangleAdded?.call(Map<String, dynamic>.from(payload));
+        }
+      } else if (type == 'onRectanglesChanged') {
+        if (payload is List) {
+          final List<Map<String, dynamic>> updated = payload
+              .whereType<Map>()
+              .map((Map e) => Map<String, dynamic>.from(e))
+              .toList();
+          _lastReceivedRectangles = List<Map<String, dynamic>>.from(updated);
+          widget.onRectanglesChanged?.call(updated);
         }
       } else if (type == 'onCrosshair') {
         if (payload is Map) {
@@ -159,7 +181,7 @@ class _TvChartWidgetState extends State<TvChartWidget> {
           "if (typeof initChart === 'function') initChart('${_hex(widget.upColor)}', '${_hex(widget.downColor)}', '${_hex(widget.gridColor)}', ${widget.interactive}, '${_rgba(crosshair, 0.85)}');",
     );
 
-    if (widget.payload != null) {
+    if (widget.payload != null && widget.payload!.candles.isNotEmpty) {
       final List<Map<String, dynamic>> candlesJson =
           widget.payload!.candles.map(_barJson).toList();
       final Map<String, List<Map<String, dynamic>>> indicatorsJson =
@@ -188,11 +210,14 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         source: "if (window.setVolumeData) setVolumeData(${jsonEncode(volsJson)});",
       );
     } else {
+      final List<Ohlc> activeCandles = widget.candles.isNotEmpty
+          ? widget.candles
+          : makeDummyCandles(60);
       final String candlesJson = jsonEncode(
-        widget.candles.map(_barJson).toList(),
+        activeCandles.map(_barJson).toList(),
       );
       final String volsJson = jsonEncode(
-        widget.candles.map(_volJson).toList(),
+        activeCandles.map(_volJson).toList(),
       );
       await _ctrl!.evaluateJavascript(
         source: "setData(${jsonEncode(candlesJson)}, ${jsonEncode(volsJson)});",
@@ -239,6 +264,17 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         source: "startTrendlineDrawing();",
       );
     }
+
+    final String rectJson = jsonEncode(widget.rectangles);
+    await _ctrl!.evaluateJavascript(
+      source: "if (typeof setRectangles === 'function') setRectangles($rectJson);",
+    );
+
+    if (widget.isDrawingRectangle) {
+      await _ctrl!.evaluateJavascript(
+        source: "if (typeof startRectangleDrawing === 'function') startRectangleDrawing();",
+      );
+    }
   }
 
   @override
@@ -264,6 +300,11 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         !listEquals(old.trendlines, widget.trendlines);
     final bool drawTrendlineChanged =
         old.isDrawingTrendline != widget.isDrawingTrendline;
+
+    final bool rectanglesChanged =
+        !listEquals(old.rectangles, widget.rectangles);
+    final bool drawRectangleChanged =
+        old.isDrawingRectangle != widget.isDrawingRectangle;
 
     final bool crosshairChanged = old.crosshairColor != widget.crosshairColor;
 
@@ -321,6 +362,25 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         } else {
           _ctrl?.evaluateJavascript(
             source: "cancelTrendlineDrawing();",
+          );
+        }
+      }
+      if (rectanglesChanged) {
+        if (!listEquals(widget.rectangles, _lastReceivedRectangles)) {
+          final String rectJson = jsonEncode(widget.rectangles);
+          _ctrl?.evaluateJavascript(
+            source: "if (typeof setRectangles === 'function') setRectangles($rectJson);",
+          );
+        }
+      }
+      if (drawRectangleChanged) {
+        if (widget.isDrawingRectangle) {
+          _ctrl?.evaluateJavascript(
+            source: "if (typeof startRectangleDrawing === 'function') startRectangleDrawing();",
+          );
+        } else {
+          _ctrl?.evaluateJavascript(
+            source: "if (typeof cancelRectangleDrawing === 'function') cancelRectangleDrawing();",
           );
         }
       }
@@ -424,6 +484,29 @@ class _TvChartWidgetState extends State<TvChartWidget> {
                   .map((Map e) => Map<String, dynamic>.from(e))
                   .toList();
               widget.onTrendlinesChanged?.call(updated);
+            }
+            return null;
+          },
+        );
+        c.addJavaScriptHandler(
+          handlerName: 'onRectangleAdded',
+          callback: (List<dynamic> args) {
+            if (args.isNotEmpty && args[0] is Map) {
+              widget.onRectangleAdded?.call(Map<String, dynamic>.from(args[0] as Map));
+            }
+            return null;
+          },
+        );
+        c.addJavaScriptHandler(
+          handlerName: 'onRectanglesChanged',
+          callback: (List<dynamic> args) {
+            if (args.isNotEmpty && args[0] is List) {
+              final List<dynamic> rawList = args[0] as List<dynamic>;
+              final List<Map<String, dynamic>> updated = rawList
+                  .whereType<Map>()
+                  .map((Map e) => Map<String, dynamic>.from(e))
+                  .toList();
+              widget.onRectanglesChanged?.call(updated);
             }
             return null;
           },
