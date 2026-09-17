@@ -93,446 +93,44 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext sheetContext) {
-        final ThemeData theme = Theme.of(sheetContext);
-        final bool isDark = theme.brightness == Brightness.dark;
+        final bool hasDrawings = _showFibonacci ||
+            _horizontalLines.isNotEmpty ||
+            _trendlines.isNotEmpty ||
+            _rectangles.isNotEmpty;
 
-        // TradingView Mobile theme palette
-        final Color sheetBg = isDark ? const Color(0xFF1E222D) : Colors.white;
-        final Color cardBg = isDark ? const Color(0xFF2A2E39) : const Color(0xFFF0F3FA);
-        final Color cardBorder = isDark ? const Color(0xFF363A45) : const Color(0xFFE0E3EB);
-        final Color searchBg = isDark ? const Color(0xFF2A2E39) : const Color(0xFFF0F3FA);
-        final Color textColor = isDark ? Colors.white : const Color(0xFF131722);
-        final Color subtitleColor = isDark ? const Color(0xFF787B86) : const Color(0xFF9598A1);
-        final Color closeBtnBg = isDark ? const Color(0xFF2A2E39) : const Color(0xFFF0F3FA);
-        final Color iconColor = isDark ? Colors.white : const Color(0xFF131722);
-        const Color starColor = Color(0xFFF7A600); // TradingView Amber Star
-
-        String searchQuery = '';
-        String selectedFilter = 'Favorites';
-        final TextEditingController searchController = TextEditingController();
-
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setSheetState) {
-            final List<_DrawingToolItem> allTools = [
-              _DrawingToolItem(
-                id: 'trendline',
-                title: 'Trendline',
-                category: 'TREND TOOLS',
-                iconBuilder: (Color c) => _TrendlineVectorIcon(color: c),
-                isFavorite: true,
-                isSelected: _isDrawingTrendline,
-                onSelect: () {
-                  Navigator.of(sheetContext).pop();
-                  _startDrawingTrendline();
-                },
-              ),
-              _DrawingToolItem(
-                id: 'horizontal_line',
-                title: 'Horizontal line',
-                category: 'TREND TOOLS',
-                iconBuilder: (Color c) => _HLineVectorIcon(color: c),
-                isFavorite: true,
-                isSelected: _isDrawingHorizontalLine,
-                onSelect: () {
-                  Navigator.of(sheetContext).pop();
-                  _startDrawingHorizontalLine();
-                },
-              ),
-              _DrawingToolItem(
-                id: 'fib_retracement',
-                title: 'Fib retracement',
-                category: 'GANN AND FIBONACCI',
-                iconBuilder: (Color c) => _FibVectorIcon(color: c),
-                isFavorite: true,
-                isSelected: _showFibonacci || _isDrawingFib,
-                onSelect: () {
-                  Navigator.of(sheetContext).pop();
-                  _toggleFibonacci();
-                },
-              ),
-              _DrawingToolItem(
-                id: 'rectangle',
-                title: 'Rectangle',
-                category: 'GEOMETRIC SHAPES',
-                iconBuilder: (Color c) => _RectVectorIcon(color: c),
-                isFavorite: true,
-                isSelected: _isDrawingRectangle,
-                onSelect: () {
-                  Navigator.of(sheetContext).pop();
-                  _startDrawingRectangle();
-                },
-              ),
-            ];
-
-            List<_DrawingToolItem> filtered = allTools;
-            if (searchQuery.isNotEmpty) {
-              filtered = allTools
-                  .where((t) =>
-                      t.title.toLowerCase().contains(searchQuery) ||
-                      t.category.toLowerCase().contains(searchQuery))
-                  .toList();
-            } else if (selectedFilter == 'Favorites') {
-              filtered = allTools.where((t) => t.isFavorite).toList();
-            } else if (selectedFilter == 'Trend tools') {
-              filtered = allTools.where((t) => t.category == 'TREND TOOLS').toList();
-            } else if (selectedFilter == 'Gann and...') {
-              filtered = allTools.where((t) => t.category == 'GANN AND FIBONACCI').toList();
-            } else if (selectedFilter == 'Shapes') {
-              filtered = allTools.where((t) => t.category == 'GEOMETRIC SHAPES').toList();
-            }
-
-            final Map<String, List<_DrawingToolItem>> grouped = {};
-            for (final item in filtered) {
-              grouped.putIfAbsent(item.category, () => []).add(item);
-            }
-
-            final bool hasDrawings = _showFibonacci ||
-                _horizontalLines.isNotEmpty ||
-                _trendlines.isNotEmpty ||
-                _rectangles.isNotEmpty;
-
-            return Container(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(sheetContext).size.height * 0.78,
-              ),
-              decoration: BoxDecoration(
-                color: sheetBg,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                border: Border(
-                  top: BorderSide(
-                    color: isDark ? const Color(0xFF363A45) : const Color(0xFFE0E3EB),
-                    width: 1,
-                  ),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.65 : 0.15),
-                    blurRadius: 24,
-                    offset: const Offset(0, -6),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                top: false,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Top Drag Pill Handle
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 10, bottom: 4),
-                        child: Container(
-                          width: 38,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF50535E) : const Color(0xFFD1D4DC),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Title & Close Button
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Drawings',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: textColor,
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                          InkWell(
-                            onTap: () => Navigator.of(sheetContext).pop(),
-                            borderRadius: BorderRadius.circular(18),
-                            child: Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: closeBtnBg,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.close, size: 18, color: iconColor),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Search Bar
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-                      child: Container(
-                        height: 40,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: searchBg,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.search, size: 18, color: subtitleColor),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextField(
-                                controller: searchController,
-                                onChanged: (val) => setSheetState(() => searchQuery = val.trim().toLowerCase()),
-                                style: TextStyle(fontSize: 13.5, color: textColor),
-                                decoration: InputDecoration(
-                                  hintText: 'Search',
-                                  hintStyle: TextStyle(fontSize: 13.5, color: subtitleColor),
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                ),
-                              ),
-                            ),
-                            if (searchQuery.isNotEmpty)
-                              GestureDetector(
-                                onTap: () {
-                                  searchController.clear();
-                                  setSheetState(() => searchQuery = '');
-                                },
-                                child: Icon(Icons.clear, size: 16, color: subtitleColor),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Category Filter Pills (Horizontal scroll)
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Row(
-                        children: [
-                          'Favorites',
-                          'Tools',
-                          'Trend tools',
-                          'Gann and...',
-                          'Shapes',
-                        ].map((filter) {
-                          final bool isSelected = selectedFilter == filter && searchQuery.isEmpty;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: InkWell(
-                              onTap: () {
-                                searchController.clear();
-                                setSheetState(() {
-                                  searchQuery = '';
-                                  selectedFilter = filter;
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? (isDark ? const Color(0xFF2A2E39) : const Color(0xFFE0E3EB))
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  filter,
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                    color: isSelected ? textColor : subtitleColor,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-
-                    Divider(height: 1, color: cardBorder),
-
-                    // Scrollable Area: Tool Cards grouped by Category
-                    Flexible(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (grouped.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 24),
-                                child: Center(
-                                  child: Text(
-                                    'Tidak ada drawing tool yang ditemukan',
-                                    style: TextStyle(color: subtitleColor, fontSize: 13),
-                                  ),
-                                ),
-                              )
-                            else
-                              ...grouped.entries.map((entry) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 16),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        entry.key,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.8,
-                                          color: subtitleColor,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Wrap(
-                                        spacing: 10,
-                                        runSpacing: 10,
-                                        children: entry.value.map((tool) {
-                                          return _buildTvToolCard(
-                                            tool: tool,
-                                            cardBg: cardBg,
-                                            cardBorder: cardBorder,
-                                            textColor: textColor,
-                                            iconColor: iconColor,
-                                            starColor: starColor,
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    Divider(height: 1, color: cardBorder),
-
-                    // Bottom Footer: Show favorites on Chart + Hapus Garis
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit_outlined, size: 18, color: subtitleColor),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Show favorites on Chart',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: textColor,
-                              ),
-                            ),
-                          ),
-                          if (hasDrawings) ...[
-                            TextButton.icon(
-                              onPressed: () {
-                                Navigator.of(sheetContext).pop();
-                                _clearAllDrawings();
-                              },
-                              icon: Icon(Icons.delete_sweep_outlined, size: 16, color: Colors.red.shade400),
-                              label: Text(
-                                'Hapus Garis',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.red.shade400,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                          Switch(
-                            value: _showDrawingToolbar,
-                            activeThumbColor: const Color(0xFF2962FF),
-                            activeTrackColor: const Color(0xFF2962FF).withValues(alpha: 0.35),
-                            inactiveThumbColor: isDark ? const Color(0xFF787B86) : const Color(0xFFD1D4DC),
-                            inactiveTrackColor: isDark ? const Color(0xFF2A2E39) : const Color(0xFFE0E3EB),
-                            onChanged: (val) {
-                              setState(() => _showDrawingToolbar = val);
-                              setSheetState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
+        return _DrawingsBottomSheetWidget(
+          isDrawingTrendline: _isDrawingTrendline,
+          isDrawingHorizontalLine: _isDrawingHorizontalLine,
+          showFibonacci: _showFibonacci,
+          isDrawingFib: _isDrawingFib,
+          isDrawingRectangle: _isDrawingRectangle,
+          showDrawingToolbar: _showDrawingToolbar,
+          hasDrawings: hasDrawings,
+          onSelectTrendline: () {
+            Navigator.of(sheetContext).pop();
+            _startDrawingTrendline();
+          },
+          onSelectHorizontalLine: () {
+            Navigator.of(sheetContext).pop();
+            _startDrawingHorizontalLine();
+          },
+          onSelectFibonacci: () {
+            Navigator.of(sheetContext).pop();
+            _toggleFibonacci();
+          },
+          onSelectRectangle: () {
+            Navigator.of(sheetContext).pop();
+            _startDrawingRectangle();
+          },
+          onClearAllDrawings: () {
+            Navigator.of(sheetContext).pop();
+            _clearAllDrawings();
+          },
+          onToggleDrawingToolbar: (bool val) {
+            setState(() => _showDrawingToolbar = val);
           },
         );
       },
-    );
-  }
-
-  Widget _buildTvToolCard({
-    required _DrawingToolItem tool,
-    required Color cardBg,
-    required Color cardBorder,
-    required Color textColor,
-    required Color iconColor,
-    required Color starColor,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: tool.onSelect,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 104,
-          height: 76,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: tool.isSelected ? const Color(0xFF2962FF) : cardBorder,
-              width: tool.isSelected ? 1.6 : 1.0,
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Star on top right
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Icon(
-                    tool.isFavorite ? Icons.star : Icons.star_border,
-                    size: 13,
-                    color: tool.isFavorite ? starColor : Colors.transparent,
-                  ),
-                ],
-              ),
-              // Vector Tool Icon
-              tool.iconBuilder(tool.isSelected ? const Color(0xFF2962FF) : iconColor),
-              // Tool Name
-              Text(
-                tool.title,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: tool.isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: tool.isSelected ? const Color(0xFF2962FF) : textColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -1174,6 +772,90 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
+class _DragHandleWidget extends StatelessWidget {
+  final Color color;
+  const _DragHandleWidget({this.color = const Color(0xFF787B86)});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(3, (row) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 1.5),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 2.8,
+                  height: 2.8,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 2.8),
+                Container(
+                  width: 2.8,
+                  height: 2.8,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                ),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class _FavoriteToolButton extends StatelessWidget {
+  final Widget icon;
+  final String tooltip;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _FavoriteToolButton({
+    required this.icon,
+    required this.tooltip,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+    final Color selectedBg = isDark ? const Color(0xFF2A2E39) : const Color(0xFFE0E3EB);
+    final Color selectedBorder = const Color(0xFF2962FF);
+
+    return Tooltip(
+      message: tooltip,
+      preferBelow: false,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isSelected ? selectedBg : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: isSelected
+                  ? Border.all(color: selectedBorder, width: 1.2)
+                  : null,
+            ),
+            child: icon,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _DrawingToolbar extends StatelessWidget {
   final bool showFib;
   final bool isDrawingFib;
@@ -1208,26 +890,27 @@ class _DrawingToolbar extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
 
-    // TradingView Charcoal background: #1E222D in dark mode, pure white in light mode
-    final Color toolbarBg = isDark ? const Color(0xFF1E222D) : Colors.white;
-    final Color toolbarBorder = isDark ? const Color(0xFF363A45) : const Color(0xFFE0E3EB);
-    final Color dividerColor = isDark ? const Color(0xFF363A45) : const Color(0xFFE0E3EB);
+    // Neutral Charcoal/Black background matching chart: #1E1E1E in dark mode, pure white in light mode
+    final Color toolbarBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final Color toolbarBorder = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE0E3EB);
+    final Color dividerColor = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE0E3EB);
+    final Color defaultIconColor = isDark ? const Color(0xFFD8D8D8) : const Color(0xFF50535E);
+    final Color activeIconColor = const Color(0xFF2962FF);
 
     return Container(
-      constraints: const BoxConstraints(maxWidth: 420),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
         color: toolbarBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: toolbarBorder,
-          width: 1.2,
+          width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.65 : 0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
+            color: Colors.black.withValues(alpha: isDark ? 0.65 : 0.18),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -1236,63 +919,87 @@ class _DrawingToolbar extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _ToolButton(
-              icon: Icons.architecture,
-              label: 'FIB',
-              color: const Color(0xFFFFB300),
-              isSelected: showFib || isDrawingFib,
-              onTap: onToggleFib,
+            // Drag handle grip (TradingView style 6 dots :::)
+            _DragHandleWidget(
+              color: isDark ? const Color(0xFF636670) : const Color(0xFF9598A1),
             ),
-            const SizedBox(width: 5),
-            _ToolButton(
-              icon: Icons.horizontal_rule,
-              label: 'S/R',
-              color: const Color(0xFF00E5FF),
-              isSelected: isDrawingHLine,
-              onTap: onToggleHLine,
-            ),
-            const SizedBox(width: 5),
-            _ToolButton(
-              icon: Icons.trending_up,
-              label: 'TL',
-              color: const Color(0xFF00A3A8),
-              isSelected: isDrawingTrendline,
-              onTap: onToggleTrendline,
-            ),
-            const SizedBox(width: 5),
-            _ToolButton(
-              icon: Icons.crop_square_rounded,
-              label: 'BOX',
-              color: const Color(0xFFAB47BC),
+            const SizedBox(width: 4),
+
+            // Rectangle (Box Area)
+            _FavoriteToolButton(
+              tooltip: 'Rectangle',
               isSelected: isDrawingRectangle,
               onTap: onToggleRectangle,
+              icon: _RectVectorIcon(
+                color: isDrawingRectangle ? activeIconColor : defaultIconColor,
+              ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 2),
+
+            // Trendline
+            _FavoriteToolButton(
+              tooltip: 'Trendline',
+              isSelected: isDrawingTrendline,
+              onTap: onToggleTrendline,
+              icon: _TrendlineVectorIcon(
+                color: isDrawingTrendline ? activeIconColor : defaultIconColor,
+              ),
+            ),
+            const SizedBox(width: 2),
+
+            // Horizontal Line (Support/Resistance)
+            _FavoriteToolButton(
+              tooltip: 'Horizontal line',
+              isSelected: isDrawingHLine,
+              onTap: onToggleHLine,
+              icon: _HLineVectorIcon(
+                color: isDrawingHLine ? activeIconColor : defaultIconColor,
+              ),
+            ),
+            const SizedBox(width: 2),
+
+            // Fibonacci Retracement
+            _FavoriteToolButton(
+              tooltip: 'Fib retracement',
+              isSelected: showFib || isDrawingFib,
+              onTap: onToggleFib,
+              icon: _FibVectorIcon(
+                color: (showFib || isDrawingFib) ? activeIconColor : defaultIconColor,
+              ),
+            ),
+            const SizedBox(width: 4),
+
+            // Divider
             Container(
               width: 1,
               height: 20,
               color: dividerColor,
             ),
             const SizedBox(width: 2),
+
             // Clear all annotations
             IconButton(
               tooltip: 'Hapus Semua Garis',
               visualDensity: VisualDensity.compact,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
               padding: const EdgeInsets.all(4),
               icon: Icon(
                 Icons.delete_sweep_outlined,
                 size: 19,
-                color: hasDrawings ? Colors.red.shade400 : (isDark ? const Color(0xFF787B86) : const Color(0xFFBDBDBD)),
+                color: hasDrawings
+                    ? Colors.red.shade400
+                    : (isDark ? const Color(0xFF636670) : const Color(0xFFBDBDBD)),
               ),
               onPressed: hasDrawings ? onClearAll : null,
             ),
-            // Close toolbar
+
+            // Close / Hide toolbar
             IconButton(
               tooltip: 'Tutup Toolbar',
               visualDensity: VisualDensity.compact,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
               padding: const EdgeInsets.all(4),
               icon: Icon(
                 Icons.close,
@@ -1302,66 +1009,6 @@ class _DrawingToolbar extends StatelessWidget {
               onPressed: onClose,
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ToolButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _ToolButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final bool isDark = theme.brightness == Brightness.dark;
-    final Color unselectedBorder = isDark ? const Color(0xFF363A45) : const Color(0xFFE0E3EB);
-    final Color unselectedBg = isDark ? const Color(0xFF2A2E39) : const Color(0xFFF0F3FA);
-    final Color unselectedContent = isDark ? const Color(0xFFB2B5BE) : const Color(0xFF50535E);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-          decoration: BoxDecoration(
-            color: isSelected ? color.withValues(alpha: 0.18) : unselectedBg,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isSelected ? color : unselectedBorder,
-              width: isSelected ? 1.6 : 1.0,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 15, color: isSelected ? color : unselectedContent),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: isSelected ? color : unselectedContent,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  fontSize: 11,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -1436,16 +1083,23 @@ class _TrendlinePainter extends CustomPainter {
       ..strokeWidth = 1.8
       ..style = PaintingStyle.stroke;
 
-    final Paint dotPaint = Paint()
+    final Paint ringPaint = Paint()
       ..color = color
-      ..style = PaintingStyle.fill;
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke;
 
-    const Offset p1 = Offset(4, 19);
-    const Offset p2 = Offset(20, 5);
+    const double r = 2.2;
+    const Offset p1 = Offset(4.5, 19.5);
+    const Offset p2 = Offset(19.5, 4.5);
 
-    canvas.drawLine(p1, p2, linePaint);
-    canvas.drawCircle(p1, 2.4, dotPaint);
-    canvas.drawCircle(p2, 2.4, dotPaint);
+    // 45 degree diagonal unit step: r / sqrt(2) ≈ 1.56
+    const double delta = 1.56;
+    const Offset lineStart = Offset(4.5 + delta, 19.5 - delta);
+    const Offset lineEnd = Offset(19.5 - delta, 4.5 + delta);
+
+    canvas.drawLine(lineStart, lineEnd, linePaint);
+    canvas.drawCircle(p1, r, ringPaint);
+    canvas.drawCircle(p2, r, ringPaint);
   }
 
   @override
@@ -1476,16 +1130,20 @@ class _HLinePainter extends CustomPainter {
       ..strokeWidth = 1.8
       ..style = PaintingStyle.stroke;
 
-    final Paint dotPaint = Paint()
+    final Paint ringPaint = Paint()
       ..color = color
-      ..style = PaintingStyle.fill;
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke;
 
-    const Offset p1 = Offset(3, 12);
-    const Offset p2 = Offset(21, 12);
-    const Offset center = Offset(12, 12);
+    const double r = 2.2;
+    const Offset center = Offset(12.0, 12.0);
 
-    canvas.drawLine(p1, p2, linePaint);
-    canvas.drawCircle(center, 2.4, dotPaint);
+    // Left line up to ring perimeter
+    canvas.drawLine(const Offset(3.0, 12.0), Offset(12.0 - r, 12.0), linePaint);
+    // Right line from ring perimeter
+    canvas.drawLine(Offset(12.0 + r, 12.0), const Offset(21.0, 12.0), linePaint);
+    // Center hollow anchor ring
+    canvas.drawCircle(center, r, ringPaint);
   }
 
   @override
@@ -1513,21 +1171,35 @@ class _FibPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final Paint linePaint = Paint()
       ..color = color
-      ..strokeWidth = 1.5
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final Paint ringPaint = Paint()
+      ..color = color
+      ..strokeWidth = 1.8
       ..style = PaintingStyle.stroke;
 
-    final Paint dotPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
+    const double r = 2.2;
+    const double xLeft = 3.5;
+    const double xRight = 20.5;
 
-    // 3 horizontal level lines
-    canvas.drawLine(const Offset(6, 6), const Offset(21, 6), linePaint);
-    canvas.drawLine(const Offset(6, 12), const Offset(21, 12), linePaint);
-    canvas.drawLine(const Offset(6, 18), const Offset(21, 18), linePaint);
+    // 4 horizontal parallel levels
+    // Line 1: plain top line
+    canvas.drawLine(const Offset(xLeft, 4.5), const Offset(xRight, 4.5), linePaint);
 
-    // Anchor points
-    canvas.drawCircle(const Offset(6, 6), 2.0, dotPaint);
-    canvas.drawCircle(const Offset(6, 18), 2.0, dotPaint);
+    // Line 2: line with hollow anchor ring on the right
+    const double circle2CenterX = xRight - r; // 18.3
+    canvas.drawLine(const Offset(xLeft, 9.5), const Offset(circle2CenterX - r, 9.5), linePaint);
+    canvas.drawCircle(const Offset(circle2CenterX, 9.5), r, ringPaint);
+
+    // Line 3: plain middle line
+    canvas.drawLine(const Offset(xLeft, 14.5), const Offset(xRight, 14.5), linePaint);
+
+    // Line 4: line with hollow anchor ring on the left
+    const double circle4CenterX = xLeft + r; // 5.7
+    canvas.drawCircle(const Offset(circle4CenterX, 19.5), r, ringPaint);
+    canvas.drawLine(const Offset(circle4CenterX + r, 19.5), const Offset(xRight, 19.5), linePaint);
   }
 
   @override
@@ -1555,22 +1227,596 @@ class _RectPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final Paint strokePaint = Paint()
       ..color = color
-      ..strokeWidth = 1.6
+      ..strokeWidth = 1.8
       ..style = PaintingStyle.stroke;
 
-    final Paint fillPaint = Paint()
-      ..color = color.withValues(alpha: 0.15)
-      ..style = PaintingStyle.fill;
+    final Paint ringPaint = Paint()
+      ..color = color
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke;
 
-    final RRect rrect = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(3, 5, 18, 14),
-      const Radius.circular(3),
-    );
+    const double r = 2.2;
+    const double x1 = 5.0;
+    const double x2 = 19.0;
+    const double y1 = 5.0;
+    const double y2 = 19.0;
 
-    canvas.drawRRect(rrect, fillPaint);
-    canvas.drawRRect(rrect, strokePaint);
+    // 4 edges connecting the corner rings (without bleeding into ring holes)
+    canvas.drawLine(const Offset(x1 + r, y1), const Offset(x2 - r, y1), strokePaint); // Top
+    canvas.drawLine(const Offset(x1 + r, y2), const Offset(x2 - r, y2), strokePaint); // Bottom
+    canvas.drawLine(const Offset(x1, y1 + r), const Offset(x1, y2 - r), strokePaint); // Left
+    canvas.drawLine(const Offset(x2, y1 + r), const Offset(x2, y2 - r), strokePaint); // Right
+
+    // 4 corner hollow anchor rings
+    canvas.drawCircle(const Offset(x1, y1), r, ringPaint); // Top-Left
+    canvas.drawCircle(const Offset(x2, y1), r, ringPaint); // Top-Right
+    canvas.drawCircle(const Offset(x1, y2), r, ringPaint); // Bottom-Left
+    canvas.drawCircle(const Offset(x2, y2), r, ringPaint); // Bottom-Right
   }
 
   @override
   bool shouldRepaint(covariant _RectPainter oldDelegate) => oldDelegate.color != color;
+}
+
+class _DrawingsBottomSheetWidget extends StatefulWidget {
+  final bool isDrawingTrendline;
+  final bool isDrawingHorizontalLine;
+  final bool showFibonacci;
+  final bool isDrawingFib;
+  final bool isDrawingRectangle;
+  final bool showDrawingToolbar;
+  final bool hasDrawings;
+  final VoidCallback onSelectTrendline;
+  final VoidCallback onSelectHorizontalLine;
+  final VoidCallback onSelectFibonacci;
+  final VoidCallback onSelectRectangle;
+  final VoidCallback onClearAllDrawings;
+  final ValueChanged<bool> onToggleDrawingToolbar;
+
+  const _DrawingsBottomSheetWidget({
+    required this.isDrawingTrendline,
+    required this.isDrawingHorizontalLine,
+    required this.showFibonacci,
+    required this.isDrawingFib,
+    required this.isDrawingRectangle,
+    required this.showDrawingToolbar,
+    required this.hasDrawings,
+    required this.onSelectTrendline,
+    required this.onSelectHorizontalLine,
+    required this.onSelectFibonacci,
+    required this.onSelectRectangle,
+    required this.onClearAllDrawings,
+    required this.onToggleDrawingToolbar,
+  });
+
+  @override
+  State<_DrawingsBottomSheetWidget> createState() => _DrawingsBottomSheetWidgetState();
+}
+
+class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> {
+  late final TextEditingController _searchController;
+  late final FocusNode _focusNode;
+  String _searchQuery = '';
+  String _selectedFilter = 'Favorites';
+  bool _isSearching = false;
+  late bool _showDrawingToolbar;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _focusNode = FocusNode();
+    _showDrawingToolbar = widget.showDrawingToolbar;
+
+    _focusNode.addListener(() {
+      if (_focusNode.hasFocus && !_isSearching) {
+        setState(() => _isSearching = true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _stopSearching() {
+    _searchController.clear();
+    _focusNode.unfocus();
+    setState(() {
+      _searchQuery = '';
+      _isSearching = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+
+    // Theme palette harmonized with chart background (#121212 in dark mode)
+    final Color sheetBg = isDark ? const Color(0xFF121212) : Colors.white;
+    final Color cardBg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F3FA);
+    final Color cardBorder = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE0E3EB);
+    final Color searchBg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F3FA);
+    final Color textColor = isDark ? Colors.white : const Color(0xFF131722);
+    final Color subtitleColor = isDark ? const Color(0xFF8E8E93) : const Color(0xFF9598A1);
+    final Color closeBtnBg = isDark ? const Color(0xFF242426) : const Color(0xFFF0F3FA);
+    final Color iconColor = isDark ? Colors.white : const Color(0xFF131722);
+    const Color starColor = Color(0xFFF7A600); // TradingView Amber Star
+
+    final List<_DrawingToolItem> allTools = [
+      _DrawingToolItem(
+        id: 'trendline',
+        title: 'Trendline',
+        category: 'TREND TOOLS',
+        iconBuilder: (Color c) => _TrendlineVectorIcon(color: c),
+        isFavorite: true,
+        isSelected: widget.isDrawingTrendline,
+        onSelect: widget.onSelectTrendline,
+      ),
+      _DrawingToolItem(
+        id: 'horizontal_line',
+        title: 'Horizontal line',
+        category: 'TREND TOOLS',
+        iconBuilder: (Color c) => _HLineVectorIcon(color: c),
+        isFavorite: true,
+        isSelected: widget.isDrawingHorizontalLine,
+        onSelect: widget.onSelectHorizontalLine,
+      ),
+      _DrawingToolItem(
+        id: 'fib_retracement',
+        title: 'Fib retracement',
+        category: 'GANN AND FIBONACCI',
+        iconBuilder: (Color c) => _FibVectorIcon(color: c),
+        isFavorite: true,
+        isSelected: widget.showFibonacci || widget.isDrawingFib,
+        onSelect: widget.onSelectFibonacci,
+      ),
+      _DrawingToolItem(
+        id: 'rectangle',
+        title: 'Rectangle',
+        category: 'GEOMETRIC SHAPES',
+        iconBuilder: (Color c) => _RectVectorIcon(color: c),
+        isFavorite: true,
+        isSelected: widget.isDrawingRectangle,
+        onSelect: widget.onSelectRectangle,
+      ),
+    ];
+
+    List<_DrawingToolItem> filtered = allTools;
+    if (_searchQuery.isNotEmpty) {
+      filtered = allTools
+          .where((t) =>
+              t.title.toLowerCase().contains(_searchQuery) ||
+              t.category.toLowerCase().contains(_searchQuery))
+          .toList();
+    } else if (_selectedFilter == 'Favorites') {
+      filtered = allTools.where((t) => t.isFavorite).toList();
+    } else if (_selectedFilter == 'Trend tools') {
+      filtered = allTools.where((t) => t.category == 'TREND TOOLS').toList();
+    } else if (_selectedFilter == 'Gann and...') {
+      filtered = allTools.where((t) => t.category == 'GANN AND FIBONACCI').toList();
+    } else if (_selectedFilter == 'Shapes') {
+      filtered = allTools.where((t) => t.category == 'GEOMETRIC SHAPES').toList();
+    }
+
+    final Map<String, List<_DrawingToolItem>> grouped = {};
+    for (final item in filtered) {
+      grouped.putIfAbsent(item.category, () => []).add(item);
+    }
+
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
+    // When searching or typing, maintain fullscreen height (94%) so it NEVER shrinks
+    final double targetHeight = (_isSearching || _searchQuery.isNotEmpty)
+        ? screenHeight * 0.94
+        : screenHeight * 0.75;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      height: targetHeight,
+      decoration: BoxDecoration(
+        color: sheetBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border(
+          top: BorderSide(
+            color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE0E3EB),
+            width: 1,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.65 : 0.15),
+            blurRadius: 24,
+            offset: const Offset(0, -6),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: keyboardHeight),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Drag Pill Handle (only when not in fullscreen search mode)
+              if (!_isSearching && _searchQuery.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 10, bottom: 4),
+                    child: Container(
+                      width: 38,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF3E3E42) : const Color(0xFFD1D4DC),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                const SizedBox(height: 12),
+
+              // Title & Close/Back Button
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _isSearching || _searchQuery.isNotEmpty ? 'Search drawings' : 'Drawings',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: textColor,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () {
+                        if (_isSearching || _searchQuery.isNotEmpty) {
+                          _stopSearching();
+                        } else {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(18),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: closeBtnBg,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _isSearching || _searchQuery.isNotEmpty ? Icons.arrow_back : Icons.close,
+                          size: 18,
+                          color: iconColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Search Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 42,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: searchBg,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: _focusNode.hasFocus ? (isDark ? Colors.white : const Color(0xFF131722)) : cardBorder,
+                            width: _focusNode.hasFocus ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.search, size: 18, color: subtitleColor),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                focusNode: _focusNode,
+                                cursorColor: isDark ? Colors.white : const Color(0xFF131722),
+                                onTap: () {
+                                  if (!_isSearching) {
+                                    setState(() => _isSearching = true);
+                                  }
+                                },
+                                onChanged: (val) {
+                                  setState(() {
+                                    _searchQuery = val.trim().toLowerCase();
+                                    _isSearching = true;
+                                  });
+                                },
+                                style: TextStyle(fontSize: 13.5, color: textColor),
+                                decoration: InputDecoration(
+                                  hintText: 'Search',
+                                  hintStyle: TextStyle(fontSize: 13.5, color: subtitleColor),
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  filled: true,
+                                  fillColor: Colors.transparent,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                  isDense: true,
+                                ),
+                              ),
+                            ),
+                            if (_searchQuery.isNotEmpty)
+                              GestureDetector(
+                                onTap: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                                child: Icon(Icons.clear, size: 16, color: subtitleColor),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (_isSearching || _searchQuery.isNotEmpty) ...[
+                      const SizedBox(width: 10),
+                      TextButton(
+                        onPressed: _stopSearching,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        child: Text(
+                          'Batal',
+                          style: TextStyle(
+                            color: isDark ? Colors.white : const Color(0xFF131722),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              // Category Filter Pills (Horizontal scroll) - visible when not searching text
+              if (_searchQuery.isEmpty) ...[
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      'Favorites',
+                      'Tools',
+                      'Trend tools',
+                      'Gann and...',
+                      'Shapes',
+                    ].map((filter) {
+                      final bool isSelected = _selectedFilter == filter;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: InkWell(
+                          onTap: () {
+                            setState(() => _selectedFilter = filter);
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? (isDark ? const Color(0xFF2B2B2B) : const Color(0xFFE0E3EB))
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              filter,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                color: isSelected ? textColor : subtitleColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                Divider(height: 1, color: cardBorder),
+              ],
+
+              // Scrollable Area: Tool Cards grouped by Category
+              // Using Expanded guarantees the view fills all vertical space and never shrinks!
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (grouped.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 36),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                Icon(Icons.search_off, size: 36, color: subtitleColor),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Tidak ada drawing tool yang cocok dengan "$_searchQuery"',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: subtitleColor, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        ...grouped.entries.map((entry) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  entry.key,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.8,
+                                    color: subtitleColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 10,
+                                  runSpacing: 10,
+                                  children: entry.value.map((tool) {
+                                    return _buildToolCard(
+                                      tool: tool,
+                                      cardBg: cardBg,
+                                      cardBorder: cardBorder,
+                                      textColor: textColor,
+                                      iconColor: iconColor,
+                                      starColor: starColor,
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Bottom Footer: Show favorites on Chart + Hapus Garis (only when not searching)
+              if (!_isSearching && _searchQuery.isEmpty) ...[
+                Divider(height: 1, color: cardBorder),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit_outlined, size: 18, color: subtitleColor),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Show favorites on Chart',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: textColor,
+                          ),
+                        ),
+                      ),
+                      if (widget.hasDrawings) ...[
+                        TextButton.icon(
+                          onPressed: widget.onClearAllDrawings,
+                          icon: Icon(Icons.delete_sweep_outlined, size: 16, color: Colors.red.shade400),
+                          label: Text(
+                            'Hapus Garis',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.red.shade400,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Switch(
+                        value: _showDrawingToolbar,
+                        activeThumbColor: const Color(0xFF2962FF),
+                        activeTrackColor: const Color(0xFF2962FF).withValues(alpha: 0.35),
+                        inactiveThumbColor: isDark ? const Color(0xFF8E8E93) : const Color(0xFFD1D4DC),
+                        inactiveTrackColor: isDark ? const Color(0xFF2B2B2B) : const Color(0xFFE0E3EB),
+                        onChanged: (val) {
+                          setState(() => _showDrawingToolbar = val);
+                          widget.onToggleDrawingToolbar(val);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToolCard({
+    required _DrawingToolItem tool,
+    required Color cardBg,
+    required Color cardBorder,
+    required Color textColor,
+    required Color iconColor,
+    required Color starColor,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: tool.onSelect,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 104,
+          height: 76,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: tool.isSelected ? const Color(0xFF2962FF) : cardBorder,
+              width: tool.isSelected ? 1.6 : 1.0,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Star on top right
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Icon(
+                    tool.isFavorite ? Icons.star : Icons.star_border,
+                    size: 13,
+                    color: tool.isFavorite ? starColor : Colors.transparent,
+                  ),
+                ],
+              ),
+              // Vector Tool Icon
+              tool.iconBuilder(tool.isSelected ? const Color(0xFF2962FF) : iconColor),
+              // Tool Name
+              Text(
+                tool.title,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: tool.isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: tool.isSelected ? const Color(0xFF2962FF) : textColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
