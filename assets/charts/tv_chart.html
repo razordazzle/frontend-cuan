@@ -34,6 +34,389 @@
             display: none !important;
             pointer-events: none !important;
         }
+
+        /* TradingView Mobile Floating Toolbar Style */
+        .tv-floating-toolbar {
+            position: absolute;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            background: #1E1E1E;
+            border: 1px solid #2C2C2E;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+            height: 38px;
+            padding: 0 4px;
+            z-index: 50;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .tv-tb-drag-handle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 32px;
+            cursor: grab;
+            padding: 0 2px;
+        }
+
+        .tv-tb-drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .tv-tb-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 32px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            color: #B2B5BE;
+            cursor: pointer;
+            padding: 0;
+            margin: 0 1px;
+            outline: none;
+            position: relative;
+            transition: background 0.12s, color 0.12s;
+            touch-action: manipulation;
+        }
+
+        .tv-tb-btn:active, .tv-tb-btn.active {
+            background: #2B2B2B;
+            color: #FFFFFF;
+        }
+
+        #tv-btn-angle.active {
+            background: #2B2B2B;
+            color: #00E5FF;
+        }
+
+        .tv-tb-btn-delete {
+            color: #EF5350;
+        }
+        .tv-tb-btn-delete:active {
+            background: rgba(239, 83, 80, 0.18);
+            color: #FF5252;
+        }
+
+        .tv-tb-text-btn {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: #FFFFFF;
+            width: auto;
+            padding: 0 7px;
+        }
+
+        .tv-btn-icon-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tv-color-underline {
+            width: 16px;
+            height: 3px;
+            border-radius: 1.5px;
+            margin-top: 2px;
+        }
+
+        .tv-t-icon {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .tv-style-preview {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 14px;
+        }
+
+        .tv-style-line-solid {
+            width: 18px;
+            height: 2px;
+            background: #FFFFFF;
+            border-radius: 1px;
+            display: block;
+        }
+
+        .tv-style-line-dashed {
+            width: 18px;
+            height: 0;
+            border-top: 2px dashed #FFFFFF;
+            display: block;
+        }
+
+        .tv-style-line-dotted {
+            width: 18px;
+            height: 0;
+            border-top: 2px dotted #FFFFFF;
+            display: block;
+        }
+
+        /* Common Popover Menu Style */
+        .tv-popover {
+            position: absolute;
+            background: #1E1E1E;
+            border: 1px solid #2C2C2E;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75);
+            z-index: 60;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        /* Width & Style Dropdowns */
+        .tv-menu-list {
+            display: flex;
+            flex-direction: column;
+            padding: 6px;
+            min-width: 120px;
+        }
+
+        .tv-menu-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: #D1D4DC;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 13.5px;
+            font-weight: 500;
+            cursor: pointer;
+            gap: 12px;
+            transition: background 0.12s;
+        }
+
+        .tv-menu-item:active, .tv-menu-item.selected {
+            background: #FFFFFF;
+            color: #121212;
+            font-weight: 700;
+        }
+
+        .tv-menu-item.selected .tv-menu-line {
+            background: #121212 !important;
+            border-color: #121212 !important;
+        }
+
+        .tv-menu-line {
+            width: 22px;
+            background: #D1D4DC;
+            border-radius: 1px;
+            display: inline-block;
+        }
+
+        /* Color Picker Popover (TradingView Exact Matrix) */
+        .tv-color-picker {
+            padding: 12px;
+            width: 255px;
+        }
+
+        .tv-palette-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 5px;
+            margin-bottom: 12px;
+        }
+
+        .tv-color-swatch {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            box-sizing: border-box;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .tv-color-swatch.selected {
+            box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 3.5px #1E1E1E;
+            z-index: 2;
+        }
+
+        .tv-custom-color-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            padding-top: 8px;
+            border-top: 1px solid #2C2C2E;
+        }
+
+        .tv-custom-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            border: 1px dashed #50535E;
+            color: #B2B5BE;
+            background: transparent;
+            cursor: pointer;
+            font-size: 15px;
+            position: relative;
+        }
+
+        .tv-opacity-section {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .tv-opacity-label {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 11.5px;
+            color: #787B86;
+            font-weight: 500;
+        }
+
+        .tv-opacity-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tv-slider-container {
+            position: relative;
+            flex: 1;
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+            background-image: repeating-linear-gradient(45deg, #2B2B2B 25%, transparent 25%, transparent 75%, #2B2B2B 75%, #2B2B2B), repeating-linear-gradient(45deg, #2B2B2B 25%, #1E1E1E 25%, #1E1E1E 75%, #2B2B2B 75%, #2B2B2B);
+            background-position: 0 0, 4px 4px;
+            background-size: 8px 8px;
+            border: 1px solid #2C2C2E;
+        }
+
+        .tv-slider-gradient {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+
+        .tv-opacity-input {
+            position: absolute;
+            top: -4px;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            margin: 0;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 5;
+        }
+
+        .tv-opacity-val {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #D1D4DC;
+            padding: 3px 6px;
+            background: #121212;
+            border: 1px solid #2C2C2E;
+            border-radius: 4px;
+            min-width: 34px;
+            text-align: center;
+        }
+
+        /* TradingView Mobile Bottom Sheet for More Options (•••) */
+        .tv-sheet-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            touch-action: none;
+        }
+
+        .tv-sheet-backdrop.visible {
+            opacity: 1;
+        }
+
+        .tv-bottom-sheet {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            background: #1E1E1E;
+            border-top: 1px solid #2C2C2E;
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+            z-index: 1001;
+            box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.6);
+            padding: 8px 0 20px 0;
+            transform: translateY(100%);
+            transition: transform 0.24s cubic-bezier(0.2, 0.9, 0.3, 1);
+            user-select: none;
+            -webkit-user-select: none;
+            box-sizing: border-box;
+        }
+
+        .tv-bottom-sheet.visible {
+            transform: translateY(0);
+        }
+
+        .tv-sheet-handle {
+            width: 36px;
+            height: 4px;
+            background: #50535E;
+            border-radius: 2px;
+            margin: 4px auto 10px auto;
+        }
+
+        .tv-sheet-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 13px 20px;
+            color: #D1D4DC;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 15px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: background 0.12s, color 0.12s;
+            touch-action: manipulation;
+        }
+
+        .tv-sheet-item:active {
+            background: #2B2B2B;
+            color: #FFFFFF;
+        }
+
+        .tv-sheet-item svg {
+            flex-shrink: 0;
+            color: #868993;
+            transition: color 0.12s;
+        }
+
+        .tv-sheet-item:active svg {
+            color: #FFFFFF;
+        }
+
+        .tv-sheet-separator {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.08);
+            margin: 6px 0;
+        }
     </style>
     <script src="lightweight-charts.standalone.production.js"></script>
 </head>
@@ -42,6 +425,198 @@
     <div id="chart-container" style="position: relative; width: 100vw; height: 100vh; overflow: hidden;">
         <div id="chart" style="width: 100%; height: 100%;"></div>
         <canvas id="fib-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></canvas>
+
+        <!-- Floating Trendline Edit Toolbar (TradingView Mobile Style) -->
+        <div id="tv-trendline-toolbar" class="tv-floating-toolbar" style="display: none;">
+            <!-- Drag Handle -->
+            <div class="tv-tb-drag-handle" id="tv-drag-handle" title="Geser Toolbar">
+                <svg width="10" height="18" viewBox="0 0 10 18" fill="none">
+                    <circle cx="3" cy="3" r="1.3" fill="#787B86" />
+                    <circle cx="7" cy="3" r="1.3" fill="#787B86" />
+                    <circle cx="3" cy="9" r="1.3" fill="#787B86" />
+                    <circle cx="7" cy="9" r="1.3" fill="#787B86" />
+                    <circle cx="3" cy="15" r="1.3" fill="#787B86" />
+                    <circle cx="7" cy="15" r="1.3" fill="#787B86" />
+                </svg>
+            </div>
+
+            <!-- Template / Clone Button -->
+            <button class="tv-tb-btn" id="tv-btn-clone" title="Template">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <rect x="2.5" y="2.5" width="5" height="5" rx="1" />
+                    <rect x="10.5" y="2.5" width="5" height="5" rx="1" />
+                    <rect x="2.5" y="10.5" width="5" height="5" rx="1" />
+                    <rect x="10.5" y="10.5" width="5" height="5" rx="1" />
+                    <path d="M13 11.5v3M11.5 13h3" stroke-linecap="round" />
+                </svg>
+            </button>
+
+            <!-- Line Color Button (Pencil) -->
+            <button class="tv-tb-btn" id="tv-btn-line-color" title="Warna Garis">
+                <div class="tv-btn-icon-wrapper">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12.5 2.5l3 3L5.5 15.5H2.5v-3L12.5 2.5z" />
+                    </svg>
+                    <div id="tv-indicator-line-color" class="tv-color-underline" style="background-color: #7C4DFF;"></div>
+                </div>
+            </button>
+
+            <!-- Text Color Button ('T') -->
+            <button class="tv-tb-btn" id="tv-btn-text-color" title="Warna Teks">
+                <div class="tv-btn-icon-wrapper">
+                    <span class="tv-t-icon">T</span>
+                    <div id="tv-indicator-text-color" class="tv-color-underline" style="background-color: #FFFFFF;"></div>
+                </div>
+            </button>
+
+            <!-- Stroke Width Button (e.g. 4px) -->
+            <button class="tv-tb-btn tv-tb-text-btn" id="tv-btn-width" title="Ketebalan Garis">
+                <span id="tv-label-width">2px</span>
+            </button>
+
+            <!-- Line Style Button (e.g. —, ---, ····) -->
+            <button class="tv-tb-btn" id="tv-btn-style" title="Gaya Garis">
+                <div id="tv-indicator-line-style" class="tv-style-preview">
+                    <span class="tv-style-line-solid"></span>
+                </div>
+            </button>
+
+            <!-- Angle Measure Button (∠) -->
+            <button class="tv-tb-btn" id="tv-btn-angle" title="Sudut">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2.5 15.5h13" />
+                    <path d="M2.5 15.5l11-11" />
+                    <path d="M7 15.5a4.5 4.5 0 0 0-3-4" />
+                </svg>
+            </button>
+
+            <!-- Trash Button (Delete) -->
+            <button class="tv-tb-btn tv-tb-btn-delete" id="tv-btn-delete" title="Hapus">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3.5 5h11" />
+                    <path d="M7 3h4" />
+                    <path d="M5 5l.8 10a1.5 1.5 0 0 0 1.5 1.4h5.4a1.5 1.5 0 0 0 1.5-1.4L15 5" />
+                    <path d="M7.5 8.5v4.5M10.5 8.5v4.5" />
+                </svg>
+            </button>
+
+            <!-- More Options Button (•••) -->
+            <button class="tv-tb-btn" id="tv-btn-more" title="Lainnya">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                    <circle cx="4" cy="9" r="1.5" />
+                    <circle cx="9" cy="9" r="1.5" />
+                    <circle cx="14" cy="9" r="1.5" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Color Picker Popover Panel -->
+        <div id="tv-popover-color" class="tv-popover tv-color-picker" style="display: none;">
+            <div id="tv-palette-grid" class="tv-palette-grid"></div>
+            <div class="tv-custom-color-row">
+                <div id="tv-recent-color-1" class="tv-color-swatch" style="background-color: #2B2B2B;"></div>
+                <div id="tv-recent-color-2" class="tv-color-swatch" style="background-color: #7C4DFF;"></div>
+                <label class="tv-custom-btn" title="Pilih Warna Kustom">
+                    +
+                    <input type="color" id="tv-custom-color-input" style="opacity: 0; width: 0; height: 0; position: absolute;" />
+                </label>
+            </div>
+            <div class="tv-opacity-section">
+                <span class="tv-opacity-label">Opacity</span>
+                <div class="tv-opacity-row">
+                    <div class="tv-slider-container">
+                        <div id="tv-slider-gradient" class="tv-slider-gradient"></div>
+                        <input type="range" id="tv-opacity-slider" class="tv-opacity-input" min="0" max="100" value="100" />
+                    </div>
+                    <span id="tv-opacity-val" class="tv-opacity-val">100%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stroke Width Dropdown Popover -->
+        <div id="tv-popover-width" class="tv-popover tv-menu-list" style="display: none;">
+            <div class="tv-menu-item" data-width="1">
+                <span class="tv-menu-line" style="height: 1px;"></span>
+                <span>1px</span>
+            </div>
+            <div class="tv-menu-item" data-width="2">
+                <span class="tv-menu-line" style="height: 2px;"></span>
+                <span>2px</span>
+            </div>
+            <div class="tv-menu-item" data-width="3">
+                <span class="tv-menu-line" style="height: 3px;"></span>
+                <span>3px</span>
+            </div>
+            <div class="tv-menu-item" data-width="4">
+                <span class="tv-menu-line" style="height: 4px;"></span>
+                <span>4px</span>
+            </div>
+        </div>
+
+        <!-- Line Style Dropdown Popover -->
+        <div id="tv-popover-style" class="tv-popover tv-menu-list" style="display: none;">
+            <div class="tv-menu-item" data-style="solid">
+                <svg width="24" height="14" viewBox="0 0 24 14" style="flex-shrink: 0;">
+                    <line x1="1" y1="7" x2="23" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+                <span>Line</span>
+            </div>
+            <div class="tv-menu-item" data-style="dashed">
+                <svg width="24" height="14" viewBox="0 0 24 14" style="flex-shrink: 0;">
+                    <line x1="1" y1="7" x2="23" y2="7" stroke="currentColor" stroke-width="2" stroke-dasharray="5 3.5" stroke-linecap="round" />
+                </svg>
+                <span>Dashed line</span>
+            </div>
+            <div class="tv-menu-item" data-style="dotted">
+                <svg width="24" height="14" viewBox="0 0 24 14" style="flex-shrink: 0;">
+                    <line x1="1" y1="7" x2="23" y2="7" stroke="currentColor" stroke-width="2.5" stroke-dasharray="0.1 5" stroke-linecap="round" />
+                </svg>
+                <span>Dotted line</span>
+            </div>
+        </div>
+
+        <!-- TradingView Mobile Bottom Sheet for More Options (•••) -->
+        <div id="tv-more-sheet-backdrop" class="tv-sheet-backdrop" style="display: none;"></div>
+        <div id="tv-more-bottom-sheet" class="tv-bottom-sheet" style="display: none;">
+            <div class="tv-sheet-handle"></div>
+            <div class="tv-sheet-item" id="tv-sheet-clone">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="9" height="9" rx="1.5" />
+                    <rect x="8" y="8" width="9" height="9" rx="1.5" />
+                </svg>
+                <span>Clone</span>
+            </div>
+            <div class="tv-sheet-item" id="tv-sheet-lock">
+                <svg id="tv-sheet-lock-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="4" y="9" width="12" height="8" rx="2" />
+                    <path id="tv-lock-shackle" d="M7 9V6a3 3 0 0 1 6 0v3" />
+                </svg>
+                <span id="tv-sheet-lock-label">Lock</span>
+            </div>
+            <div class="tv-sheet-item" id="tv-sheet-hide">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5-7.5-5.5z" />
+                    <path d="M3 3l14 14" />
+                </svg>
+                <span>Hide</span>
+            </div>
+            <div class="tv-sheet-item" id="tv-sheet-remove">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3.5 5.5h13" />
+                    <path d="M7.5 3.5h5" />
+                    <path d="M5.5 5.5l.8 10a1.5 1.5 0 0 0 1.5 1.4h4.4a1.5 1.5 0 0 0 1.5-1.4l.8-10" />
+                </svg>
+                <span>Remove</span>
+            </div>
+            <div class="tv-sheet-separator"></div>
+            <div class="tv-sheet-item" id="tv-sheet-settings">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 2.5l6.5 3.75v7.5L10 17.5 3.5 13.75v-7.5L10 2.5z" />
+                    <circle cx="10" cy="10" r="2.5" />
+                </svg>
+                <span>Settings...</span>
+            </div>
+        </div>
     </div>
     <script>
         window.onerror = function(msg, url, lineNo, columnNo, error) {
@@ -88,6 +663,7 @@
         let dragTrendlineIndex = -1;
         let dragTrendlinePart = 0; // 0: none, 1: p1, 2: p2, 3: body
         let dragTrendlineStartPos = null;
+        let globalAngleLock = false;
 
         function notifyHorizontalLinesChanged() {
             if (window.flutter_inappwebview?.callHandler) {
@@ -280,6 +856,755 @@
             return { x: px, y: py };
         }
 
+        // ----------------------------------------------------
+        // Trendline Floating Edit Toolbar & Customization
+        // ----------------------------------------------------
+        let activeColorPickerTarget = 'line'; // 'line' | 'text'
+        let recentColors = ['#2A2E39', '#7C4DFF'];
+
+        const TV_PALETTE_COLORS = [
+            // Row 0: Grayscale (10)
+            ['#FFFFFF', '#D1D4DC', '#B2B5BE', '#9598A1', '#787B86', '#60626B', '#434651', '#2A2E39', '#1E222D', '#000000'],
+            // Row 1: Very light pastel tints
+            ['#FFCDD2', '#FFE0B2', '#FFF9C4', '#F0F4C3', '#DCEDC8', '#C8E6C9', '#B2EBF2', '#BBDEFB', '#D1C4E9', '#F8BBD0'],
+            // Row 2: Soft pastels
+            ['#EF9A9A', '#FFCC80', '#FFF59D', '#E6EE9C', '#C5E1A5', '#A5D6A7', '#80DEEA', '#90CAF9', '#B39DDB', '#F48FB1'],
+            // Row 3: Medium vibrant
+            ['#E57373', '#FFB74D', '#FFF176', '#DCE775', '#AED581', '#81C784', '#4DD0E1', '#64B5F6', '#9575CD', '#F06292'],
+            // Row 4: Primary / Vivid (TradingView signature core row)
+            ['#F44336', '#FF9800', '#FFEB3B', '#CDDC39', '#8BC34A', '#4CAF50', '#00BCD4', '#2196F3', '#7C4DFF', '#E91E63'],
+            // Row 5: Deep vibrant
+            ['#E53935', '#FB8C00', '#FDD835', '#C0CA33', '#7CB342', '#43A047', '#00ACC1', '#1E88E5', '#651FFF', '#D81B60'],
+            // Row 6: Dark shades
+            ['#D32F2F', '#F57C00', '#FBC02D', '#AFB42B', '#689F38', '#388E3C', '#0097A7', '#1976D2', '#512DA8', '#C2185B'],
+            // Row 7: Deepest / Shadow shades
+            ['#B71C1C', '#E65100', '#F57F17', '#827717', '#33691E', '#1B5E20', '#006064', '#0D47A1', '#311B92', '#880E4F']
+        ];
+
+        function hexToRgba(hex, alpha = 1.0) {
+            if (!hex) hex = '#7C4DFF';
+            let c = hex.replace('#', '');
+            if (c.length === 3) {
+                c = c.split('').map(char => char + char).join('');
+            }
+            const num = parseInt(c, 16);
+            if (isNaN(num)) return `rgba(124, 77, 255, ${alpha})`;
+            const r = (num >> 16) & 255;
+            const g = (num >> 8) & 255;
+            const b = num & 255;
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        function showTrendlineToolbar(index) {
+            if (index < 0 || index >= trendlines.length) {
+                hideTrendlineToolbar();
+                return;
+            }
+            const t = trendlines[index];
+            const toolbar = document.getElementById('tv-trendline-toolbar');
+            if (!toolbar) return;
+
+            const lineColor = t.color || '#7C4DFF';
+            const textColor = t.textColor || '#FFFFFF';
+            const width = t.width || 2;
+            const style = t.style || 'solid';
+
+            const lineInd = document.getElementById('tv-indicator-line-color');
+            if (lineInd) lineInd.style.backgroundColor = lineColor;
+
+            const textInd = document.getElementById('tv-indicator-text-color');
+            if (textInd) textInd.style.backgroundColor = textColor;
+
+            const widthLabel = document.getElementById('tv-label-width');
+            if (widthLabel) widthLabel.textContent = width + 'px';
+
+            const styleInd = document.getElementById('tv-indicator-line-style');
+            if (styleInd) {
+                if (style === 'dashed') {
+                    styleInd.innerHTML = '<span class="tv-style-line-dashed"></span>';
+                } else if (style === 'dotted') {
+                    styleInd.innerHTML = '<span class="tv-style-line-dotted"></span>';
+                } else {
+                    styleInd.innerHTML = '<span class="tv-style-line-solid"></span>';
+                }
+            }
+
+            const btnAngle = document.getElementById('tv-btn-angle');
+            if (btnAngle) {
+                btnAngle.classList.toggle('active', !!t.lockAngle);
+            }
+
+            updateLockSheetUI(!!t.isLocked);
+
+            toolbar.style.display = 'flex';
+        }
+
+        function updateLockSheetUI(isLocked) {
+            const lockLabel = document.getElementById('tv-sheet-lock-label');
+            const lockShackle = document.getElementById('tv-lock-shackle');
+            if (lockLabel) {
+                lockLabel.textContent = isLocked ? 'Unlock' : 'Lock';
+            }
+            if (lockShackle) {
+                // When line is locked: action is to Unlock -> show open padlock (gembok terbuka dengan celah shackle jelas)
+                // When line is unlocked: action is to Lock -> show closed padlock (gembok tertutup)
+                lockShackle.setAttribute('d', isLocked ? 'M7 9V4.5a3 3 0 0 1 6 0v1' : 'M7 9V6a3 3 0 0 1 6 0v3');
+            }
+        }
+
+        function hideTrendlineToolbar() {
+            const toolbar = document.getElementById('tv-trendline-toolbar');
+            if (toolbar) toolbar.style.display = 'none';
+            hideAllPopovers();
+            closeMoreBottomSheet();
+        }
+
+        function hideAllPopovers() {
+            const popColor = document.getElementById('tv-popover-color');
+            const popWidth = document.getElementById('tv-popover-width');
+            const popStyle = document.getElementById('tv-popover-style');
+            if (popColor) popColor.style.display = 'none';
+            if (popWidth) popWidth.style.display = 'none';
+            if (popStyle) popStyle.style.display = 'none';
+            ['tv-btn-line-color', 'tv-btn-text-color', 'tv-btn-width', 'tv-btn-style', 'tv-btn-more'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) btn.classList.remove('active');
+            });
+        }
+
+        function openMoreBottomSheet() {
+            if (selectedTrendlineIndex < 0 || !trendlines[selectedTrendlineIndex]) return;
+            const t = trendlines[selectedTrendlineIndex];
+            const backdrop = document.getElementById('tv-more-sheet-backdrop');
+            const sheet = document.getElementById('tv-more-bottom-sheet');
+            const btnMore = document.getElementById('tv-btn-more');
+            if (!backdrop || !sheet) return;
+
+            hideAllPopovers();
+            if (btnMore) btnMore.classList.add('active');
+
+            updateLockSheetUI(!!t.isLocked);
+
+            backdrop.style.display = 'block';
+            sheet.style.display = 'block';
+
+            requestAnimationFrame(() => {
+                backdrop.classList.add('visible');
+                sheet.classList.add('visible');
+            });
+        }
+
+        function closeMoreBottomSheet() {
+            const backdrop = document.getElementById('tv-more-sheet-backdrop');
+            const sheet = document.getElementById('tv-more-bottom-sheet');
+            const btnMore = document.getElementById('tv-btn-more');
+            if (btnMore) btnMore.classList.remove('active');
+            if (!backdrop || !sheet) return;
+
+            backdrop.classList.remove('visible');
+            sheet.classList.remove('visible');
+
+            setTimeout(() => {
+                backdrop.style.display = 'none';
+                sheet.style.display = 'none';
+            }, 240);
+        }
+
+        function positionPopover(popover, targetBtn) {
+            if (!popover || !targetBtn) return;
+            const tb = document.getElementById('tv-trendline-toolbar');
+            if (!tb) return;
+            const tbRect = tb.getBoundingClientRect();
+            const btnRect = targetBtn.getBoundingClientRect();
+            const container = document.getElementById('chart-container');
+            const cRect = container ? container.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight };
+
+            popover.style.display = 'block';
+            const popW = popover.offsetWidth || 255;
+            const popH = popover.offsetHeight || 280;
+
+            let left = btnRect.left + (btnRect.width / 2) - (popW / 2);
+            if (left < 8) left = 8;
+            if (left + popW > cRect.width - 8) {
+                left = cRect.width - popW - 8;
+            }
+
+            let top = tbRect.bottom + 8;
+            if (top + popH > cRect.height - 8) {
+                top = Math.max(8, tbRect.top - popH - 8);
+            }
+
+            popover.style.left = Math.round(left) + 'px';
+            popover.style.top = Math.round(top) + 'px';
+        }
+
+        function updateSliderGradient(colorHex) {
+            const grad = document.getElementById('tv-slider-gradient');
+            if (!grad) return;
+            grad.style.background = `linear-gradient(to right, ${hexToRgba(colorHex, 0)}, ${hexToRgba(colorHex, 1)})`;
+        }
+
+        function applySelectedColor(colorHex, opacityVal) {
+            if (selectedTrendlineIndex < 0 || !trendlines[selectedTrendlineIndex]) return;
+            const t = trendlines[selectedTrendlineIndex];
+
+            if (activeColorPickerTarget === 'line') {
+                if (colorHex) t.color = colorHex;
+                if (opacityVal !== undefined) t.opacity = opacityVal;
+                const lineInd = document.getElementById('tv-indicator-line-color');
+                if (lineInd && t.color) lineInd.style.backgroundColor = t.color;
+                updateSliderGradient(t.color || '#7C4DFF');
+            } else if (activeColorPickerTarget === 'text') {
+                if (colorHex) t.textColor = colorHex;
+                const textInd = document.getElementById('tv-indicator-text-color');
+                if (textInd && t.textColor) textInd.style.backgroundColor = t.textColor;
+            }
+
+            // Update swatch selection highlight
+            const activeColor = (activeColorPickerTarget === 'line') ? (t.color || '#7C4DFF') : (t.textColor || '#FFFFFF');
+            document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
+                sw.classList.toggle('selected', sw.getAttribute('data-color')?.toUpperCase() === activeColor.toUpperCase());
+            });
+
+            renderFib();
+            notifyTrendlinesChanged();
+        }
+
+        function applySelectedWidth(w) {
+            if (selectedTrendlineIndex < 0 || !trendlines[selectedTrendlineIndex]) return;
+            const t = trendlines[selectedTrendlineIndex];
+            t.width = parseInt(w);
+            const widthLabel = document.getElementById('tv-label-width');
+            if (widthLabel) widthLabel.textContent = t.width + 'px';
+
+            document.querySelectorAll('#tv-popover-width .tv-menu-item').forEach(item => {
+                item.classList.toggle('selected', parseInt(item.getAttribute('data-width')) === t.width);
+            });
+
+            hideAllPopovers();
+            renderFib();
+            notifyTrendlinesChanged();
+        }
+
+        function applySelectedStyle(s) {
+            if (selectedTrendlineIndex < 0 || !trendlines[selectedTrendlineIndex]) return;
+            const t = trendlines[selectedTrendlineIndex];
+            t.style = s;
+            const styleInd = document.getElementById('tv-indicator-line-style');
+            if (styleInd) {
+                if (s === 'dashed') {
+                    styleInd.innerHTML = '<span class="tv-style-line-dashed"></span>';
+                } else if (s === 'dotted') {
+                    styleInd.innerHTML = '<span class="tv-style-line-dotted"></span>';
+                } else {
+                    styleInd.innerHTML = '<span class="tv-style-line-solid"></span>';
+                }
+            }
+
+            document.querySelectorAll('#tv-popover-style .tv-menu-item').forEach(item => {
+                item.classList.toggle('selected', item.getAttribute('data-style') === s);
+            });
+
+            hideAllPopovers();
+            renderFib();
+            notifyTrendlinesChanged();
+        }
+
+        function deleteSelectedTrendline() {
+            if (selectedTrendlineIndex >= 0 && selectedTrendlineIndex < trendlines.length) {
+                trendlines.splice(selectedTrendlineIndex, 1);
+                selectedTrendlineIndex = -1;
+                globalAngleLock = false;
+                hideTrendlineToolbar();
+                renderFib();
+                notifyTrendlinesChanged();
+            }
+        }
+
+        function cloneSelectedTrendline() {
+            if (selectedTrendlineIndex >= 0 && selectedTrendlineIndex < trendlines.length) {
+                const src = trendlines[selectedTrendlineIndex];
+                const activeSeries = candleSeries || areaSeries;
+                let priceOffset = 0;
+                if (activeSeries && chart) {
+                    const y1 = activeSeries.priceToCoordinate(src.p1.price);
+                    if (y1 !== null) {
+                        const targetY = y1 + 24;
+                        const targetPrice = activeSeries.coordinateToPrice(targetY);
+                        if (targetPrice !== null && !isNaN(targetPrice)) {
+                            priceOffset = targetPrice - src.p1.price;
+                        }
+                    }
+                }
+                if (!priceOffset) {
+                    priceOffset = -(src.p1.price || 100) * 0.005;
+                }
+                const cloned = {
+                    id: 'tl_' + Date.now(),
+                    p1: { time: src.p1.time, price: src.p1.price + priceOffset },
+                    p2: { time: src.p2.time, price: src.p2.price + priceOffset },
+                    color: src.color || '#7C4DFF',
+                    width: src.width || 2,
+                    style: src.style || 'solid',
+                    opacity: src.opacity !== undefined ? src.opacity : 1.0,
+                    text: src.text || '',
+                    textColor: src.textColor || '#FFFFFF',
+                    showAngle: !!src.showAngle,
+                    lockAngle: !!src.lockAngle
+                };
+                trendlines.push(cloned);
+                selectedTrendlineIndex = trendlines.length - 1;
+                showTrendlineToolbar(selectedTrendlineIndex);
+                renderFib();
+                notifyTrendlinesChanged();
+            }
+        }
+
+        function snapCoordinateTo45Degrees(originX, originY, targetX, targetY) {
+            const dx = targetX - originX;
+            const dy = targetY - originY;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 2) return { x: targetX, y: targetY };
+
+            // Angle in degrees from origin to target in screen coords
+            const deg = Math.atan2(dy, dx) * (180 / Math.PI);
+            // Snap to nearest 45 degree multiple: 0 (horizontal), 45, 90 (vertical), 135, 180 (horizontal), -45, -90, -135
+            const snappedDeg = Math.round(deg / 45) * 45;
+            const snappedRad = snappedDeg * (Math.PI / 180);
+
+            return {
+                x: originX + dist * Math.cos(snappedRad),
+                y: originY + dist * Math.sin(snappedRad)
+            };
+        }
+
+        function getTrendlineAngle(t) {
+            const activeSeries = candleSeries || areaSeries;
+            if (!chart || !activeSeries) return 0;
+            const x1 = chart.timeScale().timeToCoordinate(t.p1.time);
+            const y1 = activeSeries.priceToCoordinate(t.p1.price);
+            const x2 = chart.timeScale().timeToCoordinate(t.p2.time);
+            const y2 = activeSeries.priceToCoordinate(t.p2.price);
+            if (x1 === null || y1 === null || x2 === null || y2 === null) return 0;
+            const rad = Math.atan2(y1 - y2, x2 - x1);
+            return Math.round(rad * (180 / Math.PI));
+        }
+
+        function initTrendlineToolbarEvents() {
+            // 1. Populate Palette Grid
+            const grid = document.getElementById('tv-palette-grid');
+            if (grid && grid.children.length === 0) {
+                for (let r = 0; r < TV_PALETTE_COLORS.length; r++) {
+                    for (let c = 0; c < TV_PALETTE_COLORS[r].length; c++) {
+                        const hex = TV_PALETTE_COLORS[r][c];
+                        const swatch = document.createElement('div');
+                        swatch.className = 'tv-color-swatch';
+                        swatch.style.backgroundColor = hex;
+                        swatch.setAttribute('data-color', hex);
+                        swatch.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            recentColors[1] = recentColors[0];
+                            recentColors[0] = hex;
+                            updateRecentColorSwatches();
+                            applySelectedColor(hex);
+                        });
+                        grid.appendChild(swatch);
+                    }
+                }
+            }
+
+            function updateRecentColorSwatches() {
+                const r1 = document.getElementById('tv-recent-color-1');
+                const r2 = document.getElementById('tv-recent-color-2');
+                if (r1) {
+                    r1.style.backgroundColor = recentColors[0];
+                    r1.setAttribute('data-color', recentColors[0]);
+                }
+                if (r2) {
+                    r2.style.backgroundColor = recentColors[1];
+                    r2.setAttribute('data-color', recentColors[1]);
+                }
+            }
+            updateRecentColorSwatches();
+
+            const r1 = document.getElementById('tv-recent-color-1');
+            if (r1) {
+                r1.onclick = (e) => {
+                    e.stopPropagation();
+                    applySelectedColor(recentColors[0]);
+                };
+            }
+            const r2 = document.getElementById('tv-recent-color-2');
+            if (r2) {
+                r2.onclick = (e) => {
+                    e.stopPropagation();
+                    applySelectedColor(recentColors[1]);
+                };
+            }
+
+            // Custom color input
+            const customInput = document.getElementById('tv-custom-color-input');
+            if (customInput) {
+                customInput.oninput = (e) => {
+                    const hex = e.target.value;
+                    recentColors[1] = recentColors[0];
+                    recentColors[0] = hex;
+                    updateRecentColorSwatches();
+                    applySelectedColor(hex);
+                };
+            }
+
+            // Opacity slider
+            const opSlider = document.getElementById('tv-opacity-slider');
+            const opVal = document.getElementById('tv-opacity-val');
+            if (opSlider) {
+                opSlider.oninput = (e) => {
+                    const val = parseInt(e.target.value);
+                    if (opVal) opVal.textContent = val + '%';
+                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                        applySelectedColor(null, val / 100);
+                    }
+                };
+            }
+
+            // 2. Toolbar Buttons
+            const btnClone = document.getElementById('tv-btn-clone');
+            if (btnClone) {
+                btnClone.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    cloneSelectedTrendline();
+                };
+            }
+
+            const btnLineColor = document.getElementById('tv-btn-line-color');
+            const popColor = document.getElementById('tv-popover-color');
+            if (btnLineColor && popColor) {
+                btnLineColor.onclick = (e) => {
+                    e.stopPropagation();
+                    if (popColor.style.display === 'block' && activeColorPickerTarget === 'line') {
+                        hideAllPopovers();
+                        return;
+                    }
+                    hideAllPopovers();
+                    activeColorPickerTarget = 'line';
+                    btnLineColor.classList.add('active');
+
+                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                        const t = trendlines[selectedTrendlineIndex];
+                        const curColor = t.color || '#7C4DFF';
+                        const curOp = (t.opacity !== undefined) ? Math.round(t.opacity * 100) : 100;
+                        if (opSlider) opSlider.value = curOp;
+                        if (opVal) opVal.textContent = curOp + '%';
+                        updateSliderGradient(curColor);
+
+                        document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
+                            sw.classList.toggle('selected', sw.getAttribute('data-color')?.toUpperCase() === curColor.toUpperCase());
+                        });
+                    }
+                    positionPopover(popColor, btnLineColor);
+                };
+            }
+
+            const btnTextColor = document.getElementById('tv-btn-text-color');
+            if (btnTextColor && popColor) {
+                btnTextColor.onclick = (e) => {
+                    e.stopPropagation();
+                    if (popColor.style.display === 'block' && activeColorPickerTarget === 'text') {
+                        hideAllPopovers();
+                        return;
+                    }
+                    hideAllPopovers();
+                    activeColorPickerTarget = 'text';
+                    btnTextColor.classList.add('active');
+
+                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                        const t = trendlines[selectedTrendlineIndex];
+                        const curColor = t.textColor || '#FFFFFF';
+                        updateSliderGradient(curColor);
+
+                        document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
+                            sw.classList.toggle('selected', sw.getAttribute('data-color')?.toUpperCase() === curColor.toUpperCase());
+                        });
+                    }
+                    positionPopover(popColor, btnTextColor);
+                };
+            }
+
+            const btnWidth = document.getElementById('tv-btn-width');
+            const popWidth = document.getElementById('tv-popover-width');
+            if (btnWidth && popWidth) {
+                btnWidth.onclick = (e) => {
+                    e.stopPropagation();
+                    if (popWidth.style.display === 'block') {
+                        hideAllPopovers();
+                        return;
+                    }
+                    hideAllPopovers();
+                    btnWidth.classList.add('active');
+
+                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                        const curW = trendlines[selectedTrendlineIndex].width || 2;
+                        document.querySelectorAll('#tv-popover-width .tv-menu-item').forEach(item => {
+                            item.classList.toggle('selected', parseInt(item.getAttribute('data-width')) === curW);
+                        });
+                    }
+                    positionPopover(popWidth, btnWidth);
+                };
+            }
+
+            const btnStyle = document.getElementById('tv-btn-style');
+            const popStyle = document.getElementById('tv-popover-style');
+            if (btnStyle && popStyle) {
+                btnStyle.onclick = (e) => {
+                    e.stopPropagation();
+                    if (popStyle.style.display === 'block') {
+                        hideAllPopovers();
+                        return;
+                    }
+                    hideAllPopovers();
+                    btnStyle.classList.add('active');
+
+                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                        const curStyle = trendlines[selectedTrendlineIndex].style || 'solid';
+                        document.querySelectorAll('#tv-popover-style .tv-menu-item').forEach(item => {
+                            item.classList.toggle('selected', item.getAttribute('data-style') === curStyle);
+                        });
+                    }
+                    positionPopover(popStyle, btnStyle);
+                };
+            }
+
+            const btnAngle = document.getElementById('tv-btn-angle');
+            if (btnAngle) {
+                btnAngle.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                        const t = trendlines[selectedTrendlineIndex];
+                        t.lockAngle = !t.lockAngle;
+                        globalAngleLock = !!t.lockAngle;
+                        btnAngle.classList.toggle('active', !!t.lockAngle);
+
+                        // If lockAngle turned on, immediately snap p2 relative to p1
+                        if (t.lockAngle) {
+                            const activeSeries = candleSeries || areaSeries;
+                            if (activeSeries && chart) {
+                                const x1 = chart.timeScale().timeToCoordinate(t.p1.time);
+                                const y1 = activeSeries.priceToCoordinate(t.p1.price);
+                                const x2 = chart.timeScale().timeToCoordinate(t.p2.time);
+                                const y2 = activeSeries.priceToCoordinate(t.p2.price);
+                                if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
+                                    const snapped = snapCoordinateTo45Degrees(x1, y1, x2, y2);
+                                    const sTime = getTimeAtX(snapped.x);
+                                    const sPrice = getPriceAtY(snapped.y);
+                                    if (sTime && sPrice !== null) {
+                                        t.p2 = { time: sTime, price: sPrice };
+                                    }
+                                }
+                            }
+                        }
+
+                        renderFib();
+                        notifyTrendlinesChanged();
+                    }
+                };
+            }
+
+            const btnDelete = document.getElementById('tv-btn-delete');
+            if (btnDelete) {
+                btnDelete.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    deleteSelectedTrendline();
+                };
+            }
+
+            const btnMore = document.getElementById('tv-btn-more');
+            if (btnMore) {
+                btnMore.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                        const sheet = document.getElementById('tv-more-bottom-sheet');
+                        if (sheet && sheet.classList.contains('visible')) {
+                            closeMoreBottomSheet();
+                        } else {
+                            openMoreBottomSheet();
+                        }
+                    }
+                };
+            }
+
+            // Bottom sheet backdrop & action items
+            const sheetBackdrop = document.getElementById('tv-more-sheet-backdrop');
+            if (sheetBackdrop) {
+                sheetBackdrop.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    closeMoreBottomSheet();
+                };
+            }
+
+            const itemClone = document.getElementById('tv-sheet-clone');
+            if (itemClone) {
+                itemClone.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    closeMoreBottomSheet();
+                    cloneSelectedTrendline();
+                };
+            }
+
+            const itemLock = document.getElementById('tv-sheet-lock');
+            if (itemLock) {
+                itemLock.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                        const t = trendlines[selectedTrendlineIndex];
+                        t.isLocked = !t.isLocked;
+                        updateLockSheetUI(t.isLocked);
+                        closeMoreBottomSheet();
+                        renderFib();
+                        notifyTrendlinesChanged();
+                    }
+                };
+            }
+
+            const itemHide = document.getElementById('tv-sheet-hide');
+            if (itemHide) {
+                itemHide.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                        const t = trendlines[selectedTrendlineIndex];
+                        t.hidden = true;
+                        selectedTrendlineIndex = -1;
+                        hideTrendlineToolbar();
+                        closeMoreBottomSheet();
+                        renderFib();
+                        notifyTrendlinesChanged();
+                    }
+                };
+            }
+
+            const itemRemove = document.getElementById('tv-sheet-remove');
+            if (itemRemove) {
+                itemRemove.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    closeMoreBottomSheet();
+                    deleteSelectedTrendline();
+                };
+            }
+
+            const itemSettings = document.getElementById('tv-sheet-settings');
+            if (itemSettings) {
+                itemSettings.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    closeMoreBottomSheet();
+                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                        const t = trendlines[selectedTrendlineIndex];
+                        const newText = prompt('Masukkan teks label trendline:', t.text || '');
+                        if (newText !== null) {
+                            t.text = newText;
+                            renderFib();
+                            notifyTrendlinesChanged();
+                        }
+                    }
+                };
+            }
+
+            // Dropdown items
+            document.querySelectorAll('#tv-popover-width .tv-menu-item').forEach(item => {
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    applySelectedWidth(item.getAttribute('data-width'));
+                };
+            });
+
+            document.querySelectorAll('#tv-popover-style .tv-menu-item').forEach(item => {
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    applySelectedStyle(item.getAttribute('data-style'));
+                };
+            });
+
+            // Close popover when clicking inside popovers shouldn't dismiss them
+            const toolbar = document.getElementById('tv-trendline-toolbar');
+            if (toolbar) {
+                toolbar.onpointerdown = (e) => e.stopPropagation();
+                toolbar.ontouchstart = (e) => e.stopPropagation();
+                toolbar.onclick = (e) => e.stopPropagation();
+            }
+            [popColor, popWidth, popStyle].forEach(p => {
+                if (p) {
+                    p.onpointerdown = (e) => e.stopPropagation();
+                    p.ontouchstart = (e) => e.stopPropagation();
+                    p.onclick = (e) => e.stopPropagation();
+                }
+            });
+
+            // Drag handle for moving toolbar
+            const dragHandle = document.getElementById('tv-drag-handle');
+            if (toolbar && dragHandle) {
+                let isDraggingTb = false;
+                let tbStartX = 0, tbStartY = 0;
+                let tbInitLeft = 0, tbInitTop = 0;
+
+                dragHandle.onpointerdown = (e) => {
+                    e.stopPropagation();
+                    isDraggingTb = true;
+                    tbStartX = e.clientX;
+                    tbStartY = e.clientY;
+                    const rect = toolbar.getBoundingClientRect();
+                    tbInitLeft = rect.left;
+                    tbInitTop = rect.top;
+                    toolbar.style.left = tbInitLeft + 'px';
+                    toolbar.style.top = tbInitTop + 'px';
+                    toolbar.style.transform = 'none';
+                    try { dragHandle.setPointerCapture(e.pointerId); } catch (_) {}
+                };
+
+                dragHandle.onpointermove = (e) => {
+                    if (!isDraggingTb) return;
+                    e.stopPropagation();
+                    const dx = e.clientX - tbStartX;
+                    const dy = e.clientY - tbStartY;
+                    const container = document.getElementById('chart-container');
+                    const cRect = container ? container.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight };
+
+                    let newL = Math.max(5, Math.min(tbInitLeft + dx, cRect.width - toolbar.offsetWidth - 5));
+                    let newT = Math.max(5, Math.min(tbInitTop + dy, cRect.height - toolbar.offsetHeight - 5));
+
+                    toolbar.style.left = Math.round(newL) + 'px';
+                    toolbar.style.top = Math.round(newT) + 'px';
+
+                    // Reposition open popover
+                    if (popColor && popColor.style.display === 'block') {
+                        positionPopover(popColor, activeColorPickerTarget === 'text' ? btnTextColor : btnLineColor);
+                    } else if (popWidth && popWidth.style.display === 'block') {
+                        positionPopover(popWidth, btnWidth);
+                    } else if (popStyle && popStyle.style.display === 'block') {
+                        positionPopover(popStyle, btnStyle);
+                    }
+                };
+
+                const endTbDrag = (e) => {
+                    if (!isDraggingTb) return;
+                    isDraggingTb = false;
+                    try { dragHandle.releasePointerCapture(e.pointerId); } catch (_) {}
+                };
+
+                dragHandle.onpointerup = endTbDrag;
+                dragHandle.onpointercancel = endTbDrag;
+            }
+        }
+
         function initFibPointerEvents() {
             const canvas = document.getElementById('fib-canvas');
             const chartContainer = document.getElementById('chart-container');
@@ -439,11 +1764,21 @@
             }
 
             if (chartContainer) {
-                chartContainer.addEventListener('pointermove', updateHoverState);
+                chartContainer.addEventListener('pointermove', (e) => {
+                    if (e.target && e.target.closest && e.target.closest('#tv-trendline-toolbar, .tv-popover, #tv-more-bottom-sheet, #tv-more-sheet-backdrop')) {
+                        return;
+                    }
+                    updateHoverState(e);
+                });
 
                 // Mobile-first capture-phase touch interceptor:
                 // Intercepts touches on drawing elements BEFORE LightweightCharts can handle them as pan/scroll!
                 chartContainer.addEventListener('pointerdown', (e) => {
+                    // If touch was on the floating toolbar, popover, or bottom sheet, DO NOT INTERCEPT AT ALL!
+                    if (e.target && e.target.closest && e.target.closest('#tv-trendline-toolbar, .tv-popover, #tv-more-bottom-sheet, #tv-more-sheet-backdrop')) {
+                        return;
+                    }
+
                     // If user is placing a brand new tool, let canvas handle placement
                     if (isDrawingHorizontalLine || isDrawingTrendline || isDrawingRectangle || isDrawingFib || fibDrawState !== 0 || trendlineDrawState !== 0 || rectangleDrawState !== 0) {
                         return;
@@ -483,6 +1818,7 @@
 
                             isFibSelected = true;
                             selectedTrendlineIndex = -1;
+                            hideTrendlineToolbar();
                             selectedHorizontalLineIndex = -1;
                             selectedRectangleIndex = -1;
                             dragMode = hit1 ? 1 : 2;
@@ -498,6 +1834,7 @@
 
                             isFibSelected = true;
                             selectedTrendlineIndex = -1;
+                            hideTrendlineToolbar();
                             selectedHorizontalLineIndex = -1;
                             selectedRectangleIndex = -1;
                             renderFib();
@@ -535,6 +1872,7 @@
                                     // In non-edit mode: tap to enter edit mode!
                                     selectedHorizontalLineIndex = i;
                                     selectedTrendlineIndex = -1;
+                                    hideTrendlineToolbar();
                                     selectedRectangleIndex = -1;
                                     isFibSelected = false;
                                     renderFib();
@@ -548,32 +1886,25 @@
                     if (trendlines && trendlines.length > 0) {
                         for (let i = 0; i < trendlines.length; i++) {
                             const t = trendlines[i];
+                            if (t.hidden) continue;
                             const x1 = chart.timeScale().timeToCoordinate(t.p1.time);
                             const y1 = activeSeries.priceToCoordinate(t.p1.price);
                             const x2 = chart.timeScale().timeToCoordinate(t.p2.time);
                             const y2 = activeSeries.priceToCoordinate(t.p2.price);
                             if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
                                 if (i === selectedTrendlineIndex) {
-                                    const pillPos = getTrendlineActionPillPos(x1, y1, x2, y2, maxContentX, chartContainer.clientHeight);
-                                    if (Math.hypot(x - pillPos.x, y - pillPos.y) <= HITBOX_TL_DEL) {
-                                        e.stopPropagation();
-                                        e.stopImmediatePropagation();
-                                        e.preventDefault();
-                                        trendlines.splice(i, 1);
-                                        selectedTrendlineIndex = -1;
-                                        renderFib();
-                                        notifyTrendlinesChanged();
-                                        return;
-                                    }
                                     if (Math.hypot(x - x1, y - y1) <= HITBOX_TL_ANCHOR) {
                                         e.stopPropagation();
                                         e.stopImmediatePropagation();
                                         e.preventDefault();
-                                        dragTrendlineIndex = i;
-                                        dragTrendlinePart = 1;
-                                        isPointerDown = true;
-                                        try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
-                                        chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        if (!t.isLocked) {
+                                            dragTrendlineIndex = i;
+                                            dragTrendlinePart = 1;
+                                            isPointerDown = true;
+                                            try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                            chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        }
+                                        showTrendlineToolbar(i);
                                         renderFib();
                                         return;
                                     }
@@ -581,11 +1912,14 @@
                                         e.stopPropagation();
                                         e.stopImmediatePropagation();
                                         e.preventDefault();
-                                        dragTrendlineIndex = i;
-                                        dragTrendlinePart = 2;
-                                        isPointerDown = true;
-                                        try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
-                                        chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        if (!t.isLocked) {
+                                            dragTrendlineIndex = i;
+                                            dragTrendlinePart = 2;
+                                            isPointerDown = true;
+                                            try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                            chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        }
+                                        showTrendlineToolbar(i);
                                         renderFib();
                                         return;
                                     }
@@ -593,16 +1927,19 @@
                                         e.stopPropagation();
                                         e.stopImmediatePropagation();
                                         e.preventDefault();
-                                        dragTrendlineIndex = i;
-                                        dragTrendlinePart = 3;
-                                        dragTrendlineStartPos = {
-                                            x, y,
-                                            origP1: { time: t.p1.time, price: t.p1.price },
-                                            origP2: { time: t.p2.time, price: t.p2.price }
-                                        };
-                                        isPointerDown = true;
-                                        try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
-                                        chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        if (!t.isLocked) {
+                                            dragTrendlineIndex = i;
+                                            dragTrendlinePart = 3;
+                                            dragTrendlineStartPos = {
+                                                x, y,
+                                                origP1: { time: t.p1.time, price: t.p1.price },
+                                                origP2: { time: t.p2.time, price: t.p2.price }
+                                            };
+                                            isPointerDown = true;
+                                            try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                            chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        }
+                                        showTrendlineToolbar(i);
                                         renderFib();
                                         return;
                                     }
@@ -615,16 +1952,19 @@
                                         selectedRectangleIndex = -1;
                                         selectedHorizontalLineIndex = -1;
                                         isFibSelected = false;
-                                        dragTrendlineIndex = i;
-                                        dragTrendlinePart = 3;
-                                        dragTrendlineStartPos = {
-                                            x, y,
-                                            origP1: { time: t.p1.time, price: t.p1.price },
-                                            origP2: { time: t.p2.time, price: t.p2.price }
-                                        };
-                                        isPointerDown = true;
-                                        try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
-                                        chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        if (!t.isLocked) {
+                                            dragTrendlineIndex = i;
+                                            dragTrendlinePart = 3;
+                                            dragTrendlineStartPos = {
+                                                x, y,
+                                                origP1: { time: t.p1.time, price: t.p1.price },
+                                                origP2: { time: t.p2.time, price: t.p2.price }
+                                            };
+                                            isPointerDown = true;
+                                            try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                            chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        }
+                                        showTrendlineToolbar(i);
                                         renderFib();
                                         return;
                                     }
@@ -742,6 +2082,7 @@
                                         e.preventDefault();
                                         selectedRectangleIndex = i;
                                         selectedTrendlineIndex = -1;
+                                        hideTrendlineToolbar();
                                         selectedHorizontalLineIndex = -1;
                                         isFibSelected = false;
                                         renderFib();
@@ -756,6 +2097,7 @@
                     let needsDeselect = false;
                     if (selectedTrendlineIndex !== -1) {
                         selectedTrendlineIndex = -1;
+                        hideTrendlineToolbar();
                         needsDeselect = true;
                     }
                     if (isFibSelected) {
@@ -771,6 +2113,7 @@
                         needsDeselect = true;
                     }
                     if (needsDeselect) {
+                        hideTrendlineToolbar();
                         renderFib();
                     }
                 }, { capture: true });
@@ -862,11 +2205,37 @@
                         } else if (trendlineDrawState === 2) {
                             // Click 2: Anchor 2 placed -> Lock trendline
                             if (tempTrendlineP1) {
+                                let finalTime = time;
+                                let finalPrice = price;
+                                if (globalAngleLock) {
+                                    const activeSeries = candleSeries || areaSeries;
+                                    if (activeSeries && chart) {
+                                        const ox = chart.timeScale().timeToCoordinate(tempTrendlineP1.time);
+                                        const oy = activeSeries.priceToCoordinate(tempTrendlineP1.price);
+                                        if (ox !== null && oy !== null) {
+                                            const snapped = snapCoordinateTo45Degrees(ox, oy, clampedX, y);
+                                            const st = getTimeAtX(snapped.x);
+                                            const sp = getPriceAtY(snapped.y);
+                                            if (st && sp !== null) {
+                                                finalTime = st;
+                                                finalPrice = sp;
+                                            }
+                                        }
+                                    }
+                                }
                                 const newLine = {
+                                    id: 'tl_' + Date.now(),
                                     p1: tempTrendlineP1,
-                                    p2: { time, price }
+                                    p2: { time: finalTime, price: finalPrice },
+                                    color: '#7C4DFF',
+                                    width: 2,
+                                    style: 'solid',
+                                    opacity: 1.0,
+                                    textColor: '#FFFFFF',
+                                    lockAngle: false
                                 };
                                 trendlines.push(newLine);
+                                globalAngleLock = false;
                                 selectedTrendlineIndex = trendlines.length - 1; // Enter edit mode upon placement
                                 isDrawingTrendline = false;
                                 trendlineDrawState = 0;
@@ -878,6 +2247,7 @@
                                 if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
                                 canvas.style.cursor = 'default';
                                 canvas.style.pointerEvents = 'none';
+                                showTrendlineToolbar(selectedTrendlineIndex);
                                 renderFib();
                                 notifyTrendlinesChanged();
                                 if (window.flutter_inappwebview?.callHandler) {
@@ -1053,21 +2423,15 @@
                 if (trendlines && trendlines.length > 0 && activeSeries && chart) {
                     for (let i = 0; i < trendlines.length; i++) {
                         const t = trendlines[i];
+                        if (t.hidden) continue;
                         const x1 = chart.timeScale().timeToCoordinate(t.p1.time);
                         const y1 = activeSeries.priceToCoordinate(t.p1.price);
                         const x2 = chart.timeScale().timeToCoordinate(t.p2.time);
                         const y2 = activeSeries.priceToCoordinate(t.p2.price);
                         if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
                             if (i === selectedTrendlineIndex) {
-                                // Floating context action pill tap (TradingView Mobile Style)
-                                const pillPos = getTrendlineActionPillPos(x1, y1, x2, y2, maxContentX, chartContainer.clientHeight);
-                                if (Math.hypot(x - pillPos.x, y - pillPos.y) <= HITBOX_TL_DEL) {
-                                    trendlines.splice(i, 1);
-                                    selectedTrendlineIndex = -1;
-                                    canvas.style.cursor = 'default';
-                                    canvas.style.pointerEvents = 'none';
-                                    renderFib();
-                                    notifyTrendlinesChanged();
+                                if (t.isLocked) {
+                                    showTrendlineToolbar(i);
                                     return;
                                 }
                                 // Anchor 1 grab
@@ -1078,6 +2442,7 @@
                                     canvas.setPointerCapture?.(e.pointerId);
                                     if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
                                     canvas.style.cursor = 'grabbing';
+                                    showTrendlineToolbar(i);
                                     return;
                                 }
                                 // Anchor 2 grab
@@ -1088,6 +2453,7 @@
                                     canvas.setPointerCapture?.(e.pointerId);
                                     if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
                                     canvas.style.cursor = 'grabbing';
+                                    showTrendlineToolbar(i);
                                     return;
                                 }
                                 // Line body grab (parallel translation)
@@ -1103,6 +2469,7 @@
                                     canvas.setPointerCapture?.(e.pointerId);
                                     if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
                                     canvas.style.cursor = 'move';
+                                    showTrendlineToolbar(i);
                                     return;
                                 }
                             } else {
@@ -1112,17 +2479,20 @@
                                     selectedRectangleIndex = -1;
                                     selectedHorizontalLineIndex = -1;
                                     isFibSelected = false;
-                                    dragTrendlineIndex = i;
-                                    dragTrendlinePart = 3;
-                                    dragTrendlineStartPos = {
-                                        x, y,
-                                        origP1: { time: t.p1.time, price: t.p1.price },
-                                        origP2: { time: t.p2.time, price: t.p2.price }
-                                    };
-                                    isPointerDown = true;
-                                    canvas.setPointerCapture?.(e.pointerId);
-                                    if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
-                                    canvas.style.cursor = 'move';
+                                    if (!t.isLocked) {
+                                        dragTrendlineIndex = i;
+                                        dragTrendlinePart = 3;
+                                        dragTrendlineStartPos = {
+                                            x, y,
+                                            origP1: { time: t.p1.time, price: t.p1.price },
+                                            origP2: { time: t.p2.time, price: t.p2.price }
+                                        };
+                                        isPointerDown = true;
+                                        canvas.setPointerCapture?.(e.pointerId);
+                                        if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        canvas.style.cursor = 'move';
+                                    }
+                                    showTrendlineToolbar(i);
                                     renderFib();
                                     return;
                                 }
@@ -1199,6 +2569,7 @@
                 let canvasNeedsDeselect = false;
                 if (selectedTrendlineIndex !== -1) {
                     selectedTrendlineIndex = -1;
+                    hideTrendlineToolbar();
                     canvasNeedsDeselect = true;
                 }
                 if (isFibSelected) {
@@ -1245,8 +2616,22 @@
 
                 // Live rubber-band preview during Trendline Anchor 2 aiming
                 if (isDrawingTrendline && trendlineDrawState === 2) {
-                    const time = getTimeAtX(clampedX);
-                    const price = getPriceAtY(y);
+                    let targetX = clampedX;
+                    let targetY = y;
+                    if (globalAngleLock && tempTrendlineP1) {
+                        const activeSeries = candleSeries || areaSeries;
+                        if (activeSeries && chart) {
+                            const ox = chart.timeScale().timeToCoordinate(tempTrendlineP1.time);
+                            const oy = activeSeries.priceToCoordinate(tempTrendlineP1.price);
+                            if (ox !== null && oy !== null) {
+                                const snapped = snapCoordinateTo45Degrees(ox, oy, targetX, targetY);
+                                targetX = snapped.x;
+                                targetY = snapped.y;
+                            }
+                        }
+                    }
+                    const time = getTimeAtX(targetX);
+                    const price = getPriceAtY(targetY);
                     if (time && price !== null) {
                         tempTrendlineP2 = { time, price };
                         renderFib();
@@ -1270,8 +2655,22 @@
                     crosshairPos = null;
                     const t = trendlines[dragTrendlineIndex];
                     if (dragTrendlinePart === 1) {
-                        const time = getTimeAtX(clampedX);
-                        const price = getPriceAtY(y);
+                        let targetX = clampedX;
+                        let targetY = y;
+                        if (t.lockAngle) {
+                            const activeSeries = candleSeries || areaSeries;
+                            if (activeSeries && chart) {
+                                const fixX = chart.timeScale().timeToCoordinate(t.p2.time);
+                                const fixY = activeSeries.priceToCoordinate(t.p2.price);
+                                if (fixX !== null && fixY !== null) {
+                                    const snapped = snapCoordinateTo45Degrees(fixX, fixY, targetX, targetY);
+                                    targetX = snapped.x;
+                                    targetY = snapped.y;
+                                }
+                            }
+                        }
+                        const time = getTimeAtX(targetX);
+                        const price = getPriceAtY(targetY);
                         if (time && price !== null) {
                             t.p1 = { time, price };
                             renderFib();
@@ -1279,8 +2678,22 @@
                         return;
                     }
                     if (dragTrendlinePart === 2) {
-                        const time = getTimeAtX(clampedX);
-                        const price = getPriceAtY(y);
+                        let targetX = clampedX;
+                        let targetY = y;
+                        if (t.lockAngle) {
+                            const activeSeries = candleSeries || areaSeries;
+                            if (activeSeries && chart) {
+                                const fixX = chart.timeScale().timeToCoordinate(t.p1.time);
+                                const fixY = activeSeries.priceToCoordinate(t.p1.price);
+                                if (fixX !== null && fixY !== null) {
+                                    const snapped = snapCoordinateTo45Degrees(fixX, fixY, targetX, targetY);
+                                    targetX = snapped.x;
+                                    targetY = snapped.y;
+                                }
+                            }
+                        }
+                        const time = getTimeAtX(targetX);
+                        const price = getPriceAtY(targetY);
                         if (time && price !== null) {
                             t.p2 = { time, price };
                             renderFib();
@@ -1526,8 +2939,19 @@
                 if (isDrawingTrendline && trendlineDrawState === 2) {
                     // If user dragged and released with distance >= 20px, finalize immediately (Drag gesture fallback)
                     if (dist >= 20 && tempTrendlineP1 && tempTrendlineP2) {
-                        const newLine = { p1: tempTrendlineP1, p2: tempTrendlineP2 };
+                        const newLine = {
+                            id: 'tl_' + Date.now(),
+                            p1: tempTrendlineP1,
+                            p2: tempTrendlineP2,
+                            color: '#7C4DFF',
+                            width: 2,
+                            style: 'solid',
+                            opacity: 1.0,
+                            textColor: '#FFFFFF',
+                            lockAngle: false
+                        };
                         trendlines.push(newLine);
+                        globalAngleLock = false;
                         selectedTrendlineIndex = trendlines.length - 1; // Enter edit mode upon placement
                         isDrawingTrendline = false;
                         trendlineDrawState = 0;
@@ -1540,6 +2964,7 @@
                         if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
                         canvas.style.cursor = 'default';
                         canvas.style.pointerEvents = 'none';
+                        showTrendlineToolbar(selectedTrendlineIndex);
                         renderFib();
                         notifyTrendlinesChanged();
                         if (window.flutter_inappwebview?.callHandler) {
@@ -1629,6 +3054,7 @@
                 chartContainer.addEventListener('pointerup', onPointerUp);
                 chartContainer.addEventListener('pointercancel', onPointerUp);
             }
+            initTrendlineToolbarEvents();
         }
 
         function renderFib() {
@@ -1841,6 +3267,7 @@
                 ctx.save();
                 for (let i = 0; i < trendlines.length; i++) {
                     const t = trendlines[i];
+                    if (t.hidden) continue;
                     const x1 = chart.timeScale().timeToCoordinate(t.p1.time);
                     const y1 = activeSeries.priceToCoordinate(t.p1.price);
                     const x2 = chart.timeScale().timeToCoordinate(t.p2.time);
@@ -1848,24 +3275,65 @@
                     if (x1 === null || y1 === null || x2 === null || y2 === null) continue;
 
                     const isSelected = (i === selectedTrendlineIndex);
+                    const lineColor = t.color || '#7C4DFF';
+                    const lineWidth = t.width || 2;
+                    const lineStyle = t.style || 'solid';
+                    const lineOpacity = (t.opacity !== undefined) ? t.opacity : 1.0;
 
-                    // Solid vibrant violet line
+                    // Dash pattern
+                    if (lineStyle === 'dashed') {
+                        ctx.lineCap = 'butt';
+                        ctx.setLineDash([Math.max(6, lineWidth * 3), Math.max(4, lineWidth * 2)]);
+                    } else if (lineStyle === 'dotted') {
+                        ctx.lineCap = 'round';
+                        ctx.setLineDash([0, Math.max(6, lineWidth * 2.5)]);
+                    } else {
+                        ctx.lineCap = 'round';
+                        ctx.setLineDash([]);
+                    }
+
                     ctx.beginPath();
-                    ctx.strokeStyle = '#7C4DFF';
-                    ctx.lineWidth = isSelected ? 2.5 : 2.0;
+                    ctx.strokeStyle = hexToRgba(lineColor, lineOpacity);
+                    ctx.lineWidth = lineWidth;
                     ctx.moveTo(x1, y1);
                     ctx.lineTo(x2, y2);
                     ctx.stroke();
+                    ctx.setLineDash([]); // Reset dash for anchors & labels
 
-                    // Only render anchor handles and midpoint delete button when in EDIT MODE (isSelected)
+                    // Render optional text label
+                    if (t.text) {
+                        ctx.save();
+                        ctx.font = '500 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                        ctx.fillStyle = t.textColor || '#FFFFFF';
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+                        ctx.shadowBlur = 4;
+                        const midX = (x1 + x2) / 2;
+                        const midY = (y1 + y2) / 2;
+                        ctx.fillText(t.text, midX + 8, midY - 8);
+                        ctx.restore();
+                    }
+
+                    // Render optional angle
+                    if (t.showAngle) {
+                        const deg = getTrendlineAngle(t);
+                        ctx.save();
+                        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                        ctx.fillStyle = lineColor;
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                        ctx.shadowBlur = 3;
+                        ctx.fillText(deg + '°', x2 + 10, y2);
+                        ctx.restore();
+                    }
+
+                    // Only render anchor handles when in EDIT MODE (isSelected)
                     if (isSelected) {
                         // Anchor 1 handle
                         ctx.save();
                         ctx.beginPath();
                         ctx.arc(x1, y1, 8, 0, Math.PI * 2);
-                        ctx.fillStyle = 'rgba(124, 77, 255, 0.25)';
+                        ctx.fillStyle = hexToRgba(lineColor, 0.25);
                         ctx.fill();
-                        ctx.strokeStyle = '#7C4DFF';
+                        ctx.strokeStyle = lineColor;
                         ctx.lineWidth = 1.5;
                         ctx.stroke();
 
@@ -1875,7 +3343,7 @@
                         ctx.fill();
                         ctx.beginPath();
                         ctx.arc(x1, y1, 2, 0, Math.PI * 2);
-                        ctx.fillStyle = '#7C4DFF';
+                        ctx.fillStyle = lineColor;
                         ctx.fill();
                         ctx.restore();
 
@@ -1883,9 +3351,9 @@
                         ctx.save();
                         ctx.beginPath();
                         ctx.arc(x2, y2, 8, 0, Math.PI * 2);
-                        ctx.fillStyle = 'rgba(124, 77, 255, 0.25)';
+                        ctx.fillStyle = hexToRgba(lineColor, 0.25);
                         ctx.fill();
-                        ctx.strokeStyle = '#7C4DFF';
+                        ctx.strokeStyle = lineColor;
                         ctx.lineWidth = 1.5;
                         ctx.stroke();
 
@@ -1895,96 +3363,8 @@
                         ctx.fill();
                         ctx.beginPath();
                         ctx.arc(x2, y2, 2, 0, Math.PI * 2);
-                        ctx.fillStyle = '#7C4DFF';
+                        ctx.fillStyle = lineColor;
                         ctx.fill();
-                        ctx.restore();
-
-                        // Floating Context Action Pill (TradingView Mobile Style)
-                        const pillPos = getTrendlineActionPillPos(x1, y1, x2, y2, maxContentX);
-                        const px = pillPos.x;
-                        const py = pillPos.y;
-
-                        ctx.save();
-                        // Capsule shadow
-                        ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-                        ctx.shadowBlur = 8;
-                        ctx.shadowOffsetY = 2;
-
-                        // Pill background capsule (width 40, height 28, radius 14)
-                        const pw = 40;
-                        const ph = 28;
-                        const pr = 14;
-                        const pillLeft = px - (pw / 2);
-                        const pillTop = py - (ph / 2);
-
-                        ctx.beginPath();
-                        if (ctx.roundRect) {
-                            ctx.roundRect(pillLeft, pillTop, pw, ph, pr);
-                        } else {
-                            ctx.arc(pillLeft + pr, py, pr, Math.PI / 2, Math.PI * 1.5);
-                            ctx.lineTo(pillLeft + pw - pr, pillTop);
-                            ctx.arc(pillLeft + pw - pr, py, pr, -Math.PI / 2, Math.PI / 2);
-                            ctx.lineTo(pillLeft + pr, pillTop + ph);
-                        }
-                        ctx.fillStyle = '#1E222D';
-                        ctx.fill();
-
-                        // Border stroke
-                        ctx.shadowColor = 'transparent';
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
-                        ctx.lineWidth = 1.2;
-                        ctx.stroke();
-
-                        // Pointer indicator line pointing towards midpoint (mx, my)
-                        const angleToMid = Math.atan2(pillPos.my - py, pillPos.mx - px);
-                        const ptrStartX = px + Math.cos(angleToMid) * (pr + 1);
-                        const ptrStartY = py + Math.sin(angleToMid) * (pr + 1);
-                        const ptrEndX = px + Math.cos(angleToMid) * (pr + 7);
-                        const ptrEndY = py + Math.sin(angleToMid) * (pr + 7);
-
-                        ctx.beginPath();
-                        ctx.moveTo(ptrStartX, ptrStartY);
-                        ctx.lineTo(ptrEndX, ptrEndY);
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-                        ctx.lineWidth = 1.4;
-                        ctx.stroke();
-
-                        // Vector Trash Can Icon (🗑️) inside pill
-                        ctx.save();
-                        ctx.strokeStyle = '#EF5350';
-                        ctx.lineWidth = 1.6;
-                        ctx.lineCap = 'round';
-                        ctx.lineJoin = 'round';
-
-                        // Lid handle
-                        ctx.beginPath();
-                        ctx.moveTo(px - 2.5, py - 6);
-                        ctx.lineTo(px + 2.5, py - 6);
-                        ctx.stroke();
-
-                        // Lid rim
-                        ctx.beginPath();
-                        ctx.moveTo(px - 6.5, py - 4);
-                        ctx.lineTo(px + 6.5, py - 4);
-                        ctx.stroke();
-
-                        // Can body
-                        ctx.beginPath();
-                        ctx.moveTo(px - 5, py - 3);
-                        ctx.lineTo(px - 4, py + 5.5);
-                        ctx.lineTo(px + 4, py + 5.5);
-                        ctx.lineTo(px + 5, py - 3);
-                        ctx.stroke();
-
-                        // 2 inner ribs
-                        ctx.beginPath();
-                        ctx.moveTo(px - 1.8, py - 1.5);
-                        ctx.lineTo(px - 1.8, py + 3.5);
-                        ctx.moveTo(px + 1.8, py - 1.5);
-                        ctx.lineTo(px + 1.8, py + 3.5);
-                        ctx.stroke();
-
-                        ctx.restore();
                         ctx.restore();
                     }
                 }
@@ -2495,6 +3875,8 @@
             isDrawingFib = false;
             fibDrawState = 0;
             selectedTrendlineIndex = -1;
+            globalAngleLock = false;
+            hideTrendlineToolbar();
             cancelRectangleDrawing();
             isDrawingTrendline = true;
             trendlineDrawState = 1; // Waiting for Anchor 1 click
@@ -2515,6 +3897,8 @@
             tempTrendlineP2 = null;
             crosshairPos = null;
             selectedTrendlineIndex = -1;
+            globalAngleLock = false;
+            hideTrendlineToolbar();
             const canvas = document.getElementById('fib-canvas');
             if (canvas && !isDrawingFib && !isDrawingHorizontalLine && !isDrawingRectangle) {
                 canvas.style.pointerEvents = 'none';
@@ -2529,6 +3913,9 @@
             trendlines = Array.isArray(lines) ? lines : [];
             if (selectedTrendlineIndex >= trendlines.length) {
                 selectedTrendlineIndex = -1;
+                hideTrendlineToolbar();
+            } else if (selectedTrendlineIndex >= 0) {
+                showTrendlineToolbar(selectedTrendlineIndex);
             }
             renderFib();
         }
@@ -2536,6 +3923,8 @@
         function clearTrendlines() {
             trendlines = [];
             selectedTrendlineIndex = -1;
+            globalAngleLock = false;
+            hideTrendlineToolbar();
             cancelTrendlineDrawing();
             notifyTrendlinesChanged();
         }

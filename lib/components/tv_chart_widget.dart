@@ -483,6 +483,7 @@ class _TvChartWidgetState extends State<TvChartWidget> {
                   .whereType<Map>()
                   .map((Map e) => Map<String, dynamic>.from(e))
                   .toList();
+              _lastReceivedTrendlines = List<Map<String, dynamic>>.from(updated);
               widget.onTrendlinesChanged?.call(updated);
             }
             return null;
