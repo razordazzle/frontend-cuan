@@ -29,6 +29,8 @@ class TvChartWidget extends StatefulWidget {
   final bool isDrawingRectangle;
   final ValueChanged<Map<String, dynamic>>? onRectangleAdded;
   final ValueChanged<List<Map<String, dynamic>>>? onRectanglesChanged;
+  final String symbol;
+  final String timeframe;
   final Color upColor;
   final Color downColor;
   final Color gridColor;
@@ -39,6 +41,8 @@ class TvChartWidget extends StatefulWidget {
 
   const TvChartWidget({
     super.key,
+    this.symbol = 'IHSG',
+    this.timeframe = '1D',
     required this.candles,
     this.payload,
     required this.isCandle,
@@ -180,6 +184,10 @@ class _TvChartWidgetState extends State<TvChartWidget> {
       source:
           "if (typeof initChart === 'function') initChart('${_hex(widget.upColor)}', '${_hex(widget.downColor)}', '${_hex(widget.gridColor)}', ${widget.interactive}, '${_rgba(crosshair, 0.85)}');",
     );
+    await _ctrl!.evaluateJavascript(
+      source:
+          "if (typeof setChartInfo === 'function') setChartInfo('${widget.symbol}', '${widget.timeframe}');",
+    );
 
     if (widget.payload != null && widget.payload!.candles.isNotEmpty) {
       final List<Map<String, dynamic>> candlesJson =
@@ -307,10 +315,18 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         old.isDrawingRectangle != widget.isDrawingRectangle;
 
     final bool crosshairChanged = old.crosshairColor != widget.crosshairColor;
+    final bool chartInfoChanged =
+        old.symbol != widget.symbol || old.timeframe != widget.timeframe;
 
     if (dataChanged) {
       _pushAll();
     } else {
+      if (chartInfoChanged) {
+        _ctrl?.evaluateJavascript(
+          source:
+              "if (typeof setChartInfo === 'function') setChartInfo('${widget.symbol}', '${widget.timeframe}');",
+        );
+      }
       if (indicatorsChanged) {
         _ctrl?.evaluateJavascript(
           source:

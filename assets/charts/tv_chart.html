@@ -799,6 +799,186 @@
         .tv-footer-btn-ok:active {
             opacity: 0.85;
         }
+
+        /* Object Tree Modal (TradingView Mobile Style) */
+        .tv-object-tree-modal {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            height: 80vh;
+            max-height: 85vh;
+            background: #1E1E1E;
+            border-top: 1px solid #2C2C2E;
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+            z-index: 1060;
+            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.75);
+            transform: translateY(100%);
+            transition: transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1);
+            user-select: none;
+            -webkit-user-select: none;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .tv-object-tree-modal.visible {
+            transform: translateY(0);
+        }
+
+        .tv-object-tree-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 20px 14px 20px;
+            border-bottom: 1px solid #2C2C2E;
+        }
+
+        .tv-object-tree-title {
+            color: #FFFFFF;
+            font-size: 19px;
+            font-weight: 600;
+        }
+
+        .tv-object-tree-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .tv-tree-header-btn {
+            background: transparent;
+            border: none;
+            color: #868993;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.12s;
+        }
+
+        .tv-tree-header-btn:active {
+            color: #FFFFFF;
+        }
+
+        .tv-object-tree-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0 20px 0;
+            box-sizing: border-box;
+            scrollbar-width: none;
+        }
+
+        .tv-object-tree-body::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tv-tree-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: background 0.12s;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .tv-tree-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .tv-tree-info-row, .tv-tree-info-row:hover {
+            background: transparent !important;
+            cursor: default !important;
+        }
+
+        .tv-tree-item.selected {
+            background: #1B365D; /* TradingView mobile active row highlight */
+        }
+
+        .tv-tree-item.hidden-item {
+            opacity: 0.6;
+        }
+
+        .tv-tree-item-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .tv-tree-item-icon {
+            color: #868993;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .tv-tree-item.selected .tv-tree-item-icon {
+            color: #2962FF;
+        }
+
+        .tv-tree-item-label {
+            color: #FFFFFF;
+            font-size: 14.5px;
+            font-weight: 400;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tv-tree-item-sub {
+            color: #868993;
+            font-size: 12px;
+            margin-left: 6px;
+        }
+
+        .tv-tree-item-actions {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+            margin-left: 12px;
+        }
+
+        .tv-tree-action-btn {
+            background: transparent;
+            border: none;
+            color: #868993;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.12s;
+        }
+
+        .tv-tree-action-btn:hover {
+            color: #FFFFFF;
+        }
+
+        .tv-tree-action-btn.active-action {
+            color: #2962FF;
+        }
+
+        .tv-tree-action-btn.danger:hover {
+            color: #EF5350;
+        }
+
+        .tv-tree-empty {
+            padding: 48px 20px;
+            text-align: center;
+            color: #868993;
+            font-size: 14px;
+        }
     </style>
     <script src="lightweight-charts.standalone.production.js"></script>
 </head>
@@ -961,6 +1141,14 @@
         <div id="tv-more-sheet-backdrop" class="tv-sheet-backdrop" style="display: none;"></div>
         <div id="tv-more-bottom-sheet" class="tv-bottom-sheet" style="display: none;">
             <div class="tv-sheet-handle"></div>
+            <div class="tv-sheet-item" id="tv-sheet-object-tree">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 2.5L2.5 6.5 10 10.5 17.5 6.5 10 2.5z" />
+                    <path d="M2.5 10.5L10 14.5 17.5 10.5" />
+                    <path d="M2.5 14.5L10 18.5 17.5 14.5" />
+                </svg>
+                <span>Object tree...</span>
+            </div>
             <div class="tv-sheet-item" id="tv-sheet-clone">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="3" width="9" height="9" rx="1.5" />
@@ -1111,6 +1299,25 @@
                     <button id="tv-settings-btn-cancel" class="tv-footer-btn-cancel">Cancel</button>
                     <button id="tv-settings-btn-ok" class="tv-footer-btn-ok">Ok</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- TradingView Mobile Object Tree Modal -->
+        <div id="tv-object-tree-backdrop" class="tv-modal-backdrop" style="display: none;"></div>
+        <div id="tv-object-tree-modal" class="tv-object-tree-modal" style="display: none;">
+            <div class="tv-object-tree-header">
+                <span class="tv-object-tree-title">Object tree</span>
+                <div class="tv-object-tree-header-actions">
+                    <button id="tv-object-tree-close" class="tv-tree-header-btn" title="Tutup">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <line x1="3" y1="3" x2="15" y2="15" />
+                            <line x1="15" y1="3" x2="3" y2="15" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div id="tv-object-tree-body" class="tv-object-tree-body">
+                <!-- Dynamically populated by refreshObjectTree() -->
             </div>
         </div>
     </div>
@@ -1645,6 +1852,303 @@
             notifyTrendlinesChanged();
         }
 
+        function openObjectTreeModal() {
+            const backdrop = document.getElementById('tv-object-tree-backdrop');
+            const modal = document.getElementById('tv-object-tree-modal');
+            if (!backdrop || !modal) return;
+
+            hideAllPopovers();
+            refreshObjectTree();
+
+            backdrop.style.display = 'block';
+            modal.style.display = 'flex';
+
+            requestAnimationFrame(() => {
+                backdrop.classList.add('visible');
+                modal.classList.add('visible');
+            });
+        }
+
+        function closeObjectTreeModal() {
+            const backdrop = document.getElementById('tv-object-tree-backdrop');
+            const modal = document.getElementById('tv-object-tree-modal');
+            if (!backdrop || !modal) return;
+
+            backdrop.classList.remove('visible');
+            modal.classList.remove('visible');
+
+            setTimeout(() => {
+                backdrop.style.display = 'none';
+                modal.style.display = 'none';
+            }, 260);
+        }
+
+        let currentChartSymbol = 'IHSG';
+        let currentChartTimeframe = '1D';
+
+        function setChartInfo(symbol, timeframe) {
+            if (symbol) currentChartSymbol = String(symbol);
+            if (timeframe) currentChartTimeframe = String(timeframe);
+            const infoLabel = document.getElementById('tv-tree-symbol-info');
+            if (infoLabel) {
+                infoLabel.textContent = `${currentChartSymbol}, ${currentChartTimeframe}`;
+            }
+        }
+        window.setChartInfo = setChartInfo;
+
+        function refreshObjectTree() {
+            const body = document.getElementById('tv-object-tree-body');
+            if (!body) return;
+            body.innerHTML = '';
+
+            // 1. Chart info header at top (non-clickable, informational only)
+            const infoRow = document.createElement('div');
+            infoRow.className = 'tv-tree-item tv-tree-info-row';
+            infoRow.style.cursor = 'default';
+            infoRow.style.pointerEvents = 'none';
+            infoRow.style.userSelect = 'none';
+            infoRow.style.webkitUserSelect = 'none';
+            infoRow.innerHTML = `
+                <div class="tv-tree-item-left">
+                    <div class="tv-tree-item-icon" style="color: #D1D4DC;">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <!-- Left taller hollow candle -->
+                            <line x1="5.5" y1="2.5" x2="5.5" y2="17.5" />
+                            <rect x="3.5" y="5.5" width="4" height="9" rx="0.5" fill="#1E1E1E" stroke="currentColor" />
+                            <!-- Right shorter hollow candle -->
+                            <line x1="14.5" y1="5.5" x2="14.5" y2="15.5" />
+                            <rect x="12.5" y="8" width="4" height="5" rx="0.5" fill="#1E1E1E" stroke="currentColor" />
+                        </svg>
+                    </div>
+                    <span id="tv-tree-symbol-info" class="tv-tree-item-label" style="font-weight: 600; font-size: 15px; color: #FFFFFF;">${currentChartSymbol}, ${currentChartTimeframe}</span>
+                </div>
+            `;
+            body.appendChild(infoRow);
+
+            let totalDrawings = (trendlines ? trendlines.length : 0) +
+                                (rectangles ? rectangles.length : 0) +
+                                (horizontalLines ? horizontalLines.length : 0);
+
+            if (totalDrawings === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'tv-tree-empty';
+                empty.textContent = 'No drawings on chart';
+                body.appendChild(empty);
+                return;
+            }
+
+            // 2. Trendlines
+            if (trendlines && trendlines.length > 0) {
+                trendlines.forEach((t, idx) => {
+                    const isSelected = selectedTrendlineIndex === idx;
+                    const isHidden = !!t.hidden;
+                    const isLocked = !!t.isLocked;
+
+                    const row = document.createElement('div');
+                    row.className = 'tv-tree-item' + (isSelected ? ' selected' : '') + (isHidden ? ' hidden-item' : '');
+
+                    const labelText = t.text ? `Trendline ("${t.text}")` : 'Trendline';
+
+                    row.innerHTML = `
+                        <div class="tv-tree-item-left">
+                            <div class="tv-tree-item-icon" style="color: ${t.color || '#7C4DFF'};">
+                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                                    <circle cx="3.5" cy="14.5" r="1.8" />
+                                    <circle cx="14.5" cy="3.5" r="1.8" />
+                                    <line x1="4.8" y1="13.2" x2="13.2" y2="4.8" />
+                                </svg>
+                            </div>
+                            <span class="tv-tree-item-label">${labelText}</span>
+                        </div>
+                        <div class="tv-tree-item-actions">
+                            <button class="tv-tree-action-btn tv-tree-btn-lock ${isLocked ? 'active-action' : ''}" title="${isLocked ? 'Unlock' : 'Lock'}">
+                                ${isLocked ? `
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                        <rect x="4" y="9" width="12" height="8" rx="2" />
+                                        <path d="M7 9V6a3 3 0 0 1 6 0v3" />
+                                    </svg>
+                                ` : `
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                        <rect x="4" y="9" width="12" height="8" rx="2" />
+                                        <path d="M7 9V6a3 3 0 0 1 6 0" />
+                                    </svg>
+                                `}
+                            </button>
+                            <button class="tv-tree-action-btn tv-tree-btn-eye ${isHidden ? 'active-action' : ''}" title="${isHidden ? 'Show / Unhide' : 'Hide'}">
+                                ${isHidden ? `
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                        <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5-7.5-5.5z" />
+                                        <path d="M3 3l14 14" />
+                                    </svg>
+                                ` : `
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                        <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5z" />
+                                        <circle cx="10" cy="10" r="2.5" />
+                                    </svg>
+                                `}
+                            </button>
+                            <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                    <path d="M3.5 5.5h13" />
+                                    <path d="M7.5 3.5h5" />
+                                    <path d="M5.5 5.5l.8 10a1.5 1.5 0 0 0 1.5 1.4h4.4a1.5 1.5 0 0 0 1.5-1.4l.8-10" />
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+
+                    // Row click to select drawing
+                    row.onclick = (e) => {
+                        e.stopPropagation();
+                        selectedTrendlineIndex = idx;
+                        if (!t.hidden) {
+                            showTrendlineToolbar(idx);
+                        } else {
+                            hideTrendlineToolbar();
+                        }
+                        renderFib();
+                        refreshObjectTree();
+                    };
+
+                    // Lock button click
+                    const btnLock = row.querySelector('.tv-tree-btn-lock');
+                    if (btnLock) {
+                        btnLock.onclick = (e) => {
+                            e.stopPropagation();
+                            t.isLocked = !t.isLocked;
+                            if (selectedTrendlineIndex === idx) {
+                                updateLockSheetUI(t.isLocked);
+                            }
+                            renderFib();
+                            notifyTrendlinesChanged();
+                            refreshObjectTree();
+                        };
+                    }
+
+                    // Eye button click (Hide / Unhide!)
+                    const btnEye = row.querySelector('.tv-tree-btn-eye');
+                    if (btnEye) {
+                        btnEye.onclick = (e) => {
+                            e.stopPropagation();
+                            t.hidden = !t.hidden;
+                            if (t.hidden) {
+                                if (selectedTrendlineIndex === idx) {
+                                    selectedTrendlineIndex = -1;
+                                    hideTrendlineToolbar();
+                                }
+                            } else {
+                                selectedTrendlineIndex = idx;
+                                showTrendlineToolbar(idx);
+                            }
+                            renderFib();
+                            notifyTrendlinesChanged();
+                            refreshObjectTree();
+                        };
+                    }
+
+                    // Delete button click
+                    const btnDel = row.querySelector('.tv-tree-btn-delete');
+                    if (btnDel) {
+                        btnDel.onclick = (e) => {
+                            e.stopPropagation();
+                            trendlines.splice(idx, 1);
+                            if (selectedTrendlineIndex === idx) {
+                                selectedTrendlineIndex = -1;
+                                hideTrendlineToolbar();
+                            } else if (selectedTrendlineIndex > idx) {
+                                selectedTrendlineIndex--;
+                            }
+                            renderFib();
+                            notifyTrendlinesChanged();
+                            refreshObjectTree();
+                        };
+                    }
+
+                    body.appendChild(row);
+                });
+            }
+
+            // 3. Rectangles
+            if (rectangles && rectangles.length > 0) {
+                rectangles.forEach((rect, rIdx) => {
+                    const row = document.createElement('div');
+                    row.className = 'tv-tree-item';
+                    row.innerHTML = `
+                        <div class="tv-tree-item-left">
+                            <div class="tv-tree-item-icon" style="color: ${rect.color || '#2962FF'};">
+                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                                    <rect x="2.5" y="4.5" width="13" height="9" rx="1.5" />
+                                </svg>
+                            </div>
+                            <span class="tv-tree-item-label">Rectangle</span>
+                        </div>
+                        <div class="tv-tree-item-actions">
+                            <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                    <path d="M3.5 5.5h13" />
+                                    <path d="M7.5 3.5h5" />
+                                    <path d="M5.5 5.5l.8 10a1.5 1.5 0 0 0 1.5 1.4h4.4a1.5 1.5 0 0 0 1.5-1.4l.8-10" />
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+
+                    const btnDel = row.querySelector('.tv-tree-btn-delete');
+                    if (btnDel) {
+                        btnDel.onclick = (e) => {
+                            e.stopPropagation();
+                            rectangles.splice(rIdx, 1);
+                            renderFib();
+                            refreshObjectTree();
+                        };
+                    }
+
+                    body.appendChild(row);
+                });
+            }
+
+            // 4. Horizontal Lines
+            if (horizontalLines && horizontalLines.length > 0) {
+                horizontalLines.forEach((hLine, hIdx) => {
+                    const priceVal = typeof hLine === 'object' ? hLine.price : hLine;
+                    const row = document.createElement('div');
+                    row.className = 'tv-tree-item';
+                    row.innerHTML = `
+                        <div class="tv-tree-item-left">
+                            <div class="tv-tree-item-icon" style="color: #2962FF;">
+                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                                    <circle cx="4" cy="9" r="2" />
+                                    <line x1="6" y1="9" x2="16" y2="9" />
+                                </svg>
+                            </div>
+                            <span class="tv-tree-item-label">Horizontal ray (${typeof priceVal === 'number' ? priceVal.toFixed(1) : priceVal})</span>
+                        </div>
+                        <div class="tv-tree-item-actions">
+                            <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                    <path d="M3.5 5.5h13" />
+                                    <path d="M7.5 3.5h5" />
+                                    <path d="M5.5 5.5l.8 10a1.5 1.5 0 0 0 1.5 1.4h4.4a1.5 1.5 0 0 0 1.5-1.4l.8-10" />
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+
+                    const btnDel = row.querySelector('.tv-tree-btn-delete');
+                    if (btnDel) {
+                        btnDel.onclick = (e) => {
+                            e.stopPropagation();
+                            horizontalLines.splice(hIdx, 1);
+                            renderFib();
+                            refreshObjectTree();
+                        };
+                    }
+
+                    body.appendChild(row);
+                });
+            }
+        }
+
         function positionPopover(popover, targetBtn) {
             if (!popover || !targetBtn) return;
             const btnRect = targetBtn.getBoundingClientRect();
@@ -2088,6 +2592,16 @@
                 };
             }
 
+            const itemObjectTree = document.getElementById('tv-sheet-object-tree');
+            if (itemObjectTree) {
+                itemObjectTree.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    closeMoreBottomSheet();
+                    openObjectTreeModal();
+                };
+            }
+
             const itemClone = document.getElementById('tv-sheet-clone');
             if (itemClone) {
                 itemClone.onclick = (e) => {
@@ -2188,6 +2702,33 @@
                     closeSizeDropdown();
                 };
             });
+
+            // Object Tree Modal Event Listeners
+            const objectTreeModal = document.getElementById('tv-object-tree-modal');
+            const objectTreeBackdrop = document.getElementById('tv-object-tree-backdrop');
+            const btnObjectTreeClose = document.getElementById('tv-object-tree-close');
+
+            if (objectTreeModal) {
+                objectTreeModal.onpointerdown = (e) => e.stopPropagation();
+                objectTreeModal.ontouchstart = (e) => e.stopPropagation();
+                objectTreeModal.onclick = (e) => e.stopPropagation();
+            }
+
+            if (objectTreeBackdrop) {
+                objectTreeBackdrop.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    closeObjectTreeModal();
+                };
+            }
+
+            if (btnObjectTreeClose) {
+                btnObjectTreeClose.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    closeObjectTreeModal();
+                };
+            }
 
             if (settingsBackdrop) {
                 settingsBackdrop.onclick = (e) => {
@@ -2505,7 +3046,7 @@
 
             if (chartContainer) {
                 chartContainer.addEventListener('pointermove', (e) => {
-                    if (e.target && e.target.closest && e.target.closest('#tv-trendline-toolbar, .tv-popover, #tv-more-bottom-sheet, #tv-more-sheet-backdrop, #tv-settings-modal, #tv-settings-backdrop')) {
+                    if (e.target && e.target.closest && e.target.closest('#tv-trendline-toolbar, .tv-popover, #tv-more-bottom-sheet, #tv-more-sheet-backdrop, #tv-settings-modal, #tv-settings-backdrop, #tv-object-tree-modal, #tv-object-tree-backdrop')) {
                         return;
                     }
                     updateHoverState(e);
@@ -2514,8 +3055,8 @@
                 // Mobile-first capture-phase touch interceptor:
                 // Intercepts touches on drawing elements BEFORE LightweightCharts can handle them as pan/scroll!
                 chartContainer.addEventListener('pointerdown', (e) => {
-                    // If touch was on the floating toolbar, popover, bottom sheet, or settings modal, DO NOT INTERCEPT AT ALL!
-                    if (e.target && e.target.closest && e.target.closest('#tv-trendline-toolbar, .tv-popover, #tv-more-bottom-sheet, #tv-more-sheet-backdrop, #tv-settings-modal, #tv-settings-backdrop')) {
+                    // If touch was on the floating toolbar, popover, bottom sheet, settings modal, or object tree, DO NOT INTERCEPT AT ALL!
+                    if (e.target && e.target.closest && e.target.closest('#tv-trendline-toolbar, .tv-popover, #tv-more-bottom-sheet, #tv-more-sheet-backdrop, #tv-settings-modal, #tv-settings-backdrop, #tv-object-tree-modal, #tv-object-tree-backdrop')) {
                         return;
                     }
 

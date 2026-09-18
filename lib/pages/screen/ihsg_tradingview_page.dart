@@ -505,6 +505,8 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                 child: Stack(
                   children: [
                     TvChartWidget(
+                      symbol: 'IHSG',
+                      timeframe: p.indexInterval,
                       candles: candles,
                       payload: p.ihsgChartPayload,
                       isCandle: _isCandle,
