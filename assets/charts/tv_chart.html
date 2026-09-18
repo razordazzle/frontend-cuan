@@ -732,6 +732,10 @@
             flex: 1;
         }
 
+        .tv-align-btn {
+            min-width: 96px;
+        }
+
         .tv-align-select {
             height: 36px;
             border-radius: 6px;
@@ -1248,29 +1252,29 @@
                 <div class="tv-align-row">
                     <span class="tv-align-label">Text alignment</span>
 
+                    <!-- Hidden inputs so any external code reading .value works identically -->
+                    <input type="hidden" id="tv-text-valign-select" value="top">
+                    <input type="hidden" id="tv-text-halign-select" value="center">
+
                     <div class="tv-fmt-select-wrap">
-                        <select id="tv-text-valign-select" class="tv-align-select">
-                            <option value="top" selected>Top</option>
-                            <option value="middle">Middle</option>
-                            <option value="bottom">Bottom</option>
-                        </select>
-                        <div class="tv-select-arrow">
-                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-                                <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
-                            </svg>
+                        <div id="tv-text-valign-btn" class="tv-fmt-size-btn tv-align-btn" title="Vertical alignment" tabindex="0">
+                            <span id="tv-text-valign-val">Top</span>
+                            <div id="tv-text-valign-chevron" class="tv-size-chevron">
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
+                                </svg>
+                            </div>
                         </div>
                     </div>
 
                     <div class="tv-fmt-select-wrap">
-                        <select id="tv-text-halign-select" class="tv-align-select">
-                            <option value="left">Left</option>
-                            <option value="center" selected>Center</option>
-                            <option value="right">Right</option>
-                        </select>
-                        <div class="tv-select-arrow">
-                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-                                <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
-                            </svg>
+                        <div id="tv-text-halign-btn" class="tv-fmt-size-btn tv-align-btn" title="Horizontal alignment" tabindex="0">
+                            <span id="tv-text-halign-val">Center</span>
+                            <div id="tv-text-halign-chevron" class="tv-size-chevron">
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
+                                </svg>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1291,6 +1295,20 @@
                 <div class="tv-size-item" data-size="28">28</div>
                 <div class="tv-size-item" data-size="32">32</div>
                 <div class="tv-size-item" data-size="40">40</div>
+            </div>
+
+            <!-- Vertical Alignment Dropdown Overlay (TradingView Mobile Style) -->
+            <div id="tv-text-valign-dropdown" class="tv-size-dropdown-overlay" style="display: none;">
+                <div class="tv-size-item tv-valign-item selected" data-valign="top">Top</div>
+                <div class="tv-size-item tv-valign-item" data-valign="middle">Middle</div>
+                <div class="tv-size-item tv-valign-item" data-valign="bottom">Bottom</div>
+            </div>
+
+            <!-- Horizontal Alignment Dropdown Overlay (TradingView Mobile Style) -->
+            <div id="tv-text-halign-dropdown" class="tv-size-dropdown-overlay" style="display: none;">
+                <div class="tv-size-item tv-halign-item" data-halign="left">Left</div>
+                <div class="tv-size-item tv-halign-item selected" data-halign="center">Center</div>
+                <div class="tv-size-item tv-halign-item" data-halign="right">Right</div>
             </div>
 
             <!-- Footer -->
@@ -1849,6 +1867,7 @@
                 closeSizeDropdown();
             } else {
                 hideAllPopovers();
+                closeAlignDropdowns();
                 if (fmtRow) {
                     const modalRect = modal.getBoundingClientRect();
                     const rowRect = fmtRow.getBoundingClientRect();
@@ -1869,7 +1888,7 @@
         }
 
         function updateSizeDropdownSelection(selectedSize) {
-            document.querySelectorAll('.tv-size-item').forEach(item => {
+            document.querySelectorAll('#tv-text-size-dropdown .tv-size-item').forEach(item => {
                 const s = parseInt(item.getAttribute('data-size'), 10);
                 const isSel = s === selectedSize;
                 item.classList.toggle('selected', isSel);
@@ -1877,6 +1896,113 @@
                     setTimeout(() => item.scrollIntoView({ block: 'nearest' }), 30);
                 }
             });
+        }
+
+        function toggleValignDropdown(e) {
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            const dropdown = document.getElementById('tv-text-valign-dropdown');
+            const chevron = document.getElementById('tv-text-valign-chevron');
+            const modal = document.getElementById('tv-settings-modal');
+            const fmtRow = document.querySelector('.tv-fmt-row');
+            if (!dropdown || !modal) return;
+
+            if (dropdown.style.display === 'flex') {
+                closeValignDropdown();
+            } else {
+                hideAllPopovers();
+                closeSizeDropdown();
+                closeHalignDropdown();
+                if (fmtRow) {
+                    const modalRect = modal.getBoundingClientRect();
+                    const rowRect = fmtRow.getBoundingClientRect();
+                    dropdown.style.top = Math.round(rowRect.bottom - modalRect.top + 6) + 'px';
+                }
+                dropdown.style.display = 'flex';
+                if (chevron) chevron.classList.add('open');
+                const curVal = document.getElementById('tv-text-valign-select')?.value || 'top';
+                updateValignDropdownSelection(curVal);
+            }
+        }
+
+        function closeValignDropdown() {
+            const dropdown = document.getElementById('tv-text-valign-dropdown');
+            const chevron = document.getElementById('tv-text-valign-chevron');
+            if (dropdown) dropdown.style.display = 'none';
+            if (chevron) chevron.classList.remove('open');
+        }
+
+        function updateValignDropdownSelection(selectedVal) {
+            document.querySelectorAll('.tv-valign-item').forEach(item => {
+                const v = item.getAttribute('data-valign');
+                const isSel = v === selectedVal;
+                item.classList.toggle('selected', isSel);
+            });
+            const spanVal = document.getElementById('tv-text-valign-val');
+            if (spanVal) {
+                const map = { 'top': 'Top', 'middle': 'Middle', 'bottom': 'Bottom' };
+                spanVal.textContent = map[selectedVal] || selectedVal;
+            }
+            const hidden = document.getElementById('tv-text-valign-select');
+            if (hidden) hidden.value = selectedVal;
+        }
+
+        function toggleHalignDropdown(e) {
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            const dropdown = document.getElementById('tv-text-halign-dropdown');
+            const chevron = document.getElementById('tv-text-halign-chevron');
+            const modal = document.getElementById('tv-settings-modal');
+            const fmtRow = document.querySelector('.tv-fmt-row');
+            if (!dropdown || !modal) return;
+
+            if (dropdown.style.display === 'flex') {
+                closeHalignDropdown();
+            } else {
+                hideAllPopovers();
+                closeSizeDropdown();
+                closeValignDropdown();
+                if (fmtRow) {
+                    const modalRect = modal.getBoundingClientRect();
+                    const rowRect = fmtRow.getBoundingClientRect();
+                    dropdown.style.top = Math.round(rowRect.bottom - modalRect.top + 6) + 'px';
+                }
+                dropdown.style.display = 'flex';
+                if (chevron) chevron.classList.add('open');
+                const curVal = document.getElementById('tv-text-halign-select')?.value || 'center';
+                updateHalignDropdownSelection(curVal);
+            }
+        }
+
+        function closeHalignDropdown() {
+            const dropdown = document.getElementById('tv-text-halign-dropdown');
+            const chevron = document.getElementById('tv-text-halign-chevron');
+            if (dropdown) dropdown.style.display = 'none';
+            if (chevron) chevron.classList.remove('open');
+        }
+
+        function updateHalignDropdownSelection(selectedVal) {
+            document.querySelectorAll('.tv-halign-item').forEach(item => {
+                const h = item.getAttribute('data-halign');
+                const isSel = h === selectedVal;
+                item.classList.toggle('selected', isSel);
+            });
+            const spanVal = document.getElementById('tv-text-halign-val');
+            if (spanVal) {
+                const map = { 'left': 'Left', 'center': 'Center', 'right': 'Right' };
+                spanVal.textContent = map[selectedVal] || selectedVal;
+            }
+            const hidden = document.getElementById('tv-text-halign-select');
+            if (hidden) hidden.value = selectedVal;
+        }
+
+        function closeAlignDropdowns() {
+            closeValignDropdown();
+            closeHalignDropdown();
         }
 
         function openTrendlineSettingsModal() {
@@ -1901,6 +2027,7 @@
 
             hideAllPopovers();
             closeSizeDropdown();
+            closeAlignDropdowns();
 
             // Populate current values
             modalPendingTextColor = drawing.textColor || '#FFFFFF';
@@ -1921,11 +2048,8 @@
             const textInput = document.getElementById('tv-text-content-input');
             if (textInput) textInput.value = drawing.text || '';
 
-            const valignSelect = document.getElementById('tv-text-valign-select');
-            if (valignSelect) valignSelect.value = drawing.textValign || 'top';
-
-            const halignSelect = document.getElementById('tv-text-halign-select');
-            if (halignSelect) halignSelect.value = drawing.textHalign || 'center';
+            updateValignDropdownSelection(drawing.textValign || 'top');
+            updateHalignDropdownSelection(drawing.textHalign || 'center');
 
             backdrop.style.display = 'block';
             modal.style.display = 'flex';
@@ -1941,6 +2065,7 @@
             const modal = document.getElementById('tv-settings-modal');
             hideAllPopovers();
             closeSizeDropdown();
+            closeAlignDropdowns();
             if (!backdrop || !modal) return;
 
             backdrop.classList.remove('visible');
@@ -3026,6 +3151,9 @@
                     if (e.target && !e.target.closest('#tv-text-size-dropdown, #tv-text-size-btn')) {
                         closeSizeDropdown();
                     }
+                    if (e.target && !e.target.closest('#tv-text-valign-dropdown, #tv-text-valign-btn, #tv-text-halign-dropdown, #tv-text-halign-btn')) {
+                        closeAlignDropdowns();
+                    }
                 };
                 settingsModal.ontouchstart = (e) => e.stopPropagation();
                 settingsModal.onclick = (e) => e.stopPropagation();
@@ -3036,7 +3164,7 @@
                 btnTextSize.onclick = toggleSizeDropdown;
             }
 
-            document.querySelectorAll('.tv-size-item').forEach(item => {
+            document.querySelectorAll('#tv-text-size-dropdown .tv-size-item').forEach(item => {
                 item.onclick = (e) => {
                     e.stopPropagation();
                     e.preventDefault();
@@ -3045,6 +3173,36 @@
                     if (sizeValSpan) sizeValSpan.textContent = String(size);
                     updateSizeDropdownSelection(size);
                     closeSizeDropdown();
+                };
+            });
+
+            const btnValign = document.getElementById('tv-text-valign-btn');
+            if (btnValign) {
+                btnValign.onclick = toggleValignDropdown;
+            }
+
+            const btnHalign = document.getElementById('tv-text-halign-btn');
+            if (btnHalign) {
+                btnHalign.onclick = toggleHalignDropdown;
+            }
+
+            document.querySelectorAll('.tv-valign-item').forEach(item => {
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const val = item.getAttribute('data-valign') || 'top';
+                    updateValignDropdownSelection(val);
+                    closeValignDropdown();
+                };
+            });
+
+            document.querySelectorAll('.tv-halign-item').forEach(item => {
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const val = item.getAttribute('data-halign') || 'center';
+                    updateHalignDropdownSelection(val);
+                    closeHalignDropdown();
                 };
             });
 
@@ -4944,7 +5102,7 @@
                     ctx.stroke();
                     ctx.setLineDash([]); // Reset dash for anchors & labels
 
-                    // Render optional text label
+                    // Render optional text label rotated parallel to trendline (never upside down)
                     if (t.text) {
                         ctx.save();
                         const fontSize = t.textSize || 14;
@@ -4955,54 +5113,75 @@
                         ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
                         ctx.shadowBlur = 4;
 
-                        // Normalize anchors left to right for positioning
-                        let leftX = x1, leftY = y1, rightX = x2, rightY = y2;
-                        if (leftX > rightX) {
-                            leftX = x2; leftY = y2;
-                            rightX = x1; rightY = y1;
+                        // Normalize direction: text must ALWAYS be readable left-to-right (never upside down)
+                        let pStart = { x: x1, y: y1 };
+                        let pEnd = { x: x2, y: y2 };
+
+                        if (pStart.x > pEnd.x) {
+                            const tmp = pStart; pStart = pEnd; pEnd = tmp;
+                        } else if (pStart.x === pEnd.x) {
+                            // For vertical lines, orient bottom-to-top so text reads upward (-90 deg)
+                            if (pStart.y < pEnd.y) {
+                                const tmp = pStart; pStart = pEnd; pEnd = tmp;
+                            }
                         }
 
-                        const halign = t.textHalign || 'center';
-                        let baseX = (leftX + rightX) / 2;
-                        let baseY = (leftY + rightY) / 2;
+                        const dx = pEnd.x - pStart.x;
+                        const dy = pEnd.y - pStart.y;
+                        const len = Math.hypot(dx, dy);
+                        const angle = Math.atan2(dy, dx); // Strictly within [-PI/2, PI/2]!
 
+                        const halign = t.textHalign || 'center';
+                        let distAlongLine = len / 2;
                         if (halign === 'left') {
-                            baseX = leftX + 16;
-                            const progress = Math.min(1, 16 / Math.max(1, rightX - leftX));
-                            baseY = leftY + (rightY - leftY) * progress;
+                            distAlongLine = Math.min(24, len * 0.25);
                             ctx.textAlign = 'left';
                         } else if (halign === 'right') {
-                            baseX = rightX - 16;
-                            const progress = Math.max(0, 1 - (16 / Math.max(1, rightX - leftX)));
-                            baseY = leftY + (rightY - leftY) * progress;
+                            distAlongLine = len - Math.min(24, len * 0.25);
                             ctx.textAlign = 'right';
                         } else {
+                            distAlongLine = len / 2;
                             ctx.textAlign = 'center';
                         }
 
+                        // Anchor point on the line
+                        const anchorX = pStart.x + (len > 0 ? Math.cos(angle) * distAlongLine : 0);
+                        const anchorY = pStart.y + (len > 0 ? Math.sin(angle) * distAlongLine : 0);
+
+                        // Translate and rotate canvas to line orientation
+                        ctx.translate(anchorX, anchorY);
+                        ctx.rotate(angle);
+
                         const valign = t.textValign || 'top';
                         const lines = String(t.text).split('\n');
-                        const lineHeight = Math.round(fontSize * 1.3);
+                        const lineHeight = Math.round(fontSize * 1.25);
+                        const offsetFromLine = Math.max(5, (lineWidth / 2) + 4);
 
-                        let startY = baseY;
                         if (valign === 'top') {
-                            // Position above line
-                            startY = baseY - 8 - ((lines.length - 1) * lineHeight);
+                            // Sits on top of / above the line (negative Y in local rotated space)
                             ctx.textBaseline = 'bottom';
+                            for (let k = 0; k < lines.length; k++) {
+                                const lineY = -offsetFromLine - ((lines.length - 1 - k) * lineHeight);
+                                ctx.fillText(lines[k], 0, lineY);
+                            }
                         } else if (valign === 'bottom') {
-                            // Position below line
-                            startY = baseY + 12;
+                            // Sits below the line (positive Y in local rotated space)
                             ctx.textBaseline = 'top';
+                            for (let k = 0; k < lines.length; k++) {
+                                const lineY = offsetFromLine + (k * lineHeight);
+                                ctx.fillText(lines[k], 0, lineY);
+                            }
                         } else {
-                            // Middle
-                            const totalH = lines.length * lineHeight;
-                            startY = baseY - (totalH / 2) + (lineHeight / 2);
+                            // Middle: centered directly on the line
                             ctx.textBaseline = 'middle';
+                            const totalH = (lines.length - 1) * lineHeight;
+                            const startY = -(totalH / 2);
+                            for (let k = 0; k < lines.length; k++) {
+                                const lineY = startY + (k * lineHeight);
+                                ctx.fillText(lines[k], 0, lineY);
+                            }
                         }
 
-                        for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-                            ctx.fillText(lines[lineIdx], baseX, startY + (lineIdx * lineHeight));
-                        }
                         ctx.restore();
                     }
 
