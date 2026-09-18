@@ -49,6 +49,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
 
   void _startDrawingHorizontalLine() {
     setState(() {
+      if (_isDrawingFib) _showFibonacci = false;
       _isDrawingFib = false;
       _isDrawingTrendline = false;
       _isDrawingRectangle = false;
@@ -58,6 +59,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
 
   void _startDrawingTrendline() {
     setState(() {
+      if (_isDrawingFib) _showFibonacci = false;
       _isDrawingFib = false;
       _isDrawingHorizontalLine = false;
       _isDrawingRectangle = false;
@@ -67,6 +69,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
 
   void _startDrawingRectangle() {
     setState(() {
+      if (_isDrawingFib) _showFibonacci = false;
       _isDrawingFib = false;
       _isDrawingHorizontalLine = false;
       _isDrawingTrendline = false;
@@ -520,6 +523,14 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                           setState(() => _isDrawingFib = false);
                         }
                       },
+                      onFibDeleted: () {
+                        if (mounted) {
+                          setState(() {
+                            _showFibonacci = false;
+                            _isDrawingFib = false;
+                          });
+                        }
+                      },
                       horizontalLines: _horizontalLines,
                       isDrawingHorizontalLine: _isDrawingHorizontalLine,
                       onHorizontalLineAdded: (dynamic item) {
@@ -648,6 +659,9 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                                     _isDrawingHorizontalLine = false;
                                     _isDrawingTrendline = false;
                                     _isDrawingRectangle = false;
+                                    if (_isDrawingFib) {
+                                      _showFibonacci = false;
+                                    }
                                     _isDrawingFib = false;
                                   });
                                 },

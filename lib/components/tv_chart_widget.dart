@@ -17,6 +17,7 @@ class TvChartWidget extends StatefulWidget {
   final bool showFibonacci;
   final bool isDrawingFib;
   final VoidCallback? onFibDrawn;
+  final VoidCallback? onFibDeleted;
   final List<dynamic> horizontalLines;
   final bool isDrawingHorizontalLine;
   final ValueChanged<dynamic>? onHorizontalLineAdded;
@@ -52,6 +53,7 @@ class TvChartWidget extends StatefulWidget {
     this.showFibonacci = false,
     this.isDrawingFib = false,
     this.onFibDrawn,
+    this.onFibDeleted,
     this.horizontalLines = const <dynamic>[],
     this.isDrawingHorizontalLine = false,
     this.onHorizontalLineAdded,
@@ -103,8 +105,14 @@ class _TvChartWidgetState extends State<TvChartWidget> {
           _lastReceivedHorizLines = List<Map<String, dynamic>>.from(updated);
           widget.onHorizontalLinesChanged?.call(updated);
         }
+      } else if (type == 'onFibDeleted') {
+        widget.onFibDeleted?.call();
       } else if (type == 'onFibDrawn') {
-        widget.onFibDrawn?.call();
+        if (payload == false) {
+          widget.onFibDeleted?.call();
+        } else {
+          widget.onFibDrawn?.call();
+        }
       } else if (type == 'onTrendlineAdded') {
         if (payload is Map) {
           widget.onTrendlineAdded?.call(Map<String, dynamic>.from(payload));
@@ -340,10 +348,16 @@ class _TvChartWidgetState extends State<TvChartWidget> {
           source: "setFibonacci(${widget.showFibonacci});",
         );
       }
-      if (drawFibChanged && widget.isDrawingFib) {
-        _ctrl?.evaluateJavascript(
-          source: "startFibDrawing();",
-        );
+      if (drawFibChanged) {
+        if (widget.isDrawingFib) {
+          _ctrl?.evaluateJavascript(
+            source: "startFibDrawing();",
+          );
+        } else {
+          _ctrl?.evaluateJavascript(
+            source: "cancelFibDrawing();",
+          );
+        }
       }
       if (horizLinesChanged) {
         if (!listEquals(widget.horizontalLines, _lastReceivedHorizLines)) {
@@ -454,9 +468,20 @@ class _TvChartWidgetState extends State<TvChartWidget> {
           },
         );
         c.addJavaScriptHandler(
+          handlerName: 'onFibDeleted',
+          callback: (List<dynamic> args) {
+            widget.onFibDeleted?.call();
+            return null;
+          },
+        );
+        c.addJavaScriptHandler(
           handlerName: 'onFibDrawn',
           callback: (List<dynamic> args) {
-            widget.onFibDrawn?.call();
+            if (args.isNotEmpty && args[0] == false) {
+              widget.onFibDeleted?.call();
+            } else {
+              widget.onFibDrawn?.call();
+            }
             return null;
           },
         );

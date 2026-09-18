@@ -1095,6 +1095,7 @@
             <div class="tv-custom-color-row">
                 <div id="tv-recent-color-1" class="tv-color-swatch" style="background-color: #2B2B2B;"></div>
                 <div id="tv-recent-color-2" class="tv-color-swatch" style="background-color: #7C4DFF;"></div>
+                <div id="tv-fib-rainbow-swatch" class="tv-color-swatch" title="Rainbow (Default)" style="background: linear-gradient(90deg, #00B0FF 0%, #00E676 35%, #FFEB3B 65%, #FF5722 100%); display: none; border-radius: 4px; border: 1px solid #363A45;"></div>
                 <label class="tv-custom-btn" title="Pilih Warna Kustom">
                     +
                     <input type="color" id="tv-custom-color-input" style="opacity: 0; width: 0; height: 0; position: absolute;" />
@@ -1376,6 +1377,10 @@
         let isFibSelected = false; // true: Edit Mode (large handles, dashed line), false: Non-Edit Mode (subtle dots)
         let fibPoint1 = null; // { time, price }
         let fibPoint2 = null; // { time, price }
+        let fibCustomColor = null; // null: rainbow default per line, hex: uniform custom color
+        let fibLineWidth = 2;
+        let fibIsLocked = false;
+        let fibDragStartPos = null;
         let rawCandlesData = [];
         let currentRsiData = [];
         let currentVolumeData = [];
@@ -1717,16 +1722,31 @@
             const style = h.style || 'solid';
 
             const lineInd = document.getElementById('tv-indicator-line-color');
-            if (lineInd) lineInd.style.backgroundColor = lineColor;
+            if (lineInd) lineInd.style.background = lineColor;
 
             const fillBtn = document.getElementById('tv-btn-fill-color');
             if (fillBtn) fillBtn.style.display = 'none';
 
+            const textBtn = document.getElementById('tv-btn-text-color');
+            if (textBtn) textBtn.style.display = 'flex';
+
             const textInd = document.getElementById('tv-indicator-text-color');
             if (textInd) textInd.style.backgroundColor = textColor;
 
+            const widthBtn = document.getElementById('tv-btn-width');
+            if (widthBtn) widthBtn.style.display = 'flex';
+
             const widthLabel = document.getElementById('tv-label-width');
             if (widthLabel) widthLabel.textContent = width + 'px';
+
+            const styleBtn = document.getElementById('tv-btn-style');
+            if (styleBtn) styleBtn.style.display = 'flex';
+
+            const cloneBtn = document.getElementById('tv-btn-clone');
+            if (cloneBtn) cloneBtn.style.display = 'flex';
+
+            const rainbowSwatch = document.getElementById('tv-fib-rainbow-swatch');
+            if (rainbowSwatch) rainbowSwatch.style.display = 'none';
 
             const styleInd = document.getElementById('tv-indicator-line-style');
             if (styleInd) {
@@ -1770,16 +1790,31 @@
             const style = t.style || 'solid';
 
             const lineInd = document.getElementById('tv-indicator-line-color');
-            if (lineInd) lineInd.style.backgroundColor = lineColor;
+            if (lineInd) lineInd.style.background = lineColor;
 
             const fillBtn = document.getElementById('tv-btn-fill-color');
             if (fillBtn) fillBtn.style.display = 'none';
 
+            const textBtn = document.getElementById('tv-btn-text-color');
+            if (textBtn) textBtn.style.display = 'flex';
+
             const textInd = document.getElementById('tv-indicator-text-color');
             if (textInd) textInd.style.backgroundColor = textColor;
 
+            const widthBtn = document.getElementById('tv-btn-width');
+            if (widthBtn) widthBtn.style.display = 'flex';
+
             const widthLabel = document.getElementById('tv-label-width');
             if (widthLabel) widthLabel.textContent = width + 'px';
+
+            const styleBtn = document.getElementById('tv-btn-style');
+            if (styleBtn) styleBtn.style.display = 'flex';
+
+            const cloneBtn = document.getElementById('tv-btn-clone');
+            if (cloneBtn) cloneBtn.style.display = 'flex';
+
+            const rainbowSwatch = document.getElementById('tv-fib-rainbow-swatch');
+            if (rainbowSwatch) rainbowSwatch.style.display = 'none';
 
             const styleInd = document.getElementById('tv-indicator-line-style');
             if (styleInd) {
@@ -1826,7 +1861,7 @@
             const style = r.style || 'solid';
 
             const lineInd = document.getElementById('tv-indicator-line-color');
-            if (lineInd) lineInd.style.backgroundColor = lineColor;
+            if (lineInd) lineInd.style.background = lineColor;
 
             const fillBtn = document.getElementById('tv-btn-fill-color');
             if (fillBtn) fillBtn.style.display = 'flex';
@@ -1834,11 +1869,26 @@
             const fillInd = document.getElementById('tv-indicator-fill-color');
             if (fillInd) fillInd.style.backgroundColor = hexToRgba(fillColor, fillOpacity);
 
+            const textBtn = document.getElementById('tv-btn-text-color');
+            if (textBtn) textBtn.style.display = 'flex';
+
             const textInd = document.getElementById('tv-indicator-text-color');
             if (textInd) textInd.style.backgroundColor = textColor;
 
+            const widthBtn = document.getElementById('tv-btn-width');
+            if (widthBtn) widthBtn.style.display = 'flex';
+
             const widthLabel = document.getElementById('tv-label-width');
             if (widthLabel) widthLabel.textContent = width + 'px';
+
+            const styleBtn = document.getElementById('tv-btn-style');
+            if (styleBtn) styleBtn.style.display = 'flex';
+
+            const cloneBtn = document.getElementById('tv-btn-clone');
+            if (cloneBtn) cloneBtn.style.display = 'flex';
+
+            const rainbowSwatch = document.getElementById('tv-fib-rainbow-swatch');
+            if (rainbowSwatch) rainbowSwatch.style.display = 'none';
 
             const styleInd = document.getElementById('tv-indicator-line-style');
             if (styleInd) {
@@ -1860,6 +1910,69 @@
             }
 
             updateLockSheetUI(!!r.isLocked);
+
+            toolbar.style.display = 'flex';
+        }
+
+        function showFibToolbar() {
+            if (!currentShowFib || !fibPoint1 || !fibPoint2) {
+                hideTrendlineToolbar();
+                return;
+            }
+            isFibSelected = true;
+            selectedHorizontalLineIndex = -1;
+            selectedTrendlineIndex = -1;
+            selectedRectangleIndex = -1;
+
+            const toolbar = document.getElementById('tv-trendline-toolbar');
+            if (!toolbar) return;
+
+            const lineInd = document.getElementById('tv-indicator-line-color');
+            if (lineInd) {
+                if (fibCustomColor) {
+                    lineInd.style.background = fibCustomColor;
+                } else {
+                    lineInd.style.background = 'linear-gradient(90deg, #00B0FF 0%, #00E676 35%, #FFEB3B 65%, #FF5722 100%)';
+                }
+            }
+
+            // Buttons hidden for Fib (Fill, Text, Style, Angle)
+            const fillBtn = document.getElementById('tv-btn-fill-color');
+            if (fillBtn) fillBtn.style.display = 'none';
+
+            const textBtn = document.getElementById('tv-btn-text-color');
+            if (textBtn) textBtn.style.display = 'none';
+
+            const styleBtn = document.getElementById('tv-btn-style');
+            if (styleBtn) styleBtn.style.display = 'none';
+
+            const angleBtn = document.getElementById('tv-btn-angle');
+            if (angleBtn) angleBtn.style.display = 'none';
+
+            // Buttons visible for Fib (Template/Clone, Line Color, Width, Delete, More)
+            const cloneBtn = document.getElementById('tv-btn-clone');
+            if (cloneBtn) cloneBtn.style.display = 'flex';
+
+            const lineColorBtn = document.getElementById('tv-btn-line-color');
+            if (lineColorBtn) lineColorBtn.style.display = 'flex';
+
+            const widthBtn = document.getElementById('tv-btn-width');
+            if (widthBtn) {
+                widthBtn.style.display = 'flex';
+                const widthLabel = document.getElementById('tv-label-width');
+                if (widthLabel) widthLabel.textContent = (fibLineWidth || 2) + 'px';
+            }
+
+            const deleteBtn = document.getElementById('tv-btn-delete');
+            if (deleteBtn) deleteBtn.style.display = 'flex';
+
+            const moreBtn = document.getElementById('tv-btn-more');
+            if (moreBtn) moreBtn.style.display = 'flex';
+
+            const rainbowSwatch = document.getElementById('tv-fib-rainbow-swatch');
+            if (rainbowSwatch) rainbowSwatch.style.display = 'block';
+
+            updateLockSheetUI(!!fibIsLocked);
 
             toolbar.style.display = 'flex';
         }
@@ -1903,13 +2016,28 @@
 
         function getActiveDrawing() {
             if (selectedHorizontalLineIndex >= 0 && selectedHorizontalLineIndex < horizontalLines.length) {
-                return { drawing: horizontalLines[selectedHorizontalLineIndex], isHLine: true, isRect: false, index: selectedHorizontalLineIndex, type: 'horizontalLine' };
+                return { drawing: horizontalLines[selectedHorizontalLineIndex], isHLine: true, isRect: false, isFib: false, index: selectedHorizontalLineIndex, type: 'horizontalLine' };
             }
             if (selectedTrendlineIndex >= 0 && selectedTrendlineIndex < trendlines.length) {
-                return { drawing: trendlines[selectedTrendlineIndex], isHLine: false, isRect: false, index: selectedTrendlineIndex, type: 'trendline' };
+                return { drawing: trendlines[selectedTrendlineIndex], isHLine: false, isRect: false, isFib: false, index: selectedTrendlineIndex, type: 'trendline' };
             }
             if (selectedRectangleIndex >= 0 && selectedRectangleIndex < rectangles.length) {
-                return { drawing: rectangles[selectedRectangleIndex], isHLine: false, isRect: true, index: selectedRectangleIndex, type: 'rectangle' };
+                return { drawing: rectangles[selectedRectangleIndex], isHLine: false, isRect: true, isFib: false, index: selectedRectangleIndex, type: 'rectangle' };
+            }
+            if (isFibSelected && currentShowFib && fibPoint1 && fibPoint2) {
+                return {
+                    drawing: {
+                        color: fibCustomColor,
+                        width: fibLineWidth || 2,
+                        isLocked: !!fibIsLocked,
+                        hidden: false
+                    },
+                    isHLine: false,
+                    isRect: false,
+                    isFib: true,
+                    index: 0,
+                    type: 'fibonacci'
+                };
             }
             return null;
         }
@@ -1922,6 +2050,8 @@
                 isLocked = !!trendlines[selectedTrendlineIndex].isLocked;
             } else if (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]) {
                 isLocked = !!rectangles[selectedRectangleIndex].isLocked;
+            } else if (isFibSelected && currentShowFib && fibPoint1 && fibPoint2) {
+                isLocked = !!fibIsLocked;
             } else {
                 return;
             }
@@ -2713,6 +2843,95 @@
                     body.appendChild(row);
                 });
             }
+
+            // 5. Fibonacci Retracement
+            if (currentShowFib && fibPoint1 && fibPoint2) {
+                const isSelected = isFibSelected;
+                const isLocked = !!fibIsLocked;
+                const row = document.createElement('div');
+                row.className = 'tv-tree-item' + (isSelected ? ' selected' : '');
+                const iconColor = fibCustomColor || '#FFB300';
+                row.innerHTML = `
+                    <div class="tv-tree-item-left">
+                        <div class="tv-tree-item-icon" style="color: ${iconColor};">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                                <line x1="2" y1="4" x2="16" y2="4" />
+                                <line x1="2" y1="9" x2="16" y2="9" />
+                                <line x1="2" y1="14" x2="16" y2="14" />
+                            </svg>
+                        </div>
+                        <span class="tv-tree-item-label">Fib Retracement</span>
+                    </div>
+                    <div class="tv-tree-item-actions">
+                        <button class="tv-tree-action-btn tv-tree-btn-lock ${isLocked ? 'active-action' : ''}" title="${isLocked ? 'Unlock' : 'Lock'}">
+                            ${isLocked ? `
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                    <rect x="4" y="9" width="12" height="8" rx="2" />
+                                    <path d="M7 9V6a3 3 0 0 1 6 0v3" />
+                                </svg>
+                            ` : `
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                    <rect x="4" y="9" width="12" height="8" rx="2" />
+                                    <path d="M7 9V6a3 3 0 0 1 6 0" />
+                                </svg>
+                            `}
+                        </button>
+                        <button class="tv-tree-action-btn tv-tree-btn-eye" title="Hide">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5-7.5-5.5z" />
+                                <circle cx="10" cy="10" r="2.5" />
+                            </svg>
+                        </button>
+                        <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                <path d="M3.5 5.5h13" />
+                                <path d="M7.5 3.5h5" />
+                                <path d="M5.5 5.5l.8 10a1.5 1.5 0 0 0 1.5 1.4h4.4a1.5 1.5 0 0 0 1.5-1.4l.8-10" />
+                            </svg>
+                        </button>
+                    </div>
+                `;
+
+                row.onclick = (e) => {
+                    e.stopPropagation();
+                    isFibSelected = true;
+                    selectedHorizontalLineIndex = -1;
+                    selectedTrendlineIndex = -1;
+                    selectedRectangleIndex = -1;
+                    showFibToolbar();
+                    renderFib();
+                    refreshObjectTree();
+                };
+
+                const btnLock = row.querySelector('.tv-tree-btn-lock');
+                if (btnLock) {
+                    btnLock.onclick = (e) => {
+                        e.stopPropagation();
+                        fibIsLocked = !fibIsLocked;
+                        updateLockSheetUI(fibIsLocked);
+                        renderFib();
+                        refreshObjectTree();
+                    };
+                }
+
+                const btnEye = row.querySelector('.tv-tree-btn-eye');
+                if (btnEye) {
+                    btnEye.onclick = (e) => {
+                        e.stopPropagation();
+                        clearFibonacci();
+                    };
+                }
+
+                const btnDel = row.querySelector('.tv-tree-btn-delete');
+                if (btnDel) {
+                    btnDel.onclick = (e) => {
+                        e.stopPropagation();
+                        clearFibonacci();
+                    };
+                }
+
+                body.appendChild(row);
+            }
         }
 
         function positionPopover(popover, targetBtn) {
@@ -2747,6 +2966,26 @@
         }
 
         function applySelectedColor(colorHex, opacityVal) {
+            if (isFibSelected && currentShowFib && fibPoint1 && fibPoint2) {
+                if (colorHex) {
+                    fibCustomColor = colorHex;
+                    const lineInd = document.getElementById('tv-indicator-line-color');
+                    if (lineInd) lineInd.style.background = fibCustomColor;
+                    updateSliderGradient(fibCustomColor);
+                } else if (colorHex === null) {
+                    // Reset to rainbow
+                    fibCustomColor = null;
+                    const lineInd = document.getElementById('tv-indicator-line-color');
+                    if (lineInd) lineInd.style.background = 'linear-gradient(90deg, #00B0FF 0%, #00E676 35%, #FFEB3B 65%, #FF5722 100%)';
+                }
+                document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
+                    sw.classList.toggle('selected', !!fibCustomColor && sw.getAttribute('data-color')?.toUpperCase() === fibCustomColor.toUpperCase());
+                });
+                renderFib();
+                refreshObjectTree();
+                return;
+            }
+
             let drawing = null;
             let isHLine = false;
             let isRect = false;
@@ -2814,6 +3053,18 @@
         }
 
         function applySelectedWidth(w) {
+            if (isFibSelected && currentShowFib && fibPoint1 && fibPoint2) {
+                fibLineWidth = parseInt(w) || 2;
+                const widthLabel = document.getElementById('tv-label-width');
+                if (widthLabel) widthLabel.textContent = fibLineWidth + 'px';
+                document.querySelectorAll('#tv-popover-width .tv-menu-item').forEach(item => {
+                    item.classList.toggle('selected', parseInt(item.getAttribute('data-width')) === fibLineWidth);
+                });
+                hideAllPopovers();
+                renderFib();
+                return;
+            }
+
             let drawing = null;
             let isHLine = false;
             let isRect = false;
@@ -2894,6 +3145,10 @@
         }
 
         function deleteSelectedDrawing() {
+            if (isFibSelected && currentShowFib) {
+                clearFibonacci();
+                return;
+            }
             if (selectedHorizontalLineIndex >= 0 && selectedHorizontalLineIndex < horizontalLines.length) {
                 horizontalLines.splice(selectedHorizontalLineIndex, 1);
                 selectedHorizontalLineIndex = -1;
@@ -2925,6 +3180,9 @@
         }
 
         function cloneSelectedDrawing() {
+            if (isFibSelected && currentShowFib && fibPoint1 && fibPoint2) {
+                return;
+            }
             if (selectedHorizontalLineIndex >= 0 && selectedHorizontalLineIndex < horizontalLines.length) {
                 const src = horizontalLines[selectedHorizontalLineIndex];
                 const activeSeries = candleSeries || areaSeries;
@@ -3196,16 +3454,24 @@
                     btnLineColor.classList.add('active');
 
                     const active = getActiveDrawing();
+                    const rainbowSwatch = document.getElementById('tv-fib-rainbow-swatch');
+                    if (rainbowSwatch) {
+                        rainbowSwatch.style.display = (active && active.isFib) ? 'block' : 'none';
+                        rainbowSwatch.onclick = (ev) => {
+                            ev.stopPropagation();
+                            applySelectedColor(null);
+                        };
+                    }
                     if (active) {
                         const d = active.drawing;
-                        const curColor = d.color || (active.isHLine ? '#00E5FF' : '#7C4DFF');
+                        const curColor = d.color || (active.isFib ? '#00BCD4' : (active.isHLine ? '#00E5FF' : '#7C4DFF'));
                         const curOp = (d.opacity !== undefined) ? Math.round(d.opacity * 100) : 100;
                         if (opSlider) opSlider.value = curOp;
                         if (opVal) opVal.textContent = curOp + '%';
                         updateSliderGradient(curColor);
 
                         document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
-                            sw.classList.toggle('selected', sw.getAttribute('data-color')?.toUpperCase() === curColor.toUpperCase());
+                            sw.classList.toggle('selected', !!d.color && sw.getAttribute('data-color')?.toUpperCase() === curColor.toUpperCase());
                         });
                     }
                     positionPopover(popColor, btnLineColor);
@@ -3419,6 +3685,14 @@
                     e.preventDefault();
                     const active = getActiveDrawing();
                     if (active) {
+                        if (active.isFib) {
+                            fibIsLocked = !fibIsLocked;
+                            updateLockSheetUI(fibIsLocked);
+                            closeMoreBottomSheet();
+                            renderFib();
+                            refreshObjectTree();
+                            return;
+                        }
                         active.drawing.isLocked = !active.drawing.isLocked;
                         updateLockSheetUI(active.drawing.isLocked);
                         closeMoreBottomSheet();
@@ -3441,6 +3715,11 @@
                     e.preventDefault();
                     const active = getActiveDrawing();
                     if (active) {
+                        if (active.isFib) {
+                            closeMoreBottomSheet();
+                            clearFibonacci();
+                            return;
+                        }
                         active.drawing.hidden = true;
                         selectedHorizontalLineIndex = -1;
                         selectedTrendlineIndex = -1;
@@ -3931,6 +4210,12 @@
                         const hit1 = x1 !== null && y1 !== null && Math.hypot(x - x1, y - y1) <= HITBOX_FIB_ANCHOR;
                         const hit2 = x2 !== null && y2 !== null && Math.hypot(x - x2, y - y2) <= HITBOX_FIB_ANCHOR;
                         const hitDiagonal = (x1 !== null && y1 !== null && x2 !== null && y2 !== null) && distToSegment(x, y, x1, y1, x2, y2) <= 24;
+                        const minX = (x1 !== null && x2 !== null) ? Math.min(x1, x2) : 0;
+                        const maxX = (x1 !== null && x2 !== null) ? Math.max(x1, x2) : 0;
+                        const minY = (y1 !== null && y2 !== null) ? Math.min(y1, y2) : 0;
+                        const maxY = (y1 !== null && y2 !== null) ? Math.max(y1, y2) : 0;
+                        const hitInsideBox = (x1 !== null && y1 !== null && x2 !== null && y2 !== null) &&
+                            (x >= minX - 10 && x <= maxX + 10 && y >= minY - 10 && y <= maxY + 10);
 
                         if (hit1 || hit2) {
                             e.stopPropagation();
@@ -3939,25 +4224,38 @@
 
                             isFibSelected = true;
                             selectedTrendlineIndex = -1;
-                            hideTrendlineToolbar();
                             selectedHorizontalLineIndex = -1;
                             selectedRectangleIndex = -1;
-                            dragMode = hit1 ? 1 : 2;
-                            isPointerDown = true;
-                            try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
-                            chart.applyOptions({ handleScroll: false, handleScale: false });
+                            if (!fibIsLocked) {
+                                dragMode = hit1 ? 1 : 2;
+                                isPointerDown = true;
+                                try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                chart.applyOptions({ handleScroll: false, handleScale: false });
+                            }
+                            showFibToolbar();
                             renderFib();
                             return;
-                        } else if (hitDiagonal) {
+                        } else if (hitDiagonal || hitInsideBox) {
                             e.stopPropagation();
                             e.stopImmediatePropagation();
                             e.preventDefault();
 
                             isFibSelected = true;
                             selectedTrendlineIndex = -1;
-                            hideTrendlineToolbar();
                             selectedHorizontalLineIndex = -1;
                             selectedRectangleIndex = -1;
+                            if (!fibIsLocked) {
+                                dragMode = 3;
+                                fibDragStartPos = {
+                                    x, y,
+                                    origP1: { time: fibPoint1.time, price: fibPoint1.price },
+                                    origP2: { time: fibPoint2.time, price: fibPoint2.price }
+                                };
+                                isPointerDown = true;
+                                try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                chart.applyOptions({ handleScroll: false, handleScale: false });
+                            }
+                            showFibToolbar();
                             renderFib();
                             return;
                         }
@@ -4732,6 +5030,7 @@
                         if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
                         canvas.style.cursor = 'default';
                         canvas.style.pointerEvents = 'none';
+                        showFibToolbar();
                         renderFib();
 
                         if (window.flutter_inappwebview?.callHandler) {
@@ -4751,6 +5050,7 @@
                 }
                 if (isFibSelected) {
                     isFibSelected = false;
+                    hideTrendlineToolbar();
                     canvasNeedsDeselect = true;
                 }
                 if (selectedHorizontalLineIndex !== -1) {
@@ -5081,6 +5381,36 @@
                     }
                     return;
                 }
+                if (dragMode === 3 && fibDragStartPos) {
+                    const activeSeries = candleSeries || areaSeries;
+                    if (!activeSeries || !chart) return;
+                    let dx = x - fibDragStartPos.x;
+                    const dy = y - fibDragStartPos.y;
+
+                    const curX1 = chart.timeScale().timeToCoordinate(fibDragStartPos.origP1.time);
+                    const curY1 = activeSeries.priceToCoordinate(fibDragStartPos.origP1.price);
+                    const curX2 = chart.timeScale().timeToCoordinate(fibDragStartPos.origP2.time);
+                    const curY2 = activeSeries.priceToCoordinate(fibDragStartPos.origP2.price);
+
+                    if (curX1 !== null && curY1 !== null && curX2 !== null && curY2 !== null) {
+                        const maxFibX = Math.max(curX1, curX2);
+                        if (maxFibX + dx > maxContentX) dx = maxContentX - maxFibX;
+                        const minFibX = Math.min(curX1, curX2);
+                        if (minFibX + dx < 0) dx = -minFibX;
+
+                        const newTime1 = getTimeAtX(curX1 + dx);
+                        const newPrice1 = getPriceAtY(curY1 + dy);
+                        const newTime2 = getTimeAtX(curX2 + dx);
+                        const newPrice2 = getPriceAtY(curY2 + dy);
+
+                        if (newTime1 && newPrice1 !== null && newTime2 && newPrice2 !== null) {
+                            fibPoint1 = { time: newTime1, price: newPrice1 };
+                            fibPoint2 = { time: newTime2, price: newPrice2 };
+                            renderFib();
+                        }
+                    }
+                    return;
+                }
 
                 // While in state 2: live preview as cursor/finger moves (NO HOLDING NEEDED)
                 if (fibDrawState === 2) {
@@ -5158,8 +5488,9 @@
                     return;
                 }
 
-                if (dragMode === 1 || dragMode === 2) {
+                if (dragMode > 0) {
                     dragMode = 0;
+                    fibDragStartPos = null;
                     isPointerDown = false;
                     try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
                     try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
@@ -5290,6 +5621,7 @@
                         if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
                         canvas.style.cursor = 'default';
                         canvas.style.pointerEvents = 'none';
+                        showFibToolbar();
                         renderFib();
 
                         if (window.flutter_inappwebview?.callHandler) {
@@ -5930,7 +6262,7 @@
                                 const curr = sortedLevels[i];
                                 const next = sortedLevels[i + 1];
                                 if (curr.y !== null && next.y !== null && curr.fill !== 'transparent') {
-                                    ctx.fillStyle = curr.fill;
+                                    ctx.fillStyle = fibCustomColor ? hexToRgba(fibCustomColor, 0.08) : curr.fill;
                                     const topY = Math.min(curr.y, next.y);
                                     const bandHeight = Math.abs(curr.y - next.y);
                                     ctx.fillRect(lineStartX, topY, lineWidth, bandHeight);
@@ -5946,8 +6278,8 @@
                                 if (item.y === null || item.y < 0 || item.y > height) continue;
 
                                 ctx.beginPath();
-                                ctx.strokeStyle = item.color;
-                                ctx.lineWidth = 1.0;
+                                ctx.strokeStyle = fibCustomColor || item.color;
+                                ctx.lineWidth = fibLineWidth || 1.0;
                                 ctx.moveTo(lineStartX, item.y);
                                 ctx.lineTo(lineEndX, item.y);
                                 ctx.stroke();
@@ -5957,7 +6289,7 @@
                                     : item.price.toFixed(2);
                                 const text = `${item.label} (${priceFormatted})`;
 
-                                ctx.fillStyle = item.color;
+                                ctx.fillStyle = fibCustomColor || item.color;
                                 ctx.fillText(text, lineStartX + 4, item.y - 3);
                             }
 
@@ -6149,20 +6481,52 @@
                 fibDrawState = 0;
                 fibPoint1 = null;
                 fibPoint2 = null;
+                isFibSelected = false;
+                hideTrendlineToolbar();
                 if (canvas) {
                     canvas.style.pointerEvents = 'none';
                     canvas.style.cursor = 'default';
                 }
                 renderFib();
+                refreshObjectTree();
             }
         }
 
         function clearFibonacci() {
             setFibonacci(false);
+            isFibSelected = false;
+            fibCustomColor = null;
+            fibLineWidth = 2;
+            fibIsLocked = false;
+            fibDragStartPos = null;
+            hideTrendlineToolbar();
+            renderFib();
+            refreshObjectTree();
+            if (window.flutter_inappwebview?.callHandler) {
+                window.flutter_inappwebview.callHandler('onFibDeleted');
+                window.flutter_inappwebview.callHandler('onFibDrawn', false);
+            }
+            window.parent?.postMessage(JSON.stringify({ type: 'onFibDeleted' }), '*');
+            window.parent?.postMessage(JSON.stringify({ type: 'onFibDrawn', payload: false }), '*');
         }
 
         function resetFibonacci() {
             startFibDrawing();
+        }
+
+        function cancelFibDrawing() {
+            isDrawingFib = false;
+            fibDrawState = 0;
+            const canvas = document.getElementById('fib-canvas');
+            if (canvas && !isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle) {
+                canvas.style.pointerEvents = 'none';
+                canvas.style.cursor = 'default';
+            }
+            if (!fibPoint1 || !fibPoint2) {
+                clearFibonacci();
+            } else {
+                renderFib();
+            }
         }
 
         function startFibDrawing() {
@@ -6185,6 +6549,9 @@
         }
 
         function startHorizontalLineDrawing() {
+            if (isDrawingFib && (!fibPoint1 || !fibPoint2)) {
+                clearFibonacci();
+            }
             isDrawingFib = false;
             fibDrawState = 0;
             selectedHorizontalLineIndex = -1;
@@ -6238,6 +6605,9 @@
         }
 
         function startTrendlineDrawing() {
+            if (isDrawingFib && (!fibPoint1 || !fibPoint2)) {
+                clearFibonacci();
+            }
             isDrawingHorizontalLine = false;
             selectedHorizontalLineIndex = -1;
             isDrawingFib = false;
@@ -6298,6 +6668,9 @@
         }
 
         function startRectangleDrawing() {
+            if (isDrawingFib && (!fibPoint1 || !fibPoint2)) {
+                clearFibonacci();
+            }
             isDrawingHorizontalLine = false;
             selectedHorizontalLineIndex = -1;
             isDrawingFib = false;
@@ -6861,6 +7234,8 @@
                     resetFibonacci();
                 } else if (data.type === 'startFibDrawing') {
                     startFibDrawing();
+                } else if (data.type === 'cancelFibDrawing') {
+                    cancelFibDrawing();
                 } else if (data.type === 'startHorizontalLineDrawing') {
                     startHorizontalLineDrawing();
                 } else if (data.type === 'cancelHorizontalLineDrawing') {
