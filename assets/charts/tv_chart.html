@@ -752,11 +752,241 @@
             outline: none;
         }
 
+        /* Fibonacci Settings Modal Styles (TradingView Mobile Authentic) */
+        .tv-fib-setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 44px;
+            padding: 4px 0;
+        }
+
+        .tv-fib-setting-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #D1D4DC;
+            font-size: 14px;
+            font-weight: 400;
+        }
+
+        .tv-fib-setting-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tv-fib-checkbox-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            color: #D1D4DC;
+            font-size: 14px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .tv-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 1.5px solid #50535E;
+            border-radius: 4px;
+            background-color: transparent;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+            position: relative;
+            flex-shrink: 0;
+            transition: all 0.12s ease;
+        }
+
+        .tv-checkbox:checked {
+            background-color: #131722;
+            border-color: #FFFFFF;
+        }
+
+        .tv-checkbox:checked::after {
+            content: '';
+            display: block;
+            width: 4px;
+            height: 8px;
+            border: solid #FFFFFF;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+            margin-bottom: 2px;
+        }
+
+        .tv-fib-swatch-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: 1px solid #2A2E39;
+            cursor: pointer;
+            padding: 0;
+            flex-shrink: 0;
+            outline: none;
+            transition: transform 0.1s, border-color 0.12s;
+        }
+
+        .tv-fib-swatch-btn:active {
+            transform: scale(0.94);
+        }
+
+        .tv-color-box-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .tv-hidden-color-input {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
+        .tv-fib-mini-btn {
+            height: 32px;
+            min-width: 38px;
+            padding: 0 8px;
+            border-radius: 6px;
+            border: 1px solid #2A2E39;
+            background: #131722;
+            color: #D1D4DC;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 500;
+            outline: none;
+            transition: border-color 0.12s;
+        }
+
+        .tv-fib-mini-btn:hover, .tv-fib-mini-btn:active {
+            border-color: #4A4E5A;
+        }
+
+        .tv-select-control {
+            height: 34px;
+            background-color: #131722;
+            border: 1px solid #2A2E39;
+            color: #D1D4DC;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 0 28px 0 10px;
+            border-radius: 6px;
+            outline: none;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16' fill='%23868993'%3E%3Cpath d='M3.5 6l4.5 4.5L12.5 6H3.5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+        }
+
+        .tv-select-control:focus {
+            border-color: #2962FF;
+        }
+
+        .tv-fib-levels-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 4px 0 12px 0;
+        }
+
+        .tv-fib-level-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .tv-fib-lvl-input {
+            flex: 1;
+            max-width: 140px;
+            height: 32px;
+            background: #131722;
+            border: 1px solid #2A2E39;
+            border-radius: 6px;
+            color: #FFFFFF;
+            font-size: 13.5px;
+            font-weight: 500;
+            padding: 0 10px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .tv-fib-lvl-input:focus {
+            border-color: #2962FF;
+        }
+
+        .tv-fib-lvl-input.disabled {
+            color: #50535E;
+        }
+
+        .tv-fib-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 130px;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(90deg, rgba(41, 98, 255, 0.2) 0%, rgba(41, 98, 255, 0.9) 100%);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .tv-fib-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+            border: 2px solid #2962FF;
+        }
+
+        .tv-fib-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+            border: 2px solid #2962FF;
+        }
+
+        .tv-footer-btn-template {
+            height: 36px;
+            width: 48px;
+            border-radius: 6px;
+            border: 1px solid #3A3A3C;
+            background: transparent;
+            color: #FFFFFF;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.12s;
+        }
+
+        .tv-footer-btn-template:active {
+            background: #2B2B2B;
+        }
+
         /* Footer */
         .tv-settings-footer {
             display: flex;
             align-items: center;
-            justify-content: flex-end;
+            justify-content: space-between;
             padding: 14px 20px 20px 20px;
             border-top: 1px solid #2C2C2E;
             background: #1E1E1E;
@@ -1212,7 +1442,7 @@
             <!-- Header -->
             <div class="tv-settings-header">
                 <div class="tv-settings-title-group">
-                    <span>Trendline</span>
+                    <span id="tv-settings-title-text">Trendline</span>
                     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#868993" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M11.5 2.5a1.414 1.414 0 0 1 2 2L4.5 13.5l-3 1 1-3 9-9z" />
                     </svg>
@@ -1225,16 +1455,20 @@
                 </button>
             </div>
 
-            <!-- Tabs: Text Tab only (User specified: cukup tab Text saja) -->
+            <!-- Tabs: Style Tab (Fibonacci) or Text Tab (Trendline/HLine/Rect) -->
             <div class="tv-settings-tabs">
-                <div class="tv-settings-tab">
+                <div id="tv-tab-header-style" class="tv-settings-tab" style="display: none;">
+                    <span>Style</span>
+                    <div class="tv-settings-tab-indicator"></div>
+                </div>
+                <div id="tv-tab-header-text" class="tv-settings-tab">
                     <span>Text</span>
                     <div class="tv-settings-tab-indicator"></div>
                 </div>
             </div>
 
-            <!-- Body -->
-            <div class="tv-settings-body">
+            <!-- Body 1: Text Settings (for Trendline, Horizontal Line, Rectangle) -->
+            <div id="tv-settings-body-text" class="tv-settings-body">
                 <!-- Formatting Controls: Color Swatch, Font size, Bold, Italic -->
                 <div class="tv-fmt-row">
                     <button id="tv-text-color-btn" class="tv-fmt-color-btn" title="Warna Teks">
@@ -1294,6 +1528,175 @@
                 </div>
             </div>
 
+            <!-- Body 2: Fibonacci Style Settings (TradingView Authentic Style Tab) -->
+            <div id="tv-settings-body-fib" class="tv-settings-body" style="display: none;">
+                <!-- 1. Trend line row -->
+                <div class="tv-fib-setting-row">
+                    <label class="tv-fib-checkbox-label">
+                        <input type="checkbox" id="tv-fib-trendline-check" class="tv-checkbox" checked>
+                        <span>Trend line</span>
+                    </label>
+                    <div class="tv-fib-setting-right">
+                        <div class="tv-color-box-wrap">
+                            <input type="color" id="tv-fib-trendline-color-input" class="tv-hidden-color-input" value="#AB47BC">
+                            <button id="tv-fib-trendline-color-btn" class="tv-fib-swatch-btn" style="background-color: #AB47BC;"></button>
+                        </div>
+                        <button id="tv-fib-trendline-style-btn" class="tv-fib-mini-btn" title="Trend line style">
+                            <svg width="24" height="12" viewBox="0 0 24 12">
+                                <line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Levels line row -->
+                <div class="tv-fib-setting-row">
+                    <span class="tv-fib-setting-left">Levels line</span>
+                    <div class="tv-fib-setting-right">
+                        <button id="tv-fib-levels-style-btn" class="tv-fib-mini-btn" title="Levels style">
+                            <svg width="24" height="12" viewBox="0 0 24 12">
+                                <line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" />
+                            </svg>
+                        </button>
+                        <button id="tv-fib-levels-width-btn" class="tv-fib-mini-btn" title="Levels width">
+                            <svg width="20" height="12" viewBox="0 0 20 12">
+                                <line x1="2" y1="6" x2="18" y2="6" stroke="currentColor" stroke-width="1.5" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. Extend row -->
+                <div class="tv-fib-setting-row">
+                    <span class="tv-fib-setting-left">Extend</span>
+                    <div class="tv-fib-setting-right">
+                        <select id="tv-fib-extend-select" class="tv-select-control">
+                            <option value="none">Don't extend</option>
+                            <option value="left">Extend left</option>
+                            <option value="right">Extend right</option>
+                            <option value="both">Extend both</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 4. Fib Levels List -->
+                <div id="tv-fib-levels-list" class="tv-fib-levels-grid">
+                    <!-- Populated dynamically with the 24 levels from TradingView -->
+                </div>
+
+                <!-- 5. Use one color row -->
+                <div class="tv-fib-setting-row">
+                    <span class="tv-fib-setting-left">Use one color</span>
+                    <div class="tv-fib-setting-right">
+                        <div class="tv-color-box-wrap">
+                            <input type="color" id="tv-fib-single-color-input" class="tv-hidden-color-input" value="#AB47BC">
+                            <button id="tv-fib-single-color-btn" class="tv-fib-swatch-btn" style="background-color: #AB47BC;"></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. Background row -->
+                <div class="tv-fib-setting-row">
+                    <label class="tv-fib-checkbox-label">
+                        <input type="checkbox" id="tv-fib-bg-check" class="tv-checkbox">
+                        <span>Background</span>
+                    </label>
+                    <div class="tv-fib-setting-right">
+                        <input type="range" id="tv-fib-bg-opacity" class="tv-fib-slider" min="0" max="100" value="15">
+                    </div>
+                </div>
+
+                <!-- 7. Reverse row -->
+                <div class="tv-fib-setting-row">
+                    <label class="tv-fib-checkbox-label">
+                        <input type="checkbox" id="tv-fib-reverse-check" class="tv-checkbox">
+                        <span>Reverse</span>
+                    </label>
+                </div>
+
+                <!-- 8. Prices row -->
+                <div class="tv-fib-setting-row">
+                    <label class="tv-fib-checkbox-label">
+                        <input type="checkbox" id="tv-fib-prices-check" class="tv-checkbox" checked>
+                        <span>Prices</span>
+                    </label>
+                </div>
+
+                <!-- 9. Levels row -->
+                <div class="tv-fib-setting-row">
+                    <label class="tv-fib-checkbox-label">
+                        <input type="checkbox" id="tv-fib-levels-check" class="tv-checkbox" checked>
+                        <span>Levels</span>
+                    </label>
+                    <div class="tv-fib-setting-right">
+                        <select id="tv-fib-levels-format-select" class="tv-select-control">
+                            <option value="percents">Percents</option>
+                            <option value="values">Values</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 10. Labels row -->
+                <div class="tv-fib-setting-row">
+                    <span class="tv-fib-setting-left">Labels</span>
+                    <div class="tv-fib-setting-right">
+                        <select id="tv-fib-labels-halign-select" class="tv-select-control">
+                            <option value="left">Left</option>
+                            <option value="center">Center</option>
+                            <option value="right">Right</option>
+                        </select>
+                        <select id="tv-fib-labels-valign-select" class="tv-select-control">
+                            <option value="top">Top</option>
+                            <option value="middle">Middle</option>
+                            <option value="bottom">Bottom</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 11. Text row -->
+                <div class="tv-fib-setting-row">
+                    <label class="tv-fib-checkbox-label">
+                        <input type="checkbox" id="tv-fib-text-check" class="tv-checkbox" checked>
+                        <span>Text</span>
+                    </label>
+                    <div class="tv-fib-setting-right">
+                        <select id="tv-fib-text-halign-select" class="tv-select-control">
+                            <option value="center">Center</option>
+                            <option value="left">Left</option>
+                            <option value="right">Right</option>
+                        </select>
+                        <select id="tv-fib-text-valign-select" class="tv-select-control">
+                            <option value="middle">Middle</option>
+                            <option value="top">Top</option>
+                            <option value="bottom">Bottom</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 12. Font size row -->
+                <div class="tv-fib-setting-row">
+                    <span class="tv-fib-setting-left">Font size</span>
+                    <div class="tv-fib-setting-right">
+                        <select id="tv-fib-fontsize-select" class="tv-select-control">
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12" selected>12</option>
+                            <option value="14">14</option>
+                            <option value="16">16</option>
+                            <option value="20">20</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 13. Fib levels based on log scale row -->
+                <div class="tv-fib-setting-row" style="margin-bottom: 20px;">
+                    <label class="tv-fib-checkbox-label">
+                        <input type="checkbox" id="tv-fib-logscale-check" class="tv-checkbox">
+                        <span>Fib levels based on log scale</span>
+                    </label>
+                </div>
+            </div>
+
             <!-- Font Size Dropdown Overlay (TradingView Mobile Style) -->
             <div id="tv-text-size-dropdown" class="tv-size-dropdown-overlay" style="display: none;">
                 <div class="tv-size-item" data-size="8">8</div>
@@ -1327,6 +1730,13 @@
 
             <!-- Footer -->
             <div class="tv-settings-footer">
+                <button id="tv-settings-btn-template" class="tv-footer-btn-template" title="Template">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <circle cx="5" cy="12" r="2.2"/>
+                        <circle cx="12" cy="12" r="2.2"/>
+                        <circle cx="19" cy="12" r="2.2"/>
+                    </svg>
+                </button>
                 <div class="tv-footer-actions">
                     <button id="tv-settings-btn-cancel" class="tv-footer-btn-cancel">Cancel</button>
                     <button id="tv-settings-btn-ok" class="tv-footer-btn-ok">Ok</button>
@@ -1381,6 +1791,62 @@
         let fibLineWidth = 2;
         let fibIsLocked = false;
         let fibDragStartPos = null;
+
+        const DEFAULT_FIB_LEVELS_CONFIG = [
+            { level: 0, enabled: true, color: '#AB47BC' },
+            { level: 0.236, enabled: false, color: '#AB47BC' },
+            { level: 0.382, enabled: false, color: '#AB47BC' },
+            { level: -0.27, enabled: true, color: '#AB47BC' },
+            { level: 0.618, enabled: true, color: '#AB47BC' },
+            { level: 0.786, enabled: true, color: '#AB47BC' },
+            { level: 1, enabled: true, color: '#AB47BC' },
+            { level: 1.618, enabled: false, color: '#AB47BC' },
+            { level: 2.618, enabled: false, color: '#AB47BC' },
+            { level: 3.618, enabled: false, color: '#AB47BC' },
+            { level: 4.236, enabled: false, color: '#AB47BC' },
+            { level: 1.272, enabled: false, color: '#AB47BC' },
+            { level: 1.414, enabled: false, color: '#AB47BC' },
+            { level: 2.272, enabled: false, color: '#AB47BC' },
+            { level: 2.414, enabled: false, color: '#AB47BC' },
+            { level: 2, enabled: false, color: '#AB47BC' },
+            { level: 3, enabled: false, color: '#AB47BC' },
+            { level: 3.272, enabled: false, color: '#AB47BC' },
+            { level: 3.414, enabled: false, color: '#AB47BC' },
+            { level: 4, enabled: false, color: '#AB47BC' },
+            { level: 4.272, enabled: false, color: '#AB47BC' },
+            { level: 4.414, enabled: false, color: '#AB47BC' },
+            { level: 4.618, enabled: false, color: '#AB47BC' },
+            { level: 4.764, enabled: false, color: '#AB47BC' }
+        ];
+
+        let fibSettings = {
+            showTrendline: true,
+            trendlineColor: '#AB47BC',
+            trendlineStyle: 'dashed',
+            levelsLineStyle: 'solid',
+            levelsLineWidth: 1,
+            extend: 'none', // 'none', 'left', 'right', 'both'
+            levels: JSON.parse(JSON.stringify(DEFAULT_FIB_LEVELS_CONFIG)),
+            useOneColor: false,
+            singleColor: '#AB47BC',
+            showBackground: false,
+            backgroundOpacity: 0.15,
+            reverse: false,
+            showPrices: true,
+            showLevels: true,
+            levelsFormat: 'percents', // 'values' or 'percents'
+            labelsHAlign: 'left',
+            labelsVAlign: 'top',
+            showText: true,
+            textHAlign: 'center',
+            textVAlign: 'middle',
+            fontSize: 12,
+            logScale: false
+        };
+
+        let isFibSettingsModalOpen = false;
+        let originalFibSettings = null;
+        let pendingFibSettings = null;
         let rawCandlesData = [];
         let currentRsiData = [];
         let currentVolumeData = [];
@@ -2247,6 +2713,7 @@
         }
 
         function openTrendlineSettingsModal() {
+            isFibSettingsModalOpen = false;
             let drawing = null;
             let drawingTitle = 'Trendline';
             if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
@@ -2262,8 +2729,20 @@
                 return;
             }
 
-            const titleEl = document.querySelector('#tv-settings-modal .tv-settings-title-group span');
+            const titleEl = document.getElementById('tv-settings-title-text') || document.querySelector('#tv-settings-modal .tv-settings-title-group span');
             if (titleEl) titleEl.textContent = drawingTitle;
+
+            // Show Text tab, hide Style tab
+            const tabStyle = document.getElementById('tv-tab-header-style');
+            const tabText = document.getElementById('tv-tab-header-text');
+            if (tabStyle) tabStyle.style.display = 'none';
+            if (tabText) tabText.style.display = 'block';
+
+            // Show Text body, hide Fib body
+            const bodyFib = document.getElementById('tv-settings-body-fib');
+            const bodyText = document.getElementById('tv-settings-body-text');
+            if (bodyFib) bodyFib.style.display = 'none';
+            if (bodyText) bodyText.style.display = 'block';
 
             const backdrop = document.getElementById('tv-settings-backdrop');
             const modal = document.getElementById('tv-settings-modal');
@@ -2363,6 +2842,441 @@
                 notifyRectanglesChanged();
             } else {
                 notifyTrendlinesChanged();
+            }
+        }
+
+        function updateTrendlineStyleBtnUI(style) {
+            const btn = document.getElementById('tv-fib-trendline-style-btn');
+            if (!btn) return;
+            if (style === 'solid') {
+                btn.innerHTML = '<svg width="24" height="12" viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" /></svg>';
+            } else if (style === 'dotted') {
+                btn.innerHTML = '<svg width="24" height="12" viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" stroke-dasharray="1 3" stroke-linecap="round" /></svg>';
+            } else {
+                btn.innerHTML = '<svg width="24" height="12" viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3" /></svg>';
+            }
+        }
+
+        function updateLevelsStyleBtnUI(style) {
+            const btn = document.getElementById('tv-fib-levels-style-btn');
+            if (!btn) return;
+            if (style === 'dashed') {
+                btn.innerHTML = '<svg width="24" height="12" viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3" /></svg>';
+            } else if (style === 'dotted') {
+                btn.innerHTML = '<svg width="24" height="12" viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" stroke-dasharray="1 3" stroke-linecap="round" /></svg>';
+            } else {
+                btn.innerHTML = '<svg width="24" height="12" viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" /></svg>';
+            }
+        }
+
+        function updateLevelsWidthBtnUI(w) {
+            const btn = document.getElementById('tv-fib-levels-width-btn');
+            if (!btn) return;
+            const strokeW = Math.max(1, Math.min(4, w || 1));
+            btn.innerHTML = `<svg width="20" height="12" viewBox="0 0 20 12"><line x1="2" y1="6" x2="18" y2="6" stroke="currentColor" stroke-width="${strokeW}" /></svg>`;
+        }
+
+        function renderFibLevelsListUI() {
+            const container = document.getElementById('tv-fib-levels-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            pendingFibSettings.levels.forEach((lvl, idx) => {
+                const row = document.createElement('div');
+                row.className = 'tv-fib-level-item';
+
+                const chk = document.createElement('input');
+                chk.type = 'checkbox';
+                chk.className = 'tv-checkbox';
+                chk.checked = !!lvl.enabled;
+
+                const inp = document.createElement('input');
+                inp.type = 'text';
+                inp.className = 'tv-fib-lvl-input' + (lvl.enabled ? '' : ' disabled');
+                inp.value = String(lvl.level);
+
+                const swatchWrap = document.createElement('div');
+                swatchWrap.className = 'tv-color-box-wrap';
+
+                const colorInput = document.createElement('input');
+                colorInput.type = 'color';
+                colorInput.className = 'tv-hidden-color-input';
+                colorInput.value = lvl.color || '#AB47BC';
+
+                const swatchBtn = document.createElement('button');
+                swatchBtn.className = 'tv-fib-swatch-btn';
+                swatchBtn.style.backgroundColor = lvl.color || '#AB47BC';
+
+                swatchBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    colorInput.click();
+                };
+
+                colorInput.oninput = (e) => {
+                    const c = e.target.value;
+                    lvl.color = c;
+                    swatchBtn.style.backgroundColor = c;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+
+                chk.onchange = () => {
+                    lvl.enabled = chk.checked;
+                    inp.classList.toggle('disabled', !chk.checked);
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+
+                inp.oninput = () => {
+                    const parsed = parseFloat(inp.value);
+                    if (!isNaN(parsed)) {
+                        lvl.level = parsed;
+                        fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                        renderFib();
+                    }
+                };
+
+                swatchWrap.appendChild(colorInput);
+                swatchWrap.appendChild(swatchBtn);
+
+                row.appendChild(chk);
+                row.appendChild(inp);
+                row.appendChild(swatchWrap);
+
+                container.appendChild(row);
+            });
+        }
+
+        function openFibSettingsModal() {
+            isFibSettingsModalOpen = true;
+            originalFibSettings = JSON.parse(JSON.stringify(fibSettings));
+            pendingFibSettings = JSON.parse(JSON.stringify(fibSettings));
+
+            const titleEl = document.getElementById('tv-settings-title-text') || document.querySelector('#tv-settings-modal .tv-settings-title-group span');
+            if (titleEl) titleEl.textContent = 'Fib retracement';
+
+            // Show Style tab, hide Text tab
+            const tabStyle = document.getElementById('tv-tab-header-style');
+            const tabText = document.getElementById('tv-tab-header-text');
+            if (tabStyle) tabStyle.style.display = 'block';
+            if (tabText) tabText.style.display = 'none';
+
+            // Show Fib body, hide Text body
+            const bodyFib = document.getElementById('tv-settings-body-fib');
+            const bodyText = document.getElementById('tv-settings-body-text');
+            if (bodyFib) bodyFib.style.display = 'block';
+            if (bodyText) bodyText.style.display = 'none';
+
+            // Populate Trend line
+            const trendCheck = document.getElementById('tv-fib-trendline-check');
+            if (trendCheck) trendCheck.checked = !!pendingFibSettings.showTrendline;
+            const trendColorBtn = document.getElementById('tv-fib-trendline-color-btn');
+            const trendColorInput = document.getElementById('tv-fib-trendline-color-input');
+            if (trendColorBtn) trendColorBtn.style.backgroundColor = pendingFibSettings.trendlineColor || '#AB47BC';
+            if (trendColorInput) trendColorInput.value = pendingFibSettings.trendlineColor || '#AB47BC';
+            updateTrendlineStyleBtnUI(pendingFibSettings.trendlineStyle);
+
+            // Populate Levels line
+            updateLevelsStyleBtnUI(pendingFibSettings.levelsLineStyle);
+            updateLevelsWidthBtnUI(pendingFibSettings.levelsLineWidth);
+
+            // Populate Extend
+            const extendSelect = document.getElementById('tv-fib-extend-select');
+            if (extendSelect) extendSelect.value = pendingFibSettings.extend || 'none';
+
+            // Populate Levels list
+            renderFibLevelsListUI();
+
+            // Populate Use one color
+            const singleColorBtn = document.getElementById('tv-fib-single-color-btn');
+            const singleColorInput = document.getElementById('tv-fib-single-color-input');
+            if (singleColorBtn) singleColorBtn.style.backgroundColor = pendingFibSettings.singleColor || '#AB47BC';
+            if (singleColorInput) singleColorInput.value = pendingFibSettings.singleColor || '#AB47BC';
+
+            // Populate Background & Opacity
+            const bgCheck = document.getElementById('tv-fib-bg-check');
+            if (bgCheck) bgCheck.checked = !!pendingFibSettings.showBackground;
+            const bgSlider = document.getElementById('tv-fib-bg-opacity');
+            if (bgSlider) bgSlider.value = Math.round((pendingFibSettings.backgroundOpacity !== undefined ? pendingFibSettings.backgroundOpacity : 0.15) * 100);
+
+            // Populate Reverse
+            const revCheck = document.getElementById('tv-fib-reverse-check');
+            if (revCheck) revCheck.checked = !!pendingFibSettings.reverse;
+
+            // Populate Prices
+            const pricesCheck = document.getElementById('tv-fib-prices-check');
+            if (pricesCheck) pricesCheck.checked = !!pendingFibSettings.showPrices;
+
+            // Populate Levels
+            const levelsCheck = document.getElementById('tv-fib-levels-check');
+            if (levelsCheck) levelsCheck.checked = !!pendingFibSettings.showLevels;
+            const levelsFormatSelect = document.getElementById('tv-fib-levels-format-select');
+            if (levelsFormatSelect) levelsFormatSelect.value = pendingFibSettings.levelsFormat || 'percents';
+
+            // Populate Labels
+            const labelsHAlign = document.getElementById('tv-fib-labels-halign-select');
+            if (labelsHAlign) labelsHAlign.value = pendingFibSettings.labelsHAlign || 'left';
+            const labelsVAlign = document.getElementById('tv-fib-labels-valign-select');
+            if (labelsVAlign) labelsVAlign.value = pendingFibSettings.labelsVAlign || 'top';
+
+            // Populate Text
+            const textCheck = document.getElementById('tv-fib-text-check');
+            if (textCheck) textCheck.checked = !!pendingFibSettings.showText;
+            const textHAlign = document.getElementById('tv-fib-text-halign-select');
+            if (textHAlign) textHAlign.value = pendingFibSettings.textHAlign || 'center';
+            const textVAlign = document.getElementById('tv-fib-text-valign-select');
+            if (textVAlign) textVAlign.value = pendingFibSettings.textVAlign || 'middle';
+
+            // Populate Font size
+            const fontSizeSelect = document.getElementById('tv-fib-fontsize-select');
+            if (fontSizeSelect) fontSizeSelect.value = String(pendingFibSettings.fontSize || 12);
+
+            // Populate Log scale
+            const logCheck = document.getElementById('tv-fib-logscale-check');
+            if (logCheck) logCheck.checked = !!pendingFibSettings.logScale;
+
+            const backdrop = document.getElementById('tv-settings-backdrop');
+            const modal = document.getElementById('tv-settings-modal');
+            if (!backdrop || !modal) return;
+
+            hideAllPopovers();
+            closeSizeDropdown();
+            closeAlignDropdowns();
+
+            initFibSettingsEvents();
+
+            backdrop.style.display = 'block';
+            modal.style.display = 'flex';
+
+            requestAnimationFrame(() => {
+                backdrop.classList.add('visible');
+                modal.classList.add('visible');
+            });
+        }
+
+        let isFibEventsInitialized = false;
+        function initFibSettingsEvents() {
+            if (isFibEventsInitialized) return;
+            isFibEventsInitialized = true;
+
+            const trendCheck = document.getElementById('tv-fib-trendline-check');
+            if (trendCheck) {
+                trendCheck.onchange = () => {
+                    if (pendingFibSettings) pendingFibSettings.showTrendline = trendCheck.checked;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const trendColorBtn = document.getElementById('tv-fib-trendline-color-btn');
+            const trendColorInput = document.getElementById('tv-fib-trendline-color-input');
+            if (trendColorBtn && trendColorInput) {
+                trendColorBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    trendColorInput.click();
+                };
+                trendColorInput.oninput = (e) => {
+                    const c = e.target.value;
+                    if (pendingFibSettings) pendingFibSettings.trendlineColor = c;
+                    trendColorBtn.style.backgroundColor = c;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const trendStyleBtn = document.getElementById('tv-fib-trendline-style-btn');
+            if (trendStyleBtn) {
+                trendStyleBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!pendingFibSettings) return;
+                    const order = ['dashed', 'solid', 'dotted'];
+                    const curIdx = order.indexOf(pendingFibSettings.trendlineStyle || 'dashed');
+                    pendingFibSettings.trendlineStyle = order[(curIdx + 1) % order.length];
+                    updateTrendlineStyleBtnUI(pendingFibSettings.trendlineStyle);
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const lvlStyleBtn = document.getElementById('tv-fib-levels-style-btn');
+            if (lvlStyleBtn) {
+                lvlStyleBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!pendingFibSettings) return;
+                    const order = ['solid', 'dashed', 'dotted'];
+                    const curIdx = order.indexOf(pendingFibSettings.levelsLineStyle || 'solid');
+                    pendingFibSettings.levelsLineStyle = order[(curIdx + 1) % order.length];
+                    updateLevelsStyleBtnUI(pendingFibSettings.levelsLineStyle);
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const lvlWidthBtn = document.getElementById('tv-fib-levels-width-btn');
+            if (lvlWidthBtn) {
+                lvlWidthBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!pendingFibSettings) return;
+                    const curW = pendingFibSettings.levelsLineWidth || 1;
+                    pendingFibSettings.levelsLineWidth = (curW % 4) + 1;
+                    fibLineWidth = pendingFibSettings.levelsLineWidth;
+                    updateLevelsWidthBtnUI(pendingFibSettings.levelsLineWidth);
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const extendSelect = document.getElementById('tv-fib-extend-select');
+            if (extendSelect) {
+                extendSelect.onchange = () => {
+                    if (pendingFibSettings) pendingFibSettings.extend = extendSelect.value;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const singleColorBtn = document.getElementById('tv-fib-single-color-btn');
+            const singleColorInput = document.getElementById('tv-fib-single-color-input');
+            if (singleColorBtn && singleColorInput) {
+                singleColorBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    singleColorInput.click();
+                };
+                singleColorInput.oninput = (e) => {
+                    const c = e.target.value;
+                    if (pendingFibSettings) {
+                        pendingFibSettings.singleColor = c;
+                        pendingFibSettings.useOneColor = true;
+                    }
+                    singleColorBtn.style.backgroundColor = c;
+                    const oneColorCheck = document.getElementById('tv-fib-use-one-color-check');
+                    if (oneColorCheck) oneColorCheck.checked = true;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const bgCheck = document.getElementById('tv-fib-bg-check');
+            if (bgCheck) {
+                bgCheck.onchange = () => {
+                    if (pendingFibSettings) pendingFibSettings.showBackground = bgCheck.checked;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const bgSlider = document.getElementById('tv-fib-bg-opacity');
+            if (bgSlider) {
+                bgSlider.oninput = () => {
+                    if (pendingFibSettings) {
+                        pendingFibSettings.backgroundOpacity = parseFloat(bgSlider.value) / 100;
+                        if (!pendingFibSettings.showBackground && parseFloat(bgSlider.value) > 0) {
+                            pendingFibSettings.showBackground = true;
+                            if (bgCheck) bgCheck.checked = true;
+                        }
+                    }
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const revCheck = document.getElementById('tv-fib-reverse-check');
+            if (revCheck) {
+                revCheck.onchange = () => {
+                    if (pendingFibSettings) pendingFibSettings.reverse = revCheck.checked;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const pricesCheck = document.getElementById('tv-fib-prices-check');
+            if (pricesCheck) {
+                pricesCheck.onchange = () => {
+                    if (pendingFibSettings) pendingFibSettings.showPrices = pricesCheck.checked;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const levelsCheck = document.getElementById('tv-fib-levels-check');
+            if (levelsCheck) {
+                levelsCheck.onchange = () => {
+                    if (pendingFibSettings) pendingFibSettings.showLevels = levelsCheck.checked;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const levelsFormatSelect = document.getElementById('tv-fib-levels-format-select');
+            if (levelsFormatSelect) {
+                levelsFormatSelect.onchange = () => {
+                    if (pendingFibSettings) pendingFibSettings.levelsFormat = levelsFormatSelect.value;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const labelsHAlign = document.getElementById('tv-fib-labels-halign-select');
+            if (labelsHAlign) {
+                labelsHAlign.onchange = () => {
+                    if (pendingFibSettings) pendingFibSettings.labelsHAlign = labelsHAlign.value;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const labelsVAlign = document.getElementById('tv-fib-labels-valign-select');
+            if (labelsVAlign) {
+                labelsVAlign.onchange = () => {
+                    if (pendingFibSettings) pendingFibSettings.labelsVAlign = labelsVAlign.value;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const textCheck = document.getElementById('tv-fib-text-check');
+            if (textCheck) {
+                textCheck.onchange = () => {
+                    if (pendingFibSettings) pendingFibSettings.showText = textCheck.checked;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const textHAlign = document.getElementById('tv-fib-text-halign-select');
+            if (textHAlign) {
+                textHAlign.onchange = () => {
+                    if (pendingFibSettings) pendingFibSettings.textHAlign = textHAlign.value;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const textVAlign = document.getElementById('tv-fib-text-valign-select');
+            if (textVAlign) {
+                textVAlign.onchange = () => {
+                    if (pendingFibSettings) pendingFibSettings.textVAlign = textVAlign.value;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const fontSizeSelect = document.getElementById('tv-fib-fontsize-select');
+            if (fontSizeSelect) {
+                fontSizeSelect.onchange = () => {
+                    if (pendingFibSettings) pendingFibSettings.fontSize = parseInt(fontSizeSelect.value, 10) || 12;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            }
+
+            const logCheck = document.getElementById('tv-fib-logscale-check');
+            if (logCheck) {
+                logCheck.onchange = () => {
+                    if (pendingFibSettings) pendingFibSettings.logScale = logCheck.checked;
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
             }
         }
 
@@ -3754,7 +4668,12 @@
                     e.stopPropagation();
                     e.preventDefault();
                     closeMoreBottomSheet();
-                    openTrendlineSettingsModal();
+                    const active = getActiveDrawing();
+                    if (active && active.isFib) {
+                        openFibSettingsModal();
+                    } else {
+                        openTrendlineSettingsModal();
+                    }
                 };
             }
 
@@ -3856,11 +4775,19 @@
                 };
             }
 
+            function handleSettingsCancel() {
+                if (isFibSettingsModalOpen && originalFibSettings) {
+                    fibSettings = JSON.parse(JSON.stringify(originalFibSettings));
+                    renderFib();
+                }
+                closeTrendlineSettingsModal();
+            }
+
             if (settingsBackdrop) {
                 settingsBackdrop.onclick = (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    closeTrendlineSettingsModal();
+                    handleSettingsCancel();
                 };
             }
 
@@ -3868,7 +4795,7 @@
                 btnSettingsClose.onclick = (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    closeTrendlineSettingsModal();
+                    handleSettingsCancel();
                 };
             }
 
@@ -3876,7 +4803,7 @@
                 btnSettingsCancel.onclick = (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    closeTrendlineSettingsModal();
+                    handleSettingsCancel();
                 };
             }
 
@@ -3884,7 +4811,15 @@
                 btnSettingsOk.onclick = (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    saveTrendlineSettings();
+                    if (isFibSettingsModalOpen) {
+                        if (pendingFibSettings) {
+                            fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                            renderFib();
+                        }
+                        closeTrendlineSettingsModal();
+                    } else {
+                        saveTrendlineSettings();
+                    }
                 };
             }
 
@@ -6240,69 +7175,178 @@
                         const y2 = candleSeries.priceToCoordinate(fibPoint2.price);
 
                         if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
-                            // In TradingView: Horizontal lines span between the X coordinates of the anchors!
+                            // In TradingView: Horizontal lines span between the X coordinates of the anchors (or extended)
                             const minX = Math.min(x1, x2);
                             const maxX = Math.max(x1, x2);
-                            const lineStartX = Math.max(0, Math.min(minX, maxContentX));
-                            const lineEndX = Math.min(maxContentX, Math.max(minX + 40, maxX));
+                            let lineStartX = Math.max(0, Math.min(minX, maxContentX));
+                            let lineEndX = Math.min(maxContentX, Math.max(minX + 40, maxX));
+                            const ext = fibSettings.extend || 'none';
+                            if (ext === 'left' || ext === 'both') lineStartX = 0;
+                            if (ext === 'right' || ext === 'both') lineEndX = maxContentX;
                             const lineWidth = Math.max(0, lineEndX - lineStartX);
 
-                            // Calculate Y positions for all levels
+                            // Calculate prices for enabled levels
+                            const isReverse = !!fibSettings.reverse;
+                            const isLog = !!fibSettings.logScale;
+                            const logP1 = (isLog && fibPoint1.price > 0) ? Math.log(fibPoint1.price) : 0;
+                            const logP2 = (isLog && fibPoint2.price > 0) ? Math.log(fibPoint2.price) : 0;
+                            const logDiff = logP1 - logP2;
+
+                            const levelsConfig = fibSettings.levels || DEFAULT_FIB_LEVELS_CONFIG;
                             const levelYs = [];
-                            for (let i = 0; i < FIB_LEVELS.length; i++) {
-                                const item = FIB_LEVELS[i];
-                                const price = fibPoint2.price + (priceDiff * item.level);
+
+                            for (let i = 0; i < levelsConfig.length; i++) {
+                                const item = levelsConfig[i];
+                                if (!item.enabled) continue;
+                                const lvlVal = item.level;
+                                let price;
+                                if (isLog && fibPoint1.price > 0 && fibPoint2.price > 0) {
+                                    if (isReverse) {
+                                        price = Math.exp(logP1 - (logDiff * lvlVal));
+                                    } else {
+                                        price = Math.exp(logP2 + (logDiff * lvlVal));
+                                    }
+                                } else {
+                                    if (isReverse) {
+                                        price = fibPoint1.price - (priceDiff * lvlVal);
+                                    } else {
+                                        price = fibPoint2.price + (priceDiff * lvlVal);
+                                    }
+                                }
                                 const y = candleSeries.priceToCoordinate(price);
-                                levelYs.push({ ...item, price, y });
+                                const color = fibSettings.useOneColor
+                                    ? (fibSettings.singleColor || '#AB47BC')
+                                    : (fibCustomColor || item.color || '#AB47BC');
+                                levelYs.push({ ...item, price, y, color });
                             }
 
-                            // Draw filled zones between levels (from lineStartX to lineEndX)
-                            const sortedLevels = [...levelYs].sort((a, b) => b.level - a.level);
-                            for (let i = 0; i < sortedLevels.length - 1; i++) {
-                                const curr = sortedLevels[i];
-                                const next = sortedLevels[i + 1];
-                                if (curr.y !== null && next.y !== null && curr.fill !== 'transparent') {
-                                    ctx.fillStyle = fibCustomColor ? hexToRgba(fibCustomColor, 0.08) : curr.fill;
-                                    const topY = Math.min(curr.y, next.y);
-                                    const bandHeight = Math.abs(curr.y - next.y);
-                                    ctx.fillRect(lineStartX, topY, lineWidth, bandHeight);
+                            // Draw filled zones between levels if background is enabled
+                            if (fibSettings.showBackground && fibSettings.backgroundOpacity > 0 && levelYs.length > 1) {
+                                const sortedLevels = [...levelYs].sort((a, b) => b.level - a.level);
+                                for (let i = 0; i < sortedLevels.length - 1; i++) {
+                                    const curr = sortedLevels[i];
+                                    const next = sortedLevels[i + 1];
+                                    if (curr.y !== null && next.y !== null) {
+                                        ctx.fillStyle = hexToRgba(curr.color, fibSettings.backgroundOpacity);
+                                        const topY = Math.min(curr.y, next.y);
+                                        const bandHeight = Math.abs(curr.y - next.y);
+                                        ctx.fillRect(lineStartX, topY, lineWidth, bandHeight);
+                                    }
                                 }
                             }
 
                             // Draw level lines and TradingView-style clean text labels
-                            ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                            ctx.textBaseline = 'bottom';
+                            const lvlLineW = fibSettings.levelsLineWidth || fibLineWidth || 1.0;
+                            const lvlLineStyle = fibSettings.levelsLineStyle || 'solid';
 
                             for (let i = 0; i < levelYs.length; i++) {
                                 const item = levelYs[i];
                                 if (item.y === null || item.y < 0 || item.y > height) continue;
 
+                                ctx.save();
                                 ctx.beginPath();
-                                ctx.strokeStyle = fibCustomColor || item.color;
-                                ctx.lineWidth = fibLineWidth || 1.0;
+                                ctx.strokeStyle = item.color;
+                                ctx.lineWidth = lvlLineW;
+                                if (lvlLineStyle === 'dashed') {
+                                    ctx.setLineDash([Math.max(6, lvlLineW * 3), Math.max(4, lvlLineW * 2)]);
+                                } else if (lvlLineStyle === 'dotted') {
+                                    ctx.lineCap = 'round';
+                                    ctx.setLineDash([0, Math.max(6, lvlLineW * 2.5)]);
+                                } else {
+                                    ctx.setLineDash([]);
+                                }
                                 ctx.moveTo(lineStartX, item.y);
                                 ctx.lineTo(lineEndX, item.y);
                                 ctx.stroke();
+                                ctx.restore();
 
-                                const priceFormatted = item.price >= 1000
-                                    ? Math.round(item.price).toLocaleString('en-US')
-                                    : item.price.toFixed(2);
-                                const text = `${item.label} (${priceFormatted})`;
+                                // Render label text if enabled
+                                const showLvl = fibSettings.showLevels !== false;
+                                const showPrc = fibSettings.showPrices !== false;
+                                if (showLvl || showPrc) {
+                                    ctx.save();
+                                    const fontSize = fibSettings.fontSize || 12;
+                                    ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
 
-                                ctx.fillStyle = fibCustomColor || item.color;
-                                ctx.fillText(text, lineStartX + 4, item.y - 3);
+                                    let levelStr = '';
+                                    if (showLvl) {
+                                        if (fibSettings.levelsFormat === 'values') {
+                                            levelStr = String(item.level);
+                                        } else {
+                                            const pct = parseFloat((item.level * 100).toFixed(4));
+                                            levelStr = `${pct}%`;
+                                        }
+                                    }
+                                    const priceFormatted = item.price >= 1000
+                                        ? Math.round(item.price).toLocaleString('en-US')
+                                        : item.price.toFixed(2);
+
+                                    let labelText = '';
+                                    if (showLvl && showPrc) {
+                                        labelText = `${levelStr} (${priceFormatted})`;
+                                    } else if (showLvl) {
+                                        labelText = levelStr;
+                                    } else if (showPrc) {
+                                        labelText = `(${priceFormatted})`;
+                                    }
+
+                                    if (labelText) {
+                                        // Horizontal alignment
+                                        const hAlign = fibSettings.labelsHAlign || 'left';
+                                        let tx = lineStartX + 6;
+                                        if (hAlign === 'center') {
+                                            tx = (lineStartX + lineEndX) / 2;
+                                            ctx.textAlign = 'center';
+                                        } else if (hAlign === 'right') {
+                                            tx = lineEndX - 6;
+                                            ctx.textAlign = 'right';
+                                        } else {
+                                            ctx.textAlign = 'left';
+                                        }
+
+                                        // Vertical alignment
+                                        const vAlign = fibSettings.labelsVAlign || 'top';
+                                        let ty = item.y - 3;
+                                        if (vAlign === 'middle') {
+                                            ty = item.y;
+                                            ctx.textBaseline = 'middle';
+                                        } else if (vAlign === 'bottom') {
+                                            ty = item.y + 4;
+                                            ctx.textBaseline = 'top';
+                                        } else {
+                                            ctx.textBaseline = 'bottom';
+                                        }
+
+                                        ctx.fillStyle = item.color;
+                                        ctx.fillText(labelText, tx, ty);
+                                    }
+                                    ctx.restore();
+                                }
+                            }
+
+                            // Trendline connecting anchor 1 and anchor 2
+                            if (fibSettings.showTrendline) {
+                                ctx.save();
+                                ctx.beginPath();
+                                ctx.strokeStyle = fibSettings.trendlineColor || '#AB47BC';
+                                ctx.lineWidth = 1.5;
+                                const tStyle = fibSettings.trendlineStyle || 'dashed';
+                                if (tStyle === 'solid') {
+                                    ctx.setLineDash([]);
+                                } else if (tStyle === 'dotted') {
+                                    ctx.lineCap = 'round';
+                                    ctx.setLineDash([0, 5]);
+                                } else {
+                                    ctx.setLineDash([5, 4]);
+                                }
+                                ctx.moveTo(x1, y1);
+                                ctx.lineTo(x2, y2);
+                                ctx.stroke();
+                                ctx.restore();
                             }
 
                             // Handles
                             if (isFibSelected) {
-                                ctx.beginPath();
-                                ctx.strokeStyle = '#9E9E9E';
-                                ctx.lineWidth = 1.4;
-                                ctx.setLineDash([5, 4]);
-                                ctx.moveTo(x1, y1);
-                                ctx.lineTo(x2, y2);
-                                ctx.stroke();
-                                ctx.setLineDash([]);
 
                                 const isA1Active = (dragMode === 1);
                                 ctx.save();
