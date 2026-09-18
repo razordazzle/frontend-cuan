@@ -1598,11 +1598,108 @@
             return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         }
 
+        function normalizeHorizontalLine(item) {
+            if (typeof item === 'number') {
+                return {
+                    id: 'hl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    price: item,
+                    color: '#00E5FF',
+                    width: 2,
+                    style: 'solid',
+                    opacity: 1.0,
+                    text: '',
+                    textColor: '#FFFFFF',
+                    textSize: 14,
+                    textBold: false,
+                    textItalic: false,
+                    textValign: 'top',
+                    textHalign: 'center',
+                    isLocked: false,
+                    hidden: false
+                };
+            }
+            if (typeof item === 'object' && item !== null) {
+                return {
+                    id: item.id || ('hl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)),
+                    price: typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0,
+                    color: item.color || '#00E5FF',
+                    width: item.width || 2,
+                    style: item.style || 'solid',
+                    opacity: item.opacity !== undefined ? item.opacity : 1.0,
+                    text: item.text || '',
+                    textColor: item.textColor || '#FFFFFF',
+                    textSize: item.textSize || 14,
+                    textBold: !!item.textBold,
+                    textItalic: !!item.textItalic,
+                    textValign: item.textValign || 'top',
+                    textHalign: item.textHalign || 'center',
+                    isLocked: !!item.isLocked,
+                    hidden: !!item.hidden
+                };
+            }
+            return null;
+        }
+
+        function showHorizontalLineToolbar(index) {
+            if (index < 0 || index >= horizontalLines.length) {
+                hideTrendlineToolbar();
+                return;
+            }
+            selectedHorizontalLineIndex = index;
+            selectedTrendlineIndex = -1;
+            selectedRectangleIndex = -1;
+            isFibSelected = false;
+
+            const h = horizontalLines[index];
+            const toolbar = document.getElementById('tv-trendline-toolbar');
+            if (!toolbar) return;
+
+            const lineColor = h.color || '#00E5FF';
+            const textColor = h.textColor || '#FFFFFF';
+            const width = h.width || 2;
+            const style = h.style || 'solid';
+
+            const lineInd = document.getElementById('tv-indicator-line-color');
+            if (lineInd) lineInd.style.backgroundColor = lineColor;
+
+            const textInd = document.getElementById('tv-indicator-text-color');
+            if (textInd) textInd.style.backgroundColor = textColor;
+
+            const widthLabel = document.getElementById('tv-label-width');
+            if (widthLabel) widthLabel.textContent = width + 'px';
+
+            const styleInd = document.getElementById('tv-indicator-line-style');
+            if (styleInd) {
+                if (style === 'dashed') {
+                    styleInd.innerHTML = '<span class="tv-style-line-dashed"></span>';
+                } else if (style === 'dotted') {
+                    styleInd.innerHTML = '<span class="tv-style-line-dotted"></span>';
+                } else {
+                    styleInd.innerHTML = '<span class="tv-style-line-solid"></span>';
+                }
+            }
+
+            // Angle button is hidden for horizontal lines
+            const btnAngle = document.getElementById('tv-btn-angle');
+            if (btnAngle) {
+                btnAngle.style.display = 'none';
+            }
+
+            updateLockSheetUI(!!h.isLocked);
+
+            toolbar.style.display = 'flex';
+        }
+
         function showTrendlineToolbar(index) {
             if (index < 0 || index >= trendlines.length) {
                 hideTrendlineToolbar();
                 return;
             }
+            selectedTrendlineIndex = index;
+            selectedHorizontalLineIndex = -1;
+            selectedRectangleIndex = -1;
+            isFibSelected = false;
+
             const t = trendlines[index];
             const toolbar = document.getElementById('tv-trendline-toolbar');
             if (!toolbar) return;
@@ -1634,6 +1731,7 @@
 
             const btnAngle = document.getElementById('tv-btn-angle');
             if (btnAngle) {
+                btnAngle.style.display = 'flex';
                 btnAngle.classList.toggle('active', !!t.lockAngle);
             }
 
@@ -1649,8 +1747,8 @@
                 lockLabel.textContent = isLocked ? 'Unlock' : 'Lock';
             }
             if (lockShackle) {
-                // When line is locked: action is to Unlock -> show open padlock (gembok terbuka dengan celah shackle jelas)
-                // When line is unlocked: action is to Lock -> show closed padlock (gembok tertutup)
+                // When line is locked: action is to Unlock -> show open padlock
+                // When line is unlocked: action is to Lock -> show closed padlock
                 lockShackle.setAttribute('d', isLocked ? 'M7 9V4.5a3 3 0 0 1 6 0v1' : 'M7 9V6a3 3 0 0 1 6 0v3');
             }
         }
@@ -1679,9 +1777,26 @@
             });
         }
 
+        function getActiveDrawing() {
+            if (selectedHorizontalLineIndex >= 0 && selectedHorizontalLineIndex < horizontalLines.length) {
+                return { drawing: horizontalLines[selectedHorizontalLineIndex], isHLine: true, index: selectedHorizontalLineIndex };
+            }
+            if (selectedTrendlineIndex >= 0 && selectedTrendlineIndex < trendlines.length) {
+                return { drawing: trendlines[selectedTrendlineIndex], isHLine: false, index: selectedTrendlineIndex };
+            }
+            return null;
+        }
+
         function openMoreBottomSheet() {
-            if (selectedTrendlineIndex < 0 || !trendlines[selectedTrendlineIndex]) return;
-            const t = trendlines[selectedTrendlineIndex];
+            let isLocked = false;
+            if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
+                isLocked = !!horizontalLines[selectedHorizontalLineIndex].isLocked;
+            } else if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                isLocked = !!trendlines[selectedTrendlineIndex].isLocked;
+            } else {
+                return;
+            }
+
             const backdrop = document.getElementById('tv-more-sheet-backdrop');
             const sheet = document.getElementById('tv-more-bottom-sheet');
             const btnMore = document.getElementById('tv-btn-more');
@@ -1690,7 +1805,7 @@
             hideAllPopovers();
             if (btnMore) btnMore.classList.add('active');
 
-            updateLockSheetUI(!!t.isLocked);
+            updateLockSheetUI(isLocked);
 
             backdrop.style.display = 'block';
             sheet.style.display = 'block';
@@ -1765,8 +1880,20 @@
         }
 
         function openTrendlineSettingsModal() {
-            if (selectedTrendlineIndex < 0 || !trendlines[selectedTrendlineIndex]) return;
-            const t = trendlines[selectedTrendlineIndex];
+            let drawing = null;
+            let drawingTitle = 'Trendline';
+            if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
+                drawing = horizontalLines[selectedHorizontalLineIndex];
+                drawingTitle = 'Horizontal line';
+            } else if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                drawing = trendlines[selectedTrendlineIndex];
+                drawingTitle = 'Trendline';
+            } else {
+                return;
+            }
+
+            const titleEl = document.querySelector('#tv-settings-modal .tv-settings-title-group span');
+            if (titleEl) titleEl.textContent = drawingTitle;
 
             const backdrop = document.getElementById('tv-settings-backdrop');
             const modal = document.getElementById('tv-settings-modal');
@@ -1776,29 +1903,29 @@
             closeSizeDropdown();
 
             // Populate current values
-            modalPendingTextColor = t.textColor || '#FFFFFF';
+            modalPendingTextColor = drawing.textColor || '#FFFFFF';
             const colorPreview = document.getElementById('tv-text-color-preview');
             if (colorPreview) colorPreview.style.backgroundColor = modalPendingTextColor;
 
-            const curSize = t.textSize || 14;
+            const curSize = drawing.textSize || 14;
             const sizeVal = document.getElementById('tv-text-size-val');
             if (sizeVal) sizeVal.textContent = String(curSize);
             updateSizeDropdownSelection(curSize);
 
             const btnBold = document.getElementById('tv-text-btn-bold');
-            if (btnBold) btnBold.classList.toggle('active', !!t.textBold);
+            if (btnBold) btnBold.classList.toggle('active', !!drawing.textBold);
 
             const btnItalic = document.getElementById('tv-text-btn-italic');
-            if (btnItalic) btnItalic.classList.toggle('active', !!t.textItalic);
+            if (btnItalic) btnItalic.classList.toggle('active', !!drawing.textItalic);
 
             const textInput = document.getElementById('tv-text-content-input');
-            if (textInput) textInput.value = t.text || '';
+            if (textInput) textInput.value = drawing.text || '';
 
             const valignSelect = document.getElementById('tv-text-valign-select');
-            if (valignSelect) valignSelect.value = t.textValign || 'top';
+            if (valignSelect) valignSelect.value = drawing.textValign || 'top';
 
             const halignSelect = document.getElementById('tv-text-halign-select');
-            if (halignSelect) halignSelect.value = t.textHalign || 'center';
+            if (halignSelect) halignSelect.value = drawing.textHalign || 'center';
 
             backdrop.style.display = 'block';
             modal.style.display = 'flex';
@@ -1826,8 +1953,17 @@
         }
 
         function saveTrendlineSettings() {
-            if (selectedTrendlineIndex < 0 || !trendlines[selectedTrendlineIndex]) return;
-            const t = trendlines[selectedTrendlineIndex];
+            let drawing = null;
+            let isHLine = false;
+            if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
+                drawing = horizontalLines[selectedHorizontalLineIndex];
+                isHLine = true;
+            } else if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                drawing = trendlines[selectedTrendlineIndex];
+                isHLine = false;
+            } else {
+                return;
+            }
 
             const textInput = document.getElementById('tv-text-content-input');
             const sizeVal = document.getElementById('tv-text-size-val');
@@ -1836,20 +1972,24 @@
             const valignSelect = document.getElementById('tv-text-valign-select');
             const halignSelect = document.getElementById('tv-text-halign-select');
 
-            t.text = textInput ? textInput.value : '';
-            t.textColor = modalPendingTextColor;
-            t.textSize = sizeVal ? (parseInt(sizeVal.textContent, 10) || 14) : 14;
-            t.textBold = btnBold ? btnBold.classList.contains('active') : false;
-            t.textItalic = btnItalic ? btnItalic.classList.contains('active') : false;
-            t.textValign = valignSelect ? valignSelect.value : 'top';
-            t.textHalign = halignSelect ? halignSelect.value : 'center';
+            drawing.text = textInput ? textInput.value : '';
+            drawing.textColor = modalPendingTextColor;
+            drawing.textSize = sizeVal ? (parseInt(sizeVal.textContent, 10) || 14) : 14;
+            drawing.textBold = btnBold ? btnBold.classList.contains('active') : false;
+            drawing.textItalic = btnItalic ? btnItalic.classList.contains('active') : false;
+            drawing.textValign = valignSelect ? valignSelect.value : 'top';
+            drawing.textHalign = halignSelect ? halignSelect.value : 'center';
 
             const textInd = document.getElementById('tv-indicator-text-color');
-            if (textInd && t.textColor) textInd.style.backgroundColor = t.textColor;
+            if (textInd && drawing.textColor) textInd.style.backgroundColor = drawing.textColor;
 
             closeTrendlineSettingsModal();
             renderFib();
-            notifyTrendlinesChanged();
+            if (isHLine) {
+                notifyHorizontalLinesChanged();
+            } else {
+                notifyTrendlinesChanged();
+            }
         }
 
         function openObjectTreeModal() {
@@ -2110,20 +2250,54 @@
             // 4. Horizontal Lines
             if (horizontalLines && horizontalLines.length > 0) {
                 horizontalLines.forEach((hLine, hIdx) => {
+                    const isSelected = (selectedHorizontalLineIndex === hIdx);
+                    const isHidden = !!hLine.hidden;
+                    const isLocked = !!hLine.isLocked;
                     const priceVal = typeof hLine === 'object' ? hLine.price : hLine;
+                    const priceFormatted = (typeof priceVal === 'number')
+                        ? (priceVal >= 1000 ? Math.round(priceVal).toLocaleString('en-US') : priceVal.toFixed(2))
+                        : priceVal;
+                    const labelText = hLine.text ? `Horizontal ray ("${hLine.text}")` : `Horizontal ray (${priceFormatted})`;
+
                     const row = document.createElement('div');
-                    row.className = 'tv-tree-item';
+                    row.className = 'tv-tree-item' + (isSelected ? ' selected' : '') + (isHidden ? ' hidden-item' : '');
                     row.innerHTML = `
                         <div class="tv-tree-item-left">
-                            <div class="tv-tree-item-icon" style="color: #2962FF;">
+                            <div class="tv-tree-item-icon" style="color: ${hLine.color || '#00E5FF'};">
                                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
                                     <circle cx="4" cy="9" r="2" />
                                     <line x1="6" y1="9" x2="16" y2="9" />
                                 </svg>
                             </div>
-                            <span class="tv-tree-item-label">Horizontal ray (${typeof priceVal === 'number' ? priceVal.toFixed(1) : priceVal})</span>
+                            <span class="tv-tree-item-label">${labelText}</span>
                         </div>
                         <div class="tv-tree-item-actions">
+                            <button class="tv-tree-action-btn tv-tree-btn-lock ${isLocked ? 'active-action' : ''}" title="${isLocked ? 'Unlock' : 'Lock'}">
+                                ${isLocked ? `
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                        <rect x="4" y="9" width="12" height="8" rx="2" />
+                                        <path d="M7 9V6a3 3 0 0 1 6 0v3" />
+                                    </svg>
+                                ` : `
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                        <rect x="4" y="9" width="12" height="8" rx="2" />
+                                        <path d="M7 9V6a3 3 0 0 1 6 0" />
+                                    </svg>
+                                `}
+                            </button>
+                            <button class="tv-tree-action-btn tv-tree-btn-eye ${isHidden ? 'active-action' : ''}" title="${isHidden ? 'Show / Unhide' : 'Hide'}">
+                                ${isHidden ? `
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                        <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5-7.5-5.5z" />
+                                        <path d="M3 3l14 14" />
+                                    </svg>
+                                ` : `
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                        <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5z" />
+                                        <circle cx="10" cy="10" r="2.5" />
+                                    </svg>
+                                `}
+                            </button>
                             <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
                                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
                                     <path d="M3.5 5.5h13" />
@@ -2134,12 +2308,73 @@
                         </div>
                     `;
 
+                    // Row click to select horizontal line
+                    row.onclick = (e) => {
+                        e.stopPropagation();
+                        selectedHorizontalLineIndex = hIdx;
+                        selectedTrendlineIndex = -1;
+                        selectedRectangleIndex = -1;
+                        isFibSelected = false;
+                        if (!hLine.hidden) {
+                            showHorizontalLineToolbar(hIdx);
+                        } else {
+                            hideTrendlineToolbar();
+                        }
+                        renderFib();
+                        refreshObjectTree();
+                    };
+
+                    // Lock button click
+                    const btnLock = row.querySelector('.tv-tree-btn-lock');
+                    if (btnLock) {
+                        btnLock.onclick = (e) => {
+                            e.stopPropagation();
+                            hLine.isLocked = !hLine.isLocked;
+                            if (selectedHorizontalLineIndex === hIdx) {
+                                updateLockSheetUI(hLine.isLocked);
+                            }
+                            renderFib();
+                            notifyHorizontalLinesChanged();
+                            refreshObjectTree();
+                        };
+                    }
+
+                    // Eye button click (Hide / Unhide!)
+                    const btnEye = row.querySelector('.tv-tree-btn-eye');
+                    if (btnEye) {
+                        btnEye.onclick = (e) => {
+                            e.stopPropagation();
+                            hLine.hidden = !hLine.hidden;
+                            if (hLine.hidden) {
+                                if (selectedHorizontalLineIndex === hIdx) {
+                                    selectedHorizontalLineIndex = -1;
+                                    hideTrendlineToolbar();
+                                }
+                            } else {
+                                selectedHorizontalLineIndex = hIdx;
+                                selectedTrendlineIndex = -1;
+                                showHorizontalLineToolbar(hIdx);
+                            }
+                            renderFib();
+                            notifyHorizontalLinesChanged();
+                            refreshObjectTree();
+                        };
+                    }
+
+                    // Delete button click
                     const btnDel = row.querySelector('.tv-tree-btn-delete');
                     if (btnDel) {
                         btnDel.onclick = (e) => {
                             e.stopPropagation();
                             horizontalLines.splice(hIdx, 1);
+                            if (selectedHorizontalLineIndex === hIdx) {
+                                selectedHorizontalLineIndex = -1;
+                                hideTrendlineToolbar();
+                            } else if (selectedHorizontalLineIndex > hIdx) {
+                                selectedHorizontalLineIndex--;
+                            }
                             renderFib();
+                            notifyHorizontalLinesChanged();
                             refreshObjectTree();
                         };
                     }
@@ -2181,56 +2416,93 @@
         }
 
         function applySelectedColor(colorHex, opacityVal) {
-            if (selectedTrendlineIndex < 0 || !trendlines[selectedTrendlineIndex]) return;
-            const t = trendlines[selectedTrendlineIndex];
+            let drawing = null;
+            let isHLine = false;
+            if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
+                drawing = horizontalLines[selectedHorizontalLineIndex];
+                isHLine = true;
+            } else if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                drawing = trendlines[selectedTrendlineIndex];
+                isHLine = false;
+            } else {
+                return;
+            }
 
             if (activeColorPickerTarget === 'line') {
-                if (colorHex) t.color = colorHex;
-                if (opacityVal !== undefined) t.opacity = opacityVal;
+                if (colorHex) drawing.color = colorHex;
+                if (opacityVal !== undefined) drawing.opacity = opacityVal;
                 const lineInd = document.getElementById('tv-indicator-line-color');
-                if (lineInd && t.color) lineInd.style.backgroundColor = t.color;
-                updateSliderGradient(t.color || '#7C4DFF');
+                if (lineInd && drawing.color) lineInd.style.backgroundColor = drawing.color;
+                updateSliderGradient(drawing.color || (isHLine ? '#00E5FF' : '#7C4DFF'));
             } else if (activeColorPickerTarget === 'text') {
                 if (colorHex) {
-                    t.textColor = colorHex;
+                    drawing.textColor = colorHex;
                     modalPendingTextColor = colorHex;
                 }
                 const textInd = document.getElementById('tv-indicator-text-color');
-                if (textInd && t.textColor) textInd.style.backgroundColor = t.textColor;
+                if (textInd && drawing.textColor) textInd.style.backgroundColor = drawing.textColor;
                 const preview = document.getElementById('tv-text-color-preview');
-                if (preview && t.textColor) preview.style.backgroundColor = t.textColor;
+                if (preview && drawing.textColor) preview.style.backgroundColor = drawing.textColor;
             }
 
             // Update swatch selection highlight
-            const activeColor = (activeColorPickerTarget === 'line') ? (t.color || '#7C4DFF') : (t.textColor || '#FFFFFF');
+            const activeColor = (activeColorPickerTarget === 'line') ? (drawing.color || (isHLine ? '#00E5FF' : '#7C4DFF')) : (drawing.textColor || '#FFFFFF');
             document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
                 sw.classList.toggle('selected', sw.getAttribute('data-color')?.toUpperCase() === activeColor.toUpperCase());
             });
 
             renderFib();
-            notifyTrendlinesChanged();
+            if (isHLine) {
+                notifyHorizontalLinesChanged();
+            } else {
+                notifyTrendlinesChanged();
+            }
         }
 
         function applySelectedWidth(w) {
-            if (selectedTrendlineIndex < 0 || !trendlines[selectedTrendlineIndex]) return;
-            const t = trendlines[selectedTrendlineIndex];
-            t.width = parseInt(w);
+            let drawing = null;
+            let isHLine = false;
+            if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
+                drawing = horizontalLines[selectedHorizontalLineIndex];
+                isHLine = true;
+            } else if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                drawing = trendlines[selectedTrendlineIndex];
+                isHLine = false;
+            } else {
+                return;
+            }
+
+            drawing.width = parseInt(w);
             const widthLabel = document.getElementById('tv-label-width');
-            if (widthLabel) widthLabel.textContent = t.width + 'px';
+            if (widthLabel) widthLabel.textContent = drawing.width + 'px';
 
             document.querySelectorAll('#tv-popover-width .tv-menu-item').forEach(item => {
-                item.classList.toggle('selected', parseInt(item.getAttribute('data-width')) === t.width);
+                item.classList.toggle('selected', parseInt(item.getAttribute('data-width')) === drawing.width);
             });
 
             hideAllPopovers();
             renderFib();
-            notifyTrendlinesChanged();
+            if (isHLine) {
+                notifyHorizontalLinesChanged();
+            } else {
+                notifyTrendlinesChanged();
+            }
         }
 
         function applySelectedStyle(s) {
-            if (selectedTrendlineIndex < 0 || !trendlines[selectedTrendlineIndex]) return;
-            const t = trendlines[selectedTrendlineIndex];
-            t.style = s;
+            let drawing = null;
+            let isHLine = false;
+            if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
+                drawing = horizontalLines[selectedHorizontalLineIndex];
+                isHLine = true;
+            } else if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                drawing = trendlines[selectedTrendlineIndex];
+                isHLine = false;
+            } else {
+                return;
+            }
+
+            drawing.style = s;
             const styleInd = document.getElementById('tv-indicator-line-style');
             if (styleInd) {
                 if (s === 'dashed') {
@@ -2248,10 +2520,23 @@
 
             hideAllPopovers();
             renderFib();
-            notifyTrendlinesChanged();
+            if (isHLine) {
+                notifyHorizontalLinesChanged();
+            } else {
+                notifyTrendlinesChanged();
+            }
         }
 
-        function deleteSelectedTrendline() {
+        function deleteSelectedDrawing() {
+            if (selectedHorizontalLineIndex >= 0 && selectedHorizontalLineIndex < horizontalLines.length) {
+                horizontalLines.splice(selectedHorizontalLineIndex, 1);
+                selectedHorizontalLineIndex = -1;
+                hideTrendlineToolbar();
+                renderFib();
+                notifyHorizontalLinesChanged();
+                refreshObjectTree();
+                return;
+            }
             if (selectedTrendlineIndex >= 0 && selectedTrendlineIndex < trendlines.length) {
                 trendlines.splice(selectedTrendlineIndex, 1);
                 selectedTrendlineIndex = -1;
@@ -2259,10 +2544,53 @@
                 hideTrendlineToolbar();
                 renderFib();
                 notifyTrendlinesChanged();
+                refreshObjectTree();
             }
         }
 
-        function cloneSelectedTrendline() {
+        function cloneSelectedDrawing() {
+            if (selectedHorizontalLineIndex >= 0 && selectedHorizontalLineIndex < horizontalLines.length) {
+                const src = horizontalLines[selectedHorizontalLineIndex];
+                const activeSeries = candleSeries || areaSeries;
+                let priceOffset = 0;
+                if (activeSeries && chart) {
+                    const y1 = activeSeries.priceToCoordinate(src.price);
+                    if (y1 !== null) {
+                        const targetY = y1 + 24;
+                        const targetPrice = activeSeries.coordinateToPrice(targetY);
+                        if (targetPrice !== null && !isNaN(targetPrice)) {
+                            priceOffset = targetPrice - src.price;
+                        }
+                    }
+                }
+                if (!priceOffset) {
+                    priceOffset = -(src.price || 100) * 0.005;
+                }
+                const cloned = {
+                    id: 'hl_' + Date.now(),
+                    price: src.price + priceOffset,
+                    color: src.color || '#00E5FF',
+                    width: src.width || 2,
+                    style: src.style || 'solid',
+                    opacity: src.opacity !== undefined ? src.opacity : 1.0,
+                    text: src.text || '',
+                    textColor: src.textColor || '#FFFFFF',
+                    textSize: src.textSize || 14,
+                    textBold: !!src.textBold,
+                    textItalic: !!src.textItalic,
+                    textValign: src.textValign || 'top',
+                    textHalign: src.textHalign || 'center',
+                    isLocked: !!src.isLocked,
+                    hidden: false
+                };
+                horizontalLines.push(cloned);
+                selectedHorizontalLineIndex = horizontalLines.length - 1;
+                selectedTrendlineIndex = -1;
+                showHorizontalLineToolbar(selectedHorizontalLineIndex);
+                renderFib();
+                notifyHorizontalLinesChanged();
+                return;
+            }
             if (selectedTrendlineIndex >= 0 && selectedTrendlineIndex < trendlines.length) {
                 const src = trendlines[selectedTrendlineIndex];
                 const activeSeries = candleSeries || areaSeries;
@@ -2296,10 +2624,13 @@
                     textValign: src.textValign || 'top',
                     textHalign: src.textHalign || 'center',
                     showAngle: !!src.showAngle,
-                    lockAngle: !!src.lockAngle
+                    lockAngle: !!src.lockAngle,
+                    isLocked: !!src.isLocked,
+                    hidden: false
                 };
                 trendlines.push(cloned);
                 selectedTrendlineIndex = trendlines.length - 1;
+                selectedHorizontalLineIndex = -1;
                 showTrendlineToolbar(selectedTrendlineIndex);
                 renderFib();
                 notifyTrendlinesChanged();
@@ -2407,7 +2738,8 @@
                 opSlider.oninput = (e) => {
                     const val = parseInt(e.target.value);
                     if (opVal) opVal.textContent = val + '%';
-                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                    const active = getActiveDrawing();
+                    if (active) {
                         applySelectedColor(null, val / 100);
                     }
                 };
@@ -2419,7 +2751,7 @@
                 btnClone.onclick = (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    cloneSelectedTrendline();
+                    cloneSelectedDrawing();
                 };
             }
 
@@ -2436,10 +2768,11 @@
                     activeColorPickerTarget = 'line';
                     btnLineColor.classList.add('active');
 
-                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
-                        const t = trendlines[selectedTrendlineIndex];
-                        const curColor = t.color || '#7C4DFF';
-                        const curOp = (t.opacity !== undefined) ? Math.round(t.opacity * 100) : 100;
+                    const active = getActiveDrawing();
+                    if (active) {
+                        const d = active.drawing;
+                        const curColor = d.color || (active.isHLine ? '#00E5FF' : '#7C4DFF');
+                        const curOp = (d.opacity !== undefined) ? Math.round(d.opacity * 100) : 100;
                         if (opSlider) opSlider.value = curOp;
                         if (opVal) opVal.textContent = curOp + '%';
                         updateSliderGradient(curColor);
@@ -2464,9 +2797,10 @@
                     activeColorPickerTarget = 'text';
                     btnTextColor.classList.add('active');
 
-                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
-                        const t = trendlines[selectedTrendlineIndex];
-                        const curColor = t.textColor || '#FFFFFF';
+                    const active = getActiveDrawing();
+                    if (active) {
+                        const d = active.drawing;
+                        const curColor = d.textColor || '#FFFFFF';
                         updateSliderGradient(curColor);
 
                         document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
@@ -2489,8 +2823,9 @@
                     hideAllPopovers();
                     btnWidth.classList.add('active');
 
-                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
-                        const curW = trendlines[selectedTrendlineIndex].width || 2;
+                    const active = getActiveDrawing();
+                    if (active) {
+                        const curW = active.drawing.width || 2;
                         document.querySelectorAll('#tv-popover-width .tv-menu-item').forEach(item => {
                             item.classList.toggle('selected', parseInt(item.getAttribute('data-width')) === curW);
                         });
@@ -2511,8 +2846,9 @@
                     hideAllPopovers();
                     btnStyle.classList.add('active');
 
-                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
-                        const curStyle = trendlines[selectedTrendlineIndex].style || 'solid';
+                    const active = getActiveDrawing();
+                    if (active) {
+                        const curStyle = active.drawing.style || 'solid';
                         document.querySelectorAll('#tv-popover-style .tv-menu-item').forEach(item => {
                             item.classList.toggle('selected', item.getAttribute('data-style') === curStyle);
                         });
@@ -2562,7 +2898,7 @@
                 btnDelete.onclick = (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    deleteSelectedTrendline();
+                    deleteSelectedDrawing();
                 };
             }
 
@@ -2571,7 +2907,7 @@
                 btnMore.onclick = (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
+                    if (getActiveDrawing()) {
                         const sheet = document.getElementById('tv-more-bottom-sheet');
                         if (sheet && sheet.classList.contains('visible')) {
                             closeMoreBottomSheet();
@@ -2608,7 +2944,7 @@
                     e.stopPropagation();
                     e.preventDefault();
                     closeMoreBottomSheet();
-                    cloneSelectedTrendline();
+                    cloneSelectedDrawing();
                 };
             }
 
@@ -2617,13 +2953,17 @@
                 itemLock.onclick = (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
-                        const t = trendlines[selectedTrendlineIndex];
-                        t.isLocked = !t.isLocked;
-                        updateLockSheetUI(t.isLocked);
+                    const active = getActiveDrawing();
+                    if (active) {
+                        active.drawing.isLocked = !active.drawing.isLocked;
+                        updateLockSheetUI(active.drawing.isLocked);
                         closeMoreBottomSheet();
                         renderFib();
-                        notifyTrendlinesChanged();
+                        if (active.isHLine) {
+                            notifyHorizontalLinesChanged();
+                        } else {
+                            notifyTrendlinesChanged();
+                        }
                     }
                 };
             }
@@ -2633,14 +2973,19 @@
                 itemHide.onclick = (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
-                        const t = trendlines[selectedTrendlineIndex];
-                        t.hidden = true;
+                    const active = getActiveDrawing();
+                    if (active) {
+                        active.drawing.hidden = true;
+                        selectedHorizontalLineIndex = -1;
                         selectedTrendlineIndex = -1;
                         hideTrendlineToolbar();
                         closeMoreBottomSheet();
                         renderFib();
-                        notifyTrendlinesChanged();
+                        if (active.isHLine) {
+                            notifyHorizontalLinesChanged();
+                        } else {
+                            notifyTrendlinesChanged();
+                        }
                     }
                 };
             }
@@ -2651,7 +2996,7 @@
                     e.stopPropagation();
                     e.preventDefault();
                     closeMoreBottomSheet();
-                    deleteSelectedTrendline();
+                    deleteSelectedDrawing();
                 };
             }
 
@@ -2920,18 +3265,17 @@
 
                 const activeSeries = candleSeries || areaSeries;
 
-                // 1. Check proximity to horizontal lines (vertical drag or delete button)
+                // 1. Check proximity to horizontal lines (vertical drag or cursor)
                 if (horizontalLines && horizontalLines.length > 0 && activeSeries) {
                     for (let i = 0; i < horizontalLines.length; i++) {
-                        const lineY = activeSeries.priceToCoordinate(horizontalLines[i]);
+                        const h = horizontalLines[i];
+                        if (h && h.hidden) continue;
+                        const price = typeof h === 'object' ? h.price : h;
+                        const lineY = activeSeries.priceToCoordinate(price);
                         if (lineY !== null && Math.abs(y - lineY) <= HITBOX_HLINE) {
                             canvas.style.pointerEvents = 'auto';
                             if (i === selectedHorizontalLineIndex) {
-                                if (x >= maxContentX - HITBOX_HLINE_DEL) {
-                                    canvas.style.cursor = 'pointer';
-                                } else {
-                                    canvas.style.cursor = 'ns-resize';
-                                }
+                                canvas.style.cursor = (h && h.isLocked) ? 'pointer' : 'ns-resize';
                             } else {
                                 canvas.style.cursor = 'pointer';
                             }
@@ -3126,39 +3470,29 @@
                     // 2. HORIZONTAL LINE HIT TEST (56px tall vertical touch zone)
                     if (horizontalLines && horizontalLines.length > 0) {
                         for (let i = 0; i < horizontalLines.length; i++) {
-                            const lineY = activeSeries.priceToCoordinate(horizontalLines[i]);
+                            const h = horizontalLines[i];
+                            if (h.hidden) continue;
+                            const price = typeof h === 'object' ? h.price : h;
+                            const lineY = activeSeries.priceToCoordinate(price);
                             if (lineY !== null && Math.abs(y - lineY) <= HITBOX_HLINE) {
                                 e.stopPropagation();
                                 e.stopImmediatePropagation();
                                 e.preventDefault();
 
-                                if (i === selectedHorizontalLineIndex) {
-                                    // In edit mode: check if tapped the delete button
-                                    if (x >= maxContentX - HITBOX_HLINE_DEL) {
-                                        horizontalLines.splice(i, 1);
-                                        selectedHorizontalLineIndex = -1;
-                                        renderFib();
-                                        notifyHorizontalLinesChanged();
-                                        return;
-                                    }
+                                selectedHorizontalLineIndex = i;
+                                selectedTrendlineIndex = -1;
+                                selectedRectangleIndex = -1;
+                                isFibSelected = false;
 
-                                    // In edit mode: allow dragging vertically
+                                if (!h.isLocked) {
                                     dragHorizontalLineIndex = i;
                                     isPointerDown = true;
                                     try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
                                     chart.applyOptions({ handleScroll: false, handleScale: false });
-                                    renderFib();
-                                    return;
-                                } else {
-                                    // In non-edit mode: tap to enter edit mode!
-                                    selectedHorizontalLineIndex = i;
-                                    selectedTrendlineIndex = -1;
-                                    hideTrendlineToolbar();
-                                    selectedRectangleIndex = -1;
-                                    isFibSelected = false;
-                                    renderFib();
-                                    return;
                                 }
+                                showHorizontalLineToolbar(i);
+                                renderFib();
+                                return;
                             }
                         }
                     }
@@ -3414,56 +3748,65 @@
                     const price = getPriceAtY(y);
                     crosshairPos = null;
                     if (price !== null) {
-                        horizontalLines.push(price);
+                        const newHLine = normalizeHorizontalLine({
+                            id: 'hl_' + Date.now(),
+                            price: price,
+                            color: '#00E5FF',
+                            width: 2,
+                            style: 'solid',
+                            opacity: 1.0,
+                            text: '',
+                            textColor: '#FFFFFF',
+                            textSize: 14,
+                            textBold: false,
+                            textItalic: false,
+                            textValign: 'top',
+                            textHalign: 'center',
+                            isLocked: false,
+                            hidden: false
+                        });
+                        horizontalLines.push(newHLine);
                         selectedHorizontalLineIndex = horizontalLines.length - 1; // Enter edit mode immediately upon placement!
                         selectedTrendlineIndex = -1;
+                        selectedRectangleIndex = -1;
                         isFibSelected = false;
                         isDrawingHorizontalLine = false;
                         canvas.style.cursor = 'default';
                         canvas.style.pointerEvents = 'none';
+                        showHorizontalLineToolbar(selectedHorizontalLineIndex);
                         renderFib();
                         notifyHorizontalLinesChanged();
                         if (window.flutter_inappwebview?.callHandler) {
-                            window.flutter_inappwebview.callHandler('onHorizontalLineAdded', price);
+                            window.flutter_inappwebview.callHandler('onHorizontalLineAdded', newHLine);
                         }
-                        window.parent?.postMessage(JSON.stringify({ type: 'onHorizontalLineAdded', payload: price }), '*');
+                        window.parent?.postMessage(JSON.stringify({ type: 'onHorizontalLineAdded', payload: newHLine }), '*');
                     }
                     return;
                 }
 
-                // 0.1 Check if clicking on an existing horizontal line or its delete button
+                // 0.1 Check if clicking on an existing horizontal line
                 const activeSeries = candleSeries || areaSeries;
                 if (horizontalLines && horizontalLines.length > 0 && activeSeries) {
                     for (let i = 0; i < horizontalLines.length; i++) {
-                        const lineY = activeSeries.priceToCoordinate(horizontalLines[i]);
+                        const h = horizontalLines[i];
+                        if (h.hidden) continue;
+                        const price = typeof h === 'object' ? h.price : h;
+                        const lineY = activeSeries.priceToCoordinate(price);
                         if (lineY !== null && Math.abs(y - lineY) <= HITBOX_HLINE) {
-                            if (i === selectedHorizontalLineIndex) {
-                                // Check if clicked the delete button at the right edge
-                                if (x >= maxContentX - HITBOX_HLINE_DEL) {
-                                    horizontalLines.splice(i, 1);
-                                    selectedHorizontalLineIndex = -1;
-                                    canvas.style.cursor = 'default';
-                                    canvas.style.pointerEvents = 'none';
-                                    renderFib();
-                                    notifyHorizontalLinesChanged();
-                                    return;
-                                }
-                                // Otherwise start vertical dragging
+                            selectedHorizontalLineIndex = i;
+                            selectedTrendlineIndex = -1;
+                            selectedRectangleIndex = -1;
+                            isFibSelected = false;
+                            if (!h.isLocked) {
                                 dragHorizontalLineIndex = i;
                                 isPointerDown = true;
                                 canvas.setPointerCapture?.(e.pointerId);
                                 if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
                                 canvas.style.cursor = 'ns-resize';
-                                return;
-                            } else {
-                                // In non-edit mode: tap to enter edit mode!
-                                selectedHorizontalLineIndex = i;
-                                selectedTrendlineIndex = -1;
-                                isFibSelected = false;
-                                canvas.style.cursor = 'default';
-                                renderFib();
-                                return;
                             }
+                            showHorizontalLineToolbar(i);
+                            renderFib();
+                            return;
                         }
                     }
                 }
@@ -4019,11 +4362,18 @@
 
                 // Dragging Horizontal Line vertically
                 if (dragHorizontalLineIndex >= 0 && horizontalLines && horizontalLines[dragHorizontalLineIndex] !== undefined) {
-                    crosshairPos = null;
-                    const price = getPriceAtY(y);
-                    if (price !== null) {
-                        horizontalLines[dragHorizontalLineIndex] = price;
-                        renderFib();
+                    const h = horizontalLines[dragHorizontalLineIndex];
+                    if (h && !h.isLocked) {
+                        crosshairPos = null;
+                        const price = getPriceAtY(y);
+                        if (price !== null) {
+                            if (typeof h === 'object') {
+                                h.price = price;
+                            } else {
+                                horizontalLines[dragHorizontalLineIndex] = price;
+                            }
+                            renderFib();
+                        }
                     }
                     return;
                 }
@@ -4428,25 +4778,40 @@
             // 1. Render Horizontal Lines (Support & Resistance)
             if (horizontalLines && horizontalLines.length > 0) {
                 ctx.save();
-                ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                ctx.textBaseline = 'middle';
-
                 for (let i = 0; i < horizontalLines.length; i++) {
-                    const price = horizontalLines[i];
+                    const h = horizontalLines[i];
+                    if (h.hidden) continue;
+                    const price = typeof h === 'object' ? h.price : h;
                     const y = activeSeries.priceToCoordinate(price);
                     if (y === null || y < 0 || y > height) continue;
 
                     const isSelected = (i === selectedHorizontalLineIndex);
+                    const lineColor = (typeof h === 'object' && h.color) ? h.color : '#00E5FF';
+                    const lineWidth = (typeof h === 'object' && h.width) ? h.width : 2;
+                    const lineOpacity = (typeof h === 'object' && h.opacity !== undefined) ? h.opacity : 1.0;
+                    const lineStyle = (typeof h === 'object' && h.style) ? h.style : 'solid';
 
-                    // Solid horizontal line across chart content width (mentok before price scale)
+                    // Horizontal line stroke across chart content width
+                    ctx.save();
                     ctx.beginPath();
-                    ctx.strokeStyle = '#00E5FF';
-                    ctx.lineWidth = isSelected ? 2.0 : 1.5;
+                    ctx.strokeStyle = hexToRgba(lineColor, lineOpacity);
+                    ctx.lineWidth = isSelected ? (lineWidth + 0.5) : lineWidth;
+                    if (lineStyle === 'dashed') {
+                        ctx.setLineDash([6, 4]);
+                    } else if (lineStyle === 'dotted') {
+                        ctx.setLineDash([2, 3]);
+                    } else {
+                        ctx.setLineDash([]);
+                    }
                     ctx.moveTo(0, y);
                     ctx.lineTo(maxContentX, y);
                     ctx.stroke();
+                    ctx.restore();
 
-                    // Price text formatting
+                    // Price text badge
+                    ctx.save();
+                    ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                    ctx.textBaseline = 'middle';
                     const priceFormatted = price >= 1000
                         ? Math.round(price).toLocaleString('en-US')
                         : price.toFixed(2);
@@ -4454,90 +4819,88 @@
                     const textWidth = ctx.measureText(text).width;
                     const badgeHeight = 20;
                     const badgeWidth = textWidth + 10;
+                    const badgeX = maxContentX - badgeWidth - 6;
+                    const badgeY = y - (badgeHeight / 2);
 
-                    if (isSelected) {
-                        // EDIT MODE: Price badge AND trash can delete button
-                        const delButtonWidth = 18;
-                        const totalWidth = badgeWidth + delButtonWidth + 4;
-                        const badgeX = maxContentX - totalWidth - 4;
-                        const badgeY = y - (badgeHeight / 2);
-
-                        // Price pill background
-                        ctx.fillStyle = '#00E5FF';
-                        if (ctx.roundRect) {
-                            ctx.beginPath();
-                            ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
-                            ctx.fill();
-                        } else {
-                            ctx.fillRect(badgeX, badgeY, badgeWidth, badgeHeight);
-                        }
-
-                        // Price text
-                        ctx.fillStyle = '#051B24';
-                        ctx.fillText(text, badgeX + 5, y);
-
-                        // Delete button circle (✕)
-                        const delCenterX = maxContentX - 15;
-                        const delCenterY = y;
-                        const delRadius = 11;
-
+                    ctx.fillStyle = hexToRgba(lineColor, 0.9);
+                    if (ctx.roundRect) {
                         ctx.beginPath();
-                        ctx.arc(delCenterX, delCenterY, delRadius, 0, Math.PI * 2);
-                        ctx.fillStyle = 'rgba(239, 83, 80, 0.95)';
+                        ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
                         ctx.fill();
-
-                        // Unified Vector Trash Can Icon in white
-                        ctx.save();
-                        ctx.strokeStyle = '#FFFFFF';
-                        ctx.lineWidth = 1.3;
-                        ctx.lineCap = 'round';
-                        ctx.lineJoin = 'round';
-
-                        // Lid handle
-                        ctx.beginPath();
-                        ctx.moveTo(delCenterX - 2, delCenterY - 5);
-                        ctx.lineTo(delCenterX + 2, delCenterY - 5);
-                        ctx.stroke();
-
-                        // Lid rim
-                        ctx.beginPath();
-                        ctx.moveTo(delCenterX - 5, delCenterY - 3.5);
-                        ctx.lineTo(delCenterX + 5, delCenterY - 3.5);
-                        ctx.stroke();
-
-                        // Can body
-                        ctx.beginPath();
-                        ctx.moveTo(delCenterX - 4, delCenterY - 2.5);
-                        ctx.lineTo(delCenterX - 3, delCenterY + 4.5);
-                        ctx.lineTo(delCenterX + 3, delCenterY + 4.5);
-                        ctx.lineTo(delCenterX + 4, delCenterY - 2.5);
-                        ctx.stroke();
-
-                        // 2 inner ribs
-                        ctx.beginPath();
-                        ctx.moveTo(delCenterX - 1.4, delCenterY - 1);
-                        ctx.lineTo(delCenterX - 1.4, delCenterY + 3);
-                        ctx.moveTo(delCenterX + 1.4, delCenterY - 1);
-                        ctx.lineTo(delCenterX + 1.4, delCenterY + 3);
-                        ctx.stroke();
-
-                        ctx.restore();
                     } else {
-                        // NON-EDIT MODE: Clean, subtle price pill without delete button
-                        const badgeX = maxContentX - badgeWidth - 6;
-                        const badgeY = y - (badgeHeight / 2);
+                        ctx.fillRect(badgeX, badgeY, badgeWidth, badgeHeight);
+                    }
 
-                        ctx.fillStyle = 'rgba(0, 229, 255, 0.9)';
-                        if (ctx.roundRect) {
-                            ctx.beginPath();
-                            ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
-                            ctx.fill();
+                    ctx.fillStyle = '#051B24';
+                    ctx.fillText(text, badgeX + 5, y);
+                    ctx.restore();
+
+                    // Render custom text label along the horizontal line if provided
+                    if (typeof h === 'object' && h.text) {
+                        ctx.save();
+                        const fontSize = h.textSize || 14;
+                        const isBold = !!h.textBold;
+                        const isItalic = !!h.textItalic;
+                        ctx.font = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : '500 '}${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+                        ctx.fillStyle = h.textColor || '#FFFFFF';
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+                        ctx.shadowBlur = 4;
+
+                        const halign = h.textHalign || 'center';
+                        let baseX = maxContentX / 2;
+                        if (halign === 'left') {
+                            baseX = 16;
+                            ctx.textAlign = 'left';
+                        } else if (halign === 'right') {
+                            baseX = maxContentX - badgeWidth - 20;
+                            ctx.textAlign = 'right';
                         } else {
-                            ctx.fillRect(badgeX, badgeY, badgeWidth, badgeHeight);
+                            ctx.textAlign = 'center';
                         }
 
-                        ctx.fillStyle = '#051B24';
-                        ctx.fillText(text, badgeX + 5, y);
+                        const valign = h.textValign || 'top';
+                        const lines = String(h.text).split('\n');
+                        const lineHeight = Math.round(fontSize * 1.3);
+                        let startY = y;
+                        if (valign === 'top') {
+                            startY = y - 8 - ((lines.length - 1) * lineHeight);
+                            ctx.textBaseline = 'bottom';
+                        } else if (valign === 'bottom') {
+                            startY = y + 12;
+                            ctx.textBaseline = 'top';
+                        } else {
+                            const totalH = lines.length * lineHeight;
+                            startY = y - (totalH / 2) + (lineHeight / 2);
+                            ctx.textBaseline = 'middle';
+                        }
+
+                        for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+                            ctx.fillText(lines[lineIdx], baseX, startY + (lineIdx * lineHeight));
+                        }
+                        ctx.restore();
+                    }
+
+                    // Midpoint anchor handle when in EDIT MODE (isSelected)
+                    if (isSelected) {
+                        const midX = Math.round(maxContentX / 2);
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(midX, y, 8, 0, Math.PI * 2);
+                        ctx.fillStyle = hexToRgba(lineColor, 0.25);
+                        ctx.fill();
+                        ctx.strokeStyle = lineColor;
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+
+                        ctx.beginPath();
+                        ctx.arc(midX, y, 4, 0, Math.PI * 2);
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fill();
+                        ctx.beginPath();
+                        ctx.arc(midX, y, 2, 0, Math.PI * 2);
+                        ctx.fillStyle = lineColor;
+                        ctx.fill();
+                        ctx.restore();
                     }
                 }
                 ctx.restore();
@@ -5178,9 +5541,13 @@
 
         function setHorizontalLines(linesInput) {
             const lines = typeof linesInput === 'string' ? JSON.parse(linesInput) : linesInput;
-            horizontalLines = Array.isArray(lines) ? lines : [];
+            const rawArr = Array.isArray(lines) ? lines : [];
+            horizontalLines = rawArr.map(normalizeHorizontalLine).filter(Boolean);
             if (selectedHorizontalLineIndex >= horizontalLines.length) {
                 selectedHorizontalLineIndex = -1;
+                hideTrendlineToolbar();
+            } else if (selectedHorizontalLineIndex >= 0) {
+                showHorizontalLineToolbar(selectedHorizontalLineIndex);
             }
             renderFib();
         }

@@ -17,10 +17,10 @@ class TvChartWidget extends StatefulWidget {
   final bool showFibonacci;
   final bool isDrawingFib;
   final VoidCallback? onFibDrawn;
-  final List<double> horizontalLines;
+  final List<dynamic> horizontalLines;
   final bool isDrawingHorizontalLine;
-  final ValueChanged<double>? onHorizontalLineAdded;
-  final ValueChanged<List<double>>? onHorizontalLinesChanged;
+  final ValueChanged<dynamic>? onHorizontalLineAdded;
+  final ValueChanged<List<Map<String, dynamic>>>? onHorizontalLinesChanged;
   final List<Map<String, dynamic>> trendlines;
   final bool isDrawingTrendline;
   final ValueChanged<Map<String, dynamic>>? onTrendlineAdded;
@@ -52,7 +52,7 @@ class TvChartWidget extends StatefulWidget {
     this.showFibonacci = false,
     this.isDrawingFib = false,
     this.onFibDrawn,
-    this.horizontalLines = const <double>[],
+    this.horizontalLines = const <dynamic>[],
     this.isDrawingHorizontalLine = false,
     this.onHorizontalLineAdded,
     this.onHorizontalLinesChanged,
@@ -79,7 +79,7 @@ class TvChartWidget extends StatefulWidget {
 
 class _TvChartWidgetState extends State<TvChartWidget> {
   InAppWebViewController? _ctrl;
-  List<double>? _lastReceivedHorizLines;
+  List<Map<String, dynamic>>? _lastReceivedHorizLines;
   List<Map<String, dynamic>>? _lastReceivedTrendlines;
   List<Map<String, dynamic>>? _lastReceivedRectangles;
 
@@ -89,16 +89,18 @@ class _TvChartWidgetState extends State<TvChartWidget> {
     listenToWebMessages((String type, dynamic payload) {
       if (!mounted) return;
       if (type == 'onHorizontalLineAdded') {
-        if (payload is num) {
-          widget.onHorizontalLineAdded?.call(payload.toDouble());
-        }
+        widget.onHorizontalLineAdded?.call(payload);
       } else if (type == 'onHorizontalLinesChanged') {
         if (payload is List) {
-          final List<double> updated = payload
-              .whereType<num>()
-              .map((num e) => e.toDouble())
+          final List<Map<String, dynamic>> updated = payload
+              .map((dynamic e) {
+                if (e is Map) return Map<String, dynamic>.from(e);
+                if (e is num) return <String, dynamic>{'price': e.toDouble()};
+                return <String, dynamic>{};
+              })
+              .where((Map<String, dynamic> m) => m.isNotEmpty)
               .toList();
-          _lastReceivedHorizLines = List<double>.from(updated);
+          _lastReceivedHorizLines = List<Map<String, dynamic>>.from(updated);
           widget.onHorizontalLinesChanged?.call(updated);
         }
       } else if (type == 'onFibDrawn') {
@@ -461,8 +463,8 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         c.addJavaScriptHandler(
           handlerName: 'onHorizontalLineAdded',
           callback: (List<dynamic> args) {
-            if (args.isNotEmpty && args[0] is num) {
-              widget.onHorizontalLineAdded?.call((args[0] as num).toDouble());
+            if (args.isNotEmpty) {
+              widget.onHorizontalLineAdded?.call(args[0]);
             }
             return null;
           },
@@ -472,10 +474,15 @@ class _TvChartWidgetState extends State<TvChartWidget> {
           callback: (List<dynamic> args) {
             if (args.isNotEmpty && args[0] is List) {
               final List<dynamic> rawList = args[0] as List<dynamic>;
-              final List<double> updated = rawList
-                  .whereType<num>()
-                  .map((num e) => e.toDouble())
+              final List<Map<String, dynamic>> updated = rawList
+                  .map((dynamic e) {
+                    if (e is Map) return Map<String, dynamic>.from(e);
+                    if (e is num) return <String, dynamic>{'price': e.toDouble()};
+                    return <String, dynamic>{};
+                  })
+                  .where((Map<String, dynamic> m) => m.isNotEmpty)
                   .toList();
+              _lastReceivedHorizLines = List<Map<String, dynamic>>.from(updated);
               widget.onHorizontalLinesChanged?.call(updated);
             }
             return null;

@@ -20,7 +20,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
   bool _showVolume = false;
   bool _showFibonacci = false;
   bool _isDrawingFib = false;
-  List<double> _horizontalLines = <double>[];
+  List<Map<String, dynamic>> _horizontalLines = <Map<String, dynamic>>[];
   bool _isDrawingHorizontalLine = false;
   List<Map<String, dynamic>> _trendlines = <Map<String, dynamic>>[];
   bool _isDrawingTrendline = false;
@@ -78,7 +78,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
     setState(() {
       _showFibonacci = false;
       _isDrawingFib = false;
-      _horizontalLines = <double>[];
+      _horizontalLines = <Map<String, dynamic>>[];
       _isDrawingHorizontalLine = false;
       _trendlines = <Map<String, dynamic>>[];
       _isDrawingTrendline = false;
@@ -522,17 +522,17 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                       },
                       horizontalLines: _horizontalLines,
                       isDrawingHorizontalLine: _isDrawingHorizontalLine,
-                      onHorizontalLineAdded: (double price) {
+                      onHorizontalLineAdded: (dynamic item) {
                         if (mounted) {
                           setState(() {
                             _isDrawingHorizontalLine = false;
                           });
                         }
                       },
-                      onHorizontalLinesChanged: (List<double> updated) {
+                      onHorizontalLinesChanged: (List<Map<String, dynamic>> updated) {
                         if (mounted) {
                           setState(() {
-                            _horizontalLines = List<double>.from(updated);
+                            _horizontalLines = List<Map<String, dynamic>>.from(updated);
                             _isDrawingHorizontalLine = false;
                           });
                         }
