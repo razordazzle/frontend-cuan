@@ -1027,6 +1027,19 @@
                 </div>
             </button>
 
+            <!-- Fill Color Button (Paint Bucket) -->
+            <button class="tv-tb-btn" id="tv-btn-fill-color" title="Warna Latar" style="display: none;">
+                <div class="tv-btn-icon-wrapper">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M13.5 8.5L8.5 3.5a1.4 1.4 0 0 0-2 0L2.8 7.2a1.4 1.4 0 0 0 0 2l5 5a1.4 1.4 0 0 0 2 0l3.7-3.7a1.4 1.4 0 0 0 0-2z" />
+                        <path d="M5.5 4.5l-2-2" />
+                        <path d="M2 16h14" stroke-width="1.2" stroke-dasharray="2 1.5" />
+                        <path d="M15 13c0 .8-.7 1.5-1.5 1.5S12 13.8 12 13c0-.8 1.5-2.2 1.5-2.2S15 12.2 15 13z" fill="currentColor" stroke="none" />
+                    </svg>
+                    <div id="tv-indicator-fill-color" class="tv-color-underline" style="background-color: rgba(171, 71, 188, 0.2);"></div>
+                </div>
+            </button>
+
             <!-- Text Color Button ('T') -->
             <button class="tv-tb-btn" id="tv-btn-text-color" title="Warna Teks">
                 <div class="tv-btn-icon-wrapper">
@@ -1658,6 +1671,32 @@
             return null;
         }
 
+        function normalizeRectangle(item) {
+            if (typeof item === 'object' && item !== null) {
+                return {
+                    id: item.id || ('rect_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)),
+                    p1: item.p1,
+                    p2: item.p2,
+                    color: item.color || '#AB47BC',
+                    width: item.width || 2,
+                    style: item.style || 'solid',
+                    fillColor: item.fillColor || '#AB47BC',
+                    fillOpacity: item.fillOpacity !== undefined ? item.fillOpacity : 0.2,
+                    text: item.text || '',
+                    textColor: item.textColor || '#FFFFFF',
+                    textSize: item.textSize || 14,
+                    textBold: !!item.textBold,
+                    textItalic: !!item.textItalic,
+                    textValign: item.textValign || 'middle',
+                    textHalign: item.textHalign || 'center',
+                    lockAspect: !!item.lockAspect,
+                    isLocked: !!item.isLocked,
+                    hidden: !!item.hidden
+                };
+            }
+            return null;
+        }
+
         function showHorizontalLineToolbar(index) {
             if (index < 0 || index >= horizontalLines.length) {
                 hideTrendlineToolbar();
@@ -1679,6 +1718,9 @@
 
             const lineInd = document.getElementById('tv-indicator-line-color');
             if (lineInd) lineInd.style.backgroundColor = lineColor;
+
+            const fillBtn = document.getElementById('tv-btn-fill-color');
+            if (fillBtn) fillBtn.style.display = 'none';
 
             const textInd = document.getElementById('tv-indicator-text-color');
             if (textInd) textInd.style.backgroundColor = textColor;
@@ -1730,6 +1772,9 @@
             const lineInd = document.getElementById('tv-indicator-line-color');
             if (lineInd) lineInd.style.backgroundColor = lineColor;
 
+            const fillBtn = document.getElementById('tv-btn-fill-color');
+            if (fillBtn) fillBtn.style.display = 'none';
+
             const textInd = document.getElementById('tv-indicator-text-color');
             if (textInd) textInd.style.backgroundColor = textColor;
 
@@ -1750,10 +1795,71 @@
             const btnAngle = document.getElementById('tv-btn-angle');
             if (btnAngle) {
                 btnAngle.style.display = 'flex';
+                btnAngle.title = 'Sudut';
                 btnAngle.classList.toggle('active', !!t.lockAngle);
             }
 
             updateLockSheetUI(!!t.isLocked);
+
+            toolbar.style.display = 'flex';
+        }
+
+        function showRectangleToolbar(index) {
+            if (index < 0 || index >= rectangles.length) {
+                hideTrendlineToolbar();
+                return;
+            }
+            selectedRectangleIndex = index;
+            selectedTrendlineIndex = -1;
+            selectedHorizontalLineIndex = -1;
+            isFibSelected = false;
+
+            const r = rectangles[index];
+            const toolbar = document.getElementById('tv-trendline-toolbar');
+            if (!toolbar) return;
+
+            const lineColor = r.color || '#AB47BC';
+            const fillColor = r.fillColor || '#AB47BC';
+            const fillOpacity = (r.fillOpacity !== undefined) ? r.fillOpacity : 0.2;
+            const textColor = r.textColor || '#FFFFFF';
+            const width = r.width || 2;
+            const style = r.style || 'solid';
+
+            const lineInd = document.getElementById('tv-indicator-line-color');
+            if (lineInd) lineInd.style.backgroundColor = lineColor;
+
+            const fillBtn = document.getElementById('tv-btn-fill-color');
+            if (fillBtn) fillBtn.style.display = 'flex';
+
+            const fillInd = document.getElementById('tv-indicator-fill-color');
+            if (fillInd) fillInd.style.backgroundColor = hexToRgba(fillColor, fillOpacity);
+
+            const textInd = document.getElementById('tv-indicator-text-color');
+            if (textInd) textInd.style.backgroundColor = textColor;
+
+            const widthLabel = document.getElementById('tv-label-width');
+            if (widthLabel) widthLabel.textContent = width + 'px';
+
+            const styleInd = document.getElementById('tv-indicator-line-style');
+            if (styleInd) {
+                if (style === 'dashed') {
+                    styleInd.innerHTML = '<span class="tv-style-line-dashed"></span>';
+                } else if (style === 'dotted') {
+                    styleInd.innerHTML = '<span class="tv-style-line-dotted"></span>';
+                } else {
+                    styleInd.innerHTML = '<span class="tv-style-line-solid"></span>';
+                }
+            }
+
+            // Busur / Angle button on rectangle functions as Proportional Aspect Ratio Lock!
+            const btnAngle = document.getElementById('tv-btn-angle');
+            if (btnAngle) {
+                btnAngle.style.display = 'flex';
+                btnAngle.title = 'Kunci Rasio Panjang & Lebar';
+                btnAngle.classList.toggle('active', !!r.lockAspect);
+            }
+
+            updateLockSheetUI(!!r.isLocked);
 
             toolbar.style.display = 'flex';
         }
@@ -1789,7 +1895,7 @@
             }
             if (popWidth) popWidth.style.display = 'none';
             if (popStyle) popStyle.style.display = 'none';
-            ['tv-btn-line-color', 'tv-btn-text-color', 'tv-btn-width', 'tv-btn-style', 'tv-btn-more'].forEach(id => {
+            ['tv-btn-line-color', 'tv-btn-fill-color', 'tv-btn-text-color', 'tv-btn-width', 'tv-btn-style', 'tv-btn-more'].forEach(id => {
                 const btn = document.getElementById(id);
                 if (btn) btn.classList.remove('active');
             });
@@ -1797,10 +1903,13 @@
 
         function getActiveDrawing() {
             if (selectedHorizontalLineIndex >= 0 && selectedHorizontalLineIndex < horizontalLines.length) {
-                return { drawing: horizontalLines[selectedHorizontalLineIndex], isHLine: true, index: selectedHorizontalLineIndex };
+                return { drawing: horizontalLines[selectedHorizontalLineIndex], isHLine: true, isRect: false, index: selectedHorizontalLineIndex, type: 'horizontalLine' };
             }
             if (selectedTrendlineIndex >= 0 && selectedTrendlineIndex < trendlines.length) {
-                return { drawing: trendlines[selectedTrendlineIndex], isHLine: false, index: selectedTrendlineIndex };
+                return { drawing: trendlines[selectedTrendlineIndex], isHLine: false, isRect: false, index: selectedTrendlineIndex, type: 'trendline' };
+            }
+            if (selectedRectangleIndex >= 0 && selectedRectangleIndex < rectangles.length) {
+                return { drawing: rectangles[selectedRectangleIndex], isHLine: false, isRect: true, index: selectedRectangleIndex, type: 'rectangle' };
             }
             return null;
         }
@@ -1811,6 +1920,8 @@
                 isLocked = !!horizontalLines[selectedHorizontalLineIndex].isLocked;
             } else if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
                 isLocked = !!trendlines[selectedTrendlineIndex].isLocked;
+            } else if (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]) {
+                isLocked = !!rectangles[selectedRectangleIndex].isLocked;
             } else {
                 return;
             }
@@ -2014,6 +2125,9 @@
             } else if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
                 drawing = trendlines[selectedTrendlineIndex];
                 drawingTitle = 'Trendline';
+            } else if (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]) {
+                drawing = rectangles[selectedRectangleIndex];
+                drawingTitle = 'Rectangle';
             } else {
                 return;
             }
@@ -2043,12 +2157,11 @@
             if (btnBold) btnBold.classList.toggle('active', !!drawing.textBold);
 
             const btnItalic = document.getElementById('tv-text-btn-italic');
-            if (btnItalic) btnItalic.classList.toggle('active', !!drawing.textItalic);
-
             const textInput = document.getElementById('tv-text-content-input');
             if (textInput) textInput.value = drawing.text || '';
 
-            updateValignDropdownSelection(drawing.textValign || 'top');
+            const isRect = (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]);
+            updateValignDropdownSelection(drawing.textValign || (isRect ? 'middle' : 'top'));
             updateHalignDropdownSelection(drawing.textHalign || 'center');
 
             backdrop.style.display = 'block';
@@ -2080,12 +2193,16 @@
         function saveTrendlineSettings() {
             let drawing = null;
             let isHLine = false;
+            let isRect = false;
             if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
                 drawing = horizontalLines[selectedHorizontalLineIndex];
                 isHLine = true;
             } else if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
                 drawing = trendlines[selectedTrendlineIndex];
                 isHLine = false;
+            } else if (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]) {
+                drawing = rectangles[selectedRectangleIndex];
+                isRect = true;
             } else {
                 return;
             }
@@ -2102,7 +2219,7 @@
             drawing.textSize = sizeVal ? (parseInt(sizeVal.textContent, 10) || 14) : 14;
             drawing.textBold = btnBold ? btnBold.classList.contains('active') : false;
             drawing.textItalic = btnItalic ? btnItalic.classList.contains('active') : false;
-            drawing.textValign = valignSelect ? valignSelect.value : 'top';
+            drawing.textValign = valignSelect ? valignSelect.value : (isRect ? 'middle' : 'top');
             drawing.textHalign = halignSelect ? halignSelect.value : 'center';
 
             const textInd = document.getElementById('tv-indicator-text-color');
@@ -2112,6 +2229,8 @@
             renderFib();
             if (isHLine) {
                 notifyHorizontalLinesChanged();
+            } else if (isRect) {
+                notifyRectanglesChanged();
             } else {
                 notifyTrendlinesChanged();
             }
@@ -2336,18 +2455,49 @@
             // 3. Rectangles
             if (rectangles && rectangles.length > 0) {
                 rectangles.forEach((rect, rIdx) => {
+                    const isSelected = (selectedRectangleIndex === rIdx);
+                    const isHidden = !!rect.hidden;
+                    const isLocked = !!rect.isLocked;
+                    const labelText = rect.text ? `Rectangle ("${rect.text}")` : 'Rectangle';
+
                     const row = document.createElement('div');
-                    row.className = 'tv-tree-item';
+                    row.className = 'tv-tree-item' + (isSelected ? ' selected' : '') + (isHidden ? ' hidden-item' : '');
                     row.innerHTML = `
                         <div class="tv-tree-item-left">
-                            <div class="tv-tree-item-icon" style="color: ${rect.color || '#2962FF'};">
+                            <div class="tv-tree-item-icon" style="color: ${rect.color || '#AB47BC'};">
                                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
                                     <rect x="2.5" y="4.5" width="13" height="9" rx="1.5" />
                                 </svg>
                             </div>
-                            <span class="tv-tree-item-label">Rectangle</span>
+                            <span class="tv-tree-item-label">${labelText}</span>
                         </div>
                         <div class="tv-tree-item-actions">
+                            <button class="tv-tree-action-btn tv-tree-btn-lock ${isLocked ? 'active-action' : ''}" title="${isLocked ? 'Unlock' : 'Lock'}">
+                                ${isLocked ? `
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                        <rect x="4" y="9" width="12" height="8" rx="2" />
+                                        <path d="M7 9V6a3 3 0 0 1 6 0v3" />
+                                    </svg>
+                                ` : `
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                        <rect x="4" y="9" width="12" height="8" rx="2" />
+                                        <path d="M7 9V6a3 3 0 0 1 6 0" />
+                                    </svg>
+                                `}
+                            </button>
+                            <button class="tv-tree-action-btn tv-tree-btn-eye ${isHidden ? 'active-action' : ''}" title="${isHidden ? 'Show / Unhide' : 'Hide'}">
+                                ${isHidden ? `
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                        <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5-7.5-5.5z" />
+                                        <path d="M3 3l14 14" />
+                                    </svg>
+                                ` : `
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                        <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5-7.5-5.5z" />
+                                        <circle cx="10" cy="10" r="2.5" />
+                                    </svg>
+                                `}
+                            </button>
                             <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
                                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
                                     <path d="M3.5 5.5h13" />
@@ -2358,12 +2508,70 @@
                         </div>
                     `;
 
+                    row.onclick = (e) => {
+                        e.stopPropagation();
+                        selectedRectangleIndex = rIdx;
+                        selectedHorizontalLineIndex = -1;
+                        selectedTrendlineIndex = -1;
+                        isFibSelected = false;
+                        if (!rect.hidden) {
+                            showRectangleToolbar(rIdx);
+                        } else {
+                            hideTrendlineToolbar();
+                        }
+                        renderFib();
+                        refreshObjectTree();
+                    };
+
+                    const btnLock = row.querySelector('.tv-tree-btn-lock');
+                    if (btnLock) {
+                        btnLock.onclick = (e) => {
+                            e.stopPropagation();
+                            rect.isLocked = !rect.isLocked;
+                            if (selectedRectangleIndex === rIdx) {
+                                updateLockSheetUI(rect.isLocked);
+                            }
+                            renderFib();
+                            notifyRectanglesChanged();
+                            refreshObjectTree();
+                        };
+                    }
+
+                    const btnEye = row.querySelector('.tv-tree-btn-eye');
+                    if (btnEye) {
+                        btnEye.onclick = (e) => {
+                            e.stopPropagation();
+                            rect.hidden = !rect.hidden;
+                            if (rect.hidden) {
+                                if (selectedRectangleIndex === rIdx) {
+                                    selectedRectangleIndex = -1;
+                                    hideTrendlineToolbar();
+                                }
+                            } else {
+                                selectedRectangleIndex = rIdx;
+                                selectedHorizontalLineIndex = -1;
+                                selectedTrendlineIndex = -1;
+                                showRectangleToolbar(rIdx);
+                            }
+                            renderFib();
+                            notifyRectanglesChanged();
+                            refreshObjectTree();
+                        };
+                    }
+
                     const btnDel = row.querySelector('.tv-tree-btn-delete');
                     if (btnDel) {
                         btnDel.onclick = (e) => {
                             e.stopPropagation();
                             rectangles.splice(rIdx, 1);
+                            if (selectedRectangleIndex === rIdx) {
+                                selectedRectangleIndex = -1;
+                                hideTrendlineToolbar();
+                            } else if (selectedRectangleIndex > rIdx) {
+                                selectedRectangleIndex--;
+                            }
                             renderFib();
+                            notifyRectanglesChanged();
                             refreshObjectTree();
                         };
                     }
@@ -2379,9 +2587,7 @@
                     const isHidden = !!hLine.hidden;
                     const isLocked = !!hLine.isLocked;
                     const priceVal = typeof hLine === 'object' ? hLine.price : hLine;
-                    const priceFormatted = (typeof priceVal === 'number')
-                        ? (priceVal >= 1000 ? Math.round(priceVal).toLocaleString('en-US') : priceVal.toFixed(2))
-                        : priceVal;
+                    const priceFormatted = formatHorizontalLinePrice(priceVal);
                     const labelText = hLine.text ? `Horizontal ray ("${hLine.text}")` : `Horizontal ray (${priceFormatted})`;
 
                     const row = document.createElement('div');
@@ -2543,12 +2749,16 @@
         function applySelectedColor(colorHex, opacityVal) {
             let drawing = null;
             let isHLine = false;
+            let isRect = false;
             if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
                 drawing = horizontalLines[selectedHorizontalLineIndex];
                 isHLine = true;
             } else if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
                 drawing = trendlines[selectedTrendlineIndex];
                 isHLine = false;
+            } else if (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]) {
+                drawing = rectangles[selectedRectangleIndex];
+                isRect = true;
             } else {
                 return;
             }
@@ -2558,7 +2768,17 @@
                 if (opacityVal !== undefined) drawing.opacity = opacityVal;
                 const lineInd = document.getElementById('tv-indicator-line-color');
                 if (lineInd && drawing.color) lineInd.style.backgroundColor = drawing.color;
-                updateSliderGradient(drawing.color || (isHLine ? '#00E5FF' : '#7C4DFF'));
+                updateSliderGradient(drawing.color || (isHLine ? '#00E5FF' : (isRect ? '#AB47BC' : '#7C4DFF')));
+            } else if (activeColorPickerTarget === 'fill') {
+                if (colorHex) drawing.fillColor = colorHex;
+                if (opacityVal !== undefined) drawing.fillOpacity = opacityVal;
+                const fillInd = document.getElementById('tv-indicator-fill-color');
+                if (fillInd) {
+                    const curFill = drawing.fillColor || '#AB47BC';
+                    const curOp = drawing.fillOpacity !== undefined ? drawing.fillOpacity : 0.2;
+                    fillInd.style.backgroundColor = hexToRgba(curFill, curOp);
+                }
+                updateSliderGradient(drawing.fillColor || '#AB47BC');
             } else if (activeColorPickerTarget === 'text') {
                 if (colorHex) {
                     drawing.textColor = colorHex;
@@ -2571,7 +2791,14 @@
             }
 
             // Update swatch selection highlight
-            const activeColor = (activeColorPickerTarget === 'line') ? (drawing.color || (isHLine ? '#00E5FF' : '#7C4DFF')) : (drawing.textColor || '#FFFFFF');
+            let activeColor = '#FFFFFF';
+            if (activeColorPickerTarget === 'line') {
+                activeColor = drawing.color || (isHLine ? '#00E5FF' : (isRect ? '#AB47BC' : '#7C4DFF'));
+            } else if (activeColorPickerTarget === 'fill') {
+                activeColor = drawing.fillColor || '#AB47BC';
+            } else {
+                activeColor = drawing.textColor || '#FFFFFF';
+            }
             document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
                 sw.classList.toggle('selected', sw.getAttribute('data-color')?.toUpperCase() === activeColor.toUpperCase());
             });
@@ -2579,6 +2806,8 @@
             renderFib();
             if (isHLine) {
                 notifyHorizontalLinesChanged();
+            } else if (isRect) {
+                notifyRectanglesChanged();
             } else {
                 notifyTrendlinesChanged();
             }
@@ -2587,12 +2816,16 @@
         function applySelectedWidth(w) {
             let drawing = null;
             let isHLine = false;
+            let isRect = false;
             if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
                 drawing = horizontalLines[selectedHorizontalLineIndex];
                 isHLine = true;
             } else if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
                 drawing = trendlines[selectedTrendlineIndex];
                 isHLine = false;
+            } else if (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]) {
+                drawing = rectangles[selectedRectangleIndex];
+                isRect = true;
             } else {
                 return;
             }
@@ -2609,6 +2842,8 @@
             renderFib();
             if (isHLine) {
                 notifyHorizontalLinesChanged();
+            } else if (isRect) {
+                notifyRectanglesChanged();
             } else {
                 notifyTrendlinesChanged();
             }
@@ -2617,12 +2852,16 @@
         function applySelectedStyle(s) {
             let drawing = null;
             let isHLine = false;
+            let isRect = false;
             if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
                 drawing = horizontalLines[selectedHorizontalLineIndex];
                 isHLine = true;
             } else if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
                 drawing = trendlines[selectedTrendlineIndex];
                 isHLine = false;
+            } else if (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]) {
+                drawing = rectangles[selectedRectangleIndex];
+                isRect = true;
             } else {
                 return;
             }
@@ -2647,6 +2886,8 @@
             renderFib();
             if (isHLine) {
                 notifyHorizontalLinesChanged();
+            } else if (isRect) {
+                notifyRectanglesChanged();
             } else {
                 notifyTrendlinesChanged();
             }
@@ -2670,6 +2911,16 @@
                 renderFib();
                 notifyTrendlinesChanged();
                 refreshObjectTree();
+                return;
+            }
+            if (selectedRectangleIndex >= 0 && selectedRectangleIndex < rectangles.length) {
+                rectangles.splice(selectedRectangleIndex, 1);
+                selectedRectangleIndex = -1;
+                hideTrendlineToolbar();
+                renderFib();
+                notifyRectanglesChanged();
+                refreshObjectTree();
+                return;
             }
         }
 
@@ -2711,9 +2962,11 @@
                 horizontalLines.push(cloned);
                 selectedHorizontalLineIndex = horizontalLines.length - 1;
                 selectedTrendlineIndex = -1;
+                selectedRectangleIndex = -1;
                 showHorizontalLineToolbar(selectedHorizontalLineIndex);
                 renderFib();
                 notifyHorizontalLinesChanged();
+                refreshObjectTree();
                 return;
             }
             if (selectedTrendlineIndex >= 0 && selectedTrendlineIndex < trendlines.length) {
@@ -2756,9 +3009,58 @@
                 trendlines.push(cloned);
                 selectedTrendlineIndex = trendlines.length - 1;
                 selectedHorizontalLineIndex = -1;
+                selectedRectangleIndex = -1;
                 showTrendlineToolbar(selectedTrendlineIndex);
                 renderFib();
                 notifyTrendlinesChanged();
+                refreshObjectTree();
+                return;
+            }
+            if (selectedRectangleIndex >= 0 && selectedRectangleIndex < rectangles.length) {
+                const src = rectangles[selectedRectangleIndex];
+                const activeSeries = candleSeries || areaSeries;
+                let priceOffset = 0;
+                if (activeSeries && chart) {
+                    const y1 = activeSeries.priceToCoordinate(src.p1.price);
+                    if (y1 !== null) {
+                        const targetY = y1 + 24;
+                        const targetPrice = activeSeries.coordinateToPrice(targetY);
+                        if (targetPrice !== null && !isNaN(targetPrice)) {
+                            priceOffset = targetPrice - src.p1.price;
+                        }
+                    }
+                }
+                if (!priceOffset) {
+                    priceOffset = -(src.p1.price || 100) * 0.005;
+                }
+                const cloned = {
+                    id: 'rect_' + Date.now(),
+                    p1: { time: src.p1.time, price: src.p1.price + priceOffset },
+                    p2: { time: src.p2.time, price: src.p2.price + priceOffset },
+                    color: src.color || '#AB47BC',
+                    width: src.width || 2,
+                    style: src.style || 'solid',
+                    fillColor: src.fillColor || '#AB47BC',
+                    fillOpacity: (src.fillOpacity !== undefined) ? src.fillOpacity : 0.2,
+                    text: src.text || '',
+                    textColor: src.textColor || '#FFFFFF',
+                    textSize: src.textSize || 14,
+                    textBold: !!src.textBold,
+                    textItalic: !!src.textItalic,
+                    textValign: src.textValign || 'middle',
+                    textHalign: src.textHalign || 'center',
+                    lockAspect: !!src.lockAspect,
+                    isLocked: !!src.isLocked,
+                    hidden: false
+                };
+                rectangles.push(cloned);
+                selectedRectangleIndex = rectangles.length - 1;
+                selectedHorizontalLineIndex = -1;
+                selectedTrendlineIndex = -1;
+                showRectangleToolbar(selectedRectangleIndex);
+                renderFib();
+                notifyRectanglesChanged();
+                refreshObjectTree();
             }
         }
 
@@ -2910,6 +3212,35 @@
                 };
             }
 
+            const btnFillColor = document.getElementById('tv-btn-fill-color');
+            if (btnFillColor && popColor) {
+                btnFillColor.onclick = (e) => {
+                    e.stopPropagation();
+                    if (popColor.style.display === 'block' && activeColorPickerTarget === 'fill') {
+                        hideAllPopovers();
+                        return;
+                    }
+                    hideAllPopovers();
+                    activeColorPickerTarget = 'fill';
+                    btnFillColor.classList.add('active');
+
+                    const active = getActiveDrawing();
+                    if (active) {
+                        const d = active.drawing;
+                        const curColor = d.fillColor || '#AB47BC';
+                        const curOp = (d.fillOpacity !== undefined) ? Math.round(d.fillOpacity * 100) : 20;
+                        if (opSlider) opSlider.value = curOp;
+                        if (opVal) opVal.textContent = curOp + '%';
+                        updateSliderGradient(curColor);
+
+                        document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
+                            sw.classList.toggle('selected', sw.getAttribute('data-color')?.toUpperCase() === curColor.toUpperCase());
+                        });
+                    }
+                    positionPopover(popColor, btnFillColor);
+                };
+            }
+
             const btnTextColor = document.getElementById('tv-btn-text-color');
             if (btnTextColor && popColor) {
                 btnTextColor.onclick = (e) => {
@@ -2987,6 +3318,14 @@
                 btnAngle.onclick = (e) => {
                     e.stopPropagation();
                     e.preventDefault();
+                    if (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]) {
+                        const r = rectangles[selectedRectangleIndex];
+                        r.lockAspect = !r.lockAspect;
+                        btnAngle.classList.toggle('active', !!r.lockAspect);
+                        renderFib();
+                        notifyRectanglesChanged();
+                        return;
+                    }
                     if (selectedTrendlineIndex >= 0 && trendlines[selectedTrendlineIndex]) {
                         const t = trendlines[selectedTrendlineIndex];
                         t.lockAngle = !t.lockAngle;
@@ -3086,6 +3425,8 @@
                         renderFib();
                         if (active.isHLine) {
                             notifyHorizontalLinesChanged();
+                        } else if (active.isRect) {
+                            notifyRectanglesChanged();
                         } else {
                             notifyTrendlinesChanged();
                         }
@@ -3103,11 +3444,14 @@
                         active.drawing.hidden = true;
                         selectedHorizontalLineIndex = -1;
                         selectedTrendlineIndex = -1;
+                        selectedRectangleIndex = -1;
                         hideTrendlineToolbar();
                         closeMoreBottomSheet();
                         renderFib();
                         if (active.isHLine) {
                             notifyHorizontalLinesChanged();
+                        } else if (active.isRect) {
+                            notifyRectanglesChanged();
                         } else {
                             notifyTrendlinesChanged();
                         }
@@ -3370,7 +3714,7 @@
 
                     // Reposition open popover
                     if (popColor && popColor.style.display === 'block') {
-                        positionPopover(popColor, activeColorPickerTarget === 'text' ? btnTextColor : btnLineColor);
+                        positionPopover(popColor, activeColorPickerTarget === 'text' ? btnTextColor : (activeColorPickerTarget === 'fill' ? btnFillColor : btnLineColor));
                     } else if (popWidth && popWidth.style.display === 'block') {
                         positionPopover(popWidth, btnWidth);
                     } else if (popStyle && popStyle.style.display === 'block') {
@@ -3494,12 +3838,6 @@
                             const bottom = Math.max(y1, y2);
 
                             if (i === selectedRectangleIndex) {
-                                const pillPos = getRectangleActionPillPos(left, top, right, bottom, maxContentX, rect.height);
-                                if (Math.hypot(x - pillPos.x, y - pillPos.y) <= HITBOX_RECT_DEL) {
-                                    canvas.style.pointerEvents = 'auto';
-                                    canvas.style.cursor = 'pointer';
-                                    return;
-                                }
                                 if (Math.hypot(x - x1, y - y1) <= HITBOX_RECT_CORNER ||
                                     Math.hypot(x - x2, y - y2) <= HITBOX_RECT_CORNER ||
                                     Math.hypot(x - x1, y - y2) <= HITBOX_RECT_CORNER ||
@@ -3746,10 +4084,11 @@
                         }
                     }
 
-                    // 4. RECTANGLE HIT TEST (Body, corner handles, and action pill delete button)
+                    // 4. RECTANGLE HIT TEST (Body and corner handles)
                     if (rectangles && rectangles.length > 0) {
                         for (let i = 0; i < rectangles.length; i++) {
                             const r = rectangles[i];
+                            if (r.hidden) continue;
                             const x1 = chart.timeScale().timeToCoordinate(r.p1.time);
                             const y1 = activeSeries.priceToCoordinate(r.p1.price);
                             const x2 = chart.timeScale().timeToCoordinate(r.p2.time);
@@ -3760,29 +4099,31 @@
                                 const top = Math.min(y1, y2);
                                 const bottom = Math.max(y1, y2);
 
-                                if (i === selectedRectangleIndex) {
-                                    const pillPos = getRectangleActionPillPos(left, top, right, bottom, maxContentX, chartContainer.clientHeight);
-                                    if (Math.hypot(x - pillPos.x, y - pillPos.y) <= HITBOX_RECT_DEL) {
-                                        e.stopPropagation();
-                                        e.stopImmediatePropagation();
-                                        e.preventDefault();
-                                        rectangles.splice(i, 1);
-                                        selectedRectangleIndex = -1;
-                                        renderFib();
-                                        notifyRectanglesChanged();
-                                        return;
-                                    }
+                                const startPosData = {
+                                    x, y,
+                                    origP1: { time: r.p1.time, price: r.p1.price },
+                                    origP2: { time: r.p2.time, price: r.p2.price },
+                                    origX1: x1,
+                                    origY1: y1,
+                                    origX2: x2,
+                                    origY2: y2
+                                };
 
+                                if (i === selectedRectangleIndex) {
                                     // Corner 1 grab (p1)
                                     if (Math.hypot(x - x1, y - y1) <= HITBOX_RECT_CORNER) {
                                         e.stopPropagation();
                                         e.stopImmediatePropagation();
                                         e.preventDefault();
-                                        dragRectangleIndex = i;
-                                        dragRectanglePart = 1;
-                                        isPointerDown = true;
-                                        try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
-                                        chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        if (!r.isLocked) {
+                                            dragRectangleIndex = i;
+                                            dragRectanglePart = 1;
+                                            dragRectangleStartPos = startPosData;
+                                            isPointerDown = true;
+                                            try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                            chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        }
+                                        showRectangleToolbar(i);
                                         renderFib();
                                         return;
                                     }
@@ -3792,11 +4133,15 @@
                                         e.stopPropagation();
                                         e.stopImmediatePropagation();
                                         e.preventDefault();
-                                        dragRectangleIndex = i;
-                                        dragRectanglePart = 2;
-                                        isPointerDown = true;
-                                        try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
-                                        chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        if (!r.isLocked) {
+                                            dragRectangleIndex = i;
+                                            dragRectanglePart = 2;
+                                            dragRectangleStartPos = startPosData;
+                                            isPointerDown = true;
+                                            try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                            chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        }
+                                        showRectangleToolbar(i);
                                         renderFib();
                                         return;
                                     }
@@ -3806,11 +4151,15 @@
                                         e.stopPropagation();
                                         e.stopImmediatePropagation();
                                         e.preventDefault();
-                                        dragRectangleIndex = i;
-                                        dragRectanglePart = 4;
-                                        isPointerDown = true;
-                                        try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
-                                        chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        if (!r.isLocked) {
+                                            dragRectangleIndex = i;
+                                            dragRectanglePart = 4;
+                                            dragRectangleStartPos = startPosData;
+                                            isPointerDown = true;
+                                            try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                            chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        }
+                                        showRectangleToolbar(i);
                                         renderFib();
                                         return;
                                     }
@@ -3820,11 +4169,15 @@
                                         e.stopPropagation();
                                         e.stopImmediatePropagation();
                                         e.preventDefault();
-                                        dragRectangleIndex = i;
-                                        dragRectanglePart = 5;
-                                        isPointerDown = true;
-                                        try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
-                                        chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        if (!r.isLocked) {
+                                            dragRectangleIndex = i;
+                                            dragRectanglePart = 5;
+                                            dragRectangleStartPos = startPosData;
+                                            isPointerDown = true;
+                                            try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                            chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        }
+                                        showRectangleToolbar(i);
                                         renderFib();
                                         return;
                                     }
@@ -3834,16 +4187,15 @@
                                         e.stopPropagation();
                                         e.stopImmediatePropagation();
                                         e.preventDefault();
-                                        dragRectangleIndex = i;
-                                        dragRectanglePart = 3;
-                                        dragRectangleStartPos = {
-                                            x, y,
-                                            origP1: { time: r.p1.time, price: r.p1.price },
-                                            origP2: { time: r.p2.time, price: r.p2.price }
-                                        };
-                                        isPointerDown = true;
-                                        try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
-                                        chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        if (!r.isLocked) {
+                                            dragRectangleIndex = i;
+                                            dragRectanglePart = 3;
+                                            dragRectangleStartPos = startPosData;
+                                            isPointerDown = true;
+                                            try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                            chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        }
+                                        showRectangleToolbar(i);
                                         renderFib();
                                         return;
                                     }
@@ -3855,9 +4207,17 @@
                                         e.preventDefault();
                                         selectedRectangleIndex = i;
                                         selectedTrendlineIndex = -1;
-                                        hideTrendlineToolbar();
                                         selectedHorizontalLineIndex = -1;
                                         isFibSelected = false;
+                                        if (!r.isLocked) {
+                                            dragRectangleIndex = i;
+                                            dragRectanglePart = 3;
+                                            dragRectangleStartPos = startPosData;
+                                            isPointerDown = true;
+                                            try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                            chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        }
+                                        showRectangleToolbar(i);
                                         renderFib();
                                         return;
                                     }
@@ -4064,7 +4424,22 @@
                                 const newRect = {
                                     id: 'rect_' + Date.now(),
                                     p1: tempRectangleP1,
-                                    p2: { time, price }
+                                    p2: { time, price },
+                                    color: '#AB47BC',
+                                    width: 2,
+                                    style: 'solid',
+                                    fillColor: '#AB47BC',
+                                    fillOpacity: 0.2,
+                                    text: '',
+                                    textColor: '#FFFFFF',
+                                    textSize: 14,
+                                    textBold: false,
+                                    textItalic: false,
+                                    textValign: 'middle',
+                                    textHalign: 'center',
+                                    lockAspect: false,
+                                    isLocked: false,
+                                    hidden: false
                                 };
                                 rectangles.push(newRect);
                                 selectedRectangleIndex = rectangles.length - 1; // Enter edit mode upon placement
@@ -4081,6 +4456,7 @@
                                 if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
                                 canvas.style.cursor = 'default';
                                 canvas.style.pointerEvents = 'none';
+                                showRectangleToolbar(selectedRectangleIndex);
                                 renderFib();
                                 notifyRectanglesChanged();
                                 if (window.flutter_inappwebview?.callHandler) {
@@ -4094,10 +4470,11 @@
                     return;
                 }
 
-                // 0.26 Check if clicking on an existing Rectangle (action pill delete button, corner anchors, or body)
+                // 0.26 Check if clicking on an existing Rectangle (corner anchors or body)
                 if (rectangles && rectangles.length > 0 && activeSeries && chart) {
                     for (let i = 0; i < rectangles.length; i++) {
                         const r = rectangles[i];
+                        if (r.hidden) continue;
                         const x1 = chart.timeScale().timeToCoordinate(r.p1.time);
                         const y1 = activeSeries.priceToCoordinate(r.p1.price);
                         const x2 = chart.timeScale().timeToCoordinate(r.p2.time);
@@ -4108,71 +4485,90 @@
                             const top = Math.min(y1, y2);
                             const bottom = Math.max(y1, y2);
 
+                            const startPosData = {
+                                x, y,
+                                origP1: { time: r.p1.time, price: r.p1.price },
+                                origP2: { time: r.p2.time, price: r.p2.price },
+                                origX1: x1,
+                                origY1: y1,
+                                origX2: x2,
+                                origY2: y2
+                            };
+
                             if (i === selectedRectangleIndex) {
-                                // Floating context action pill tap
-                                const pillPos = getRectangleActionPillPos(left, top, right, bottom, maxContentX, chartContainer.clientHeight);
-                                if (Math.hypot(x - pillPos.x, y - pillPos.y) <= HITBOX_RECT_DEL) {
-                                    rectangles.splice(i, 1);
-                                    selectedRectangleIndex = -1;
-                                    canvas.style.cursor = 'default';
-                                    canvas.style.pointerEvents = 'none';
-                                    renderFib();
-                                    notifyRectanglesChanged();
-                                    return;
-                                }
                                 // Corner 1 grab (p1)
                                 if (Math.hypot(x - x1, y - y1) <= HITBOX_RECT_CORNER) {
-                                    dragRectangleIndex = i;
-                                    dragRectanglePart = 1;
-                                    isPointerDown = true;
-                                    canvas.setPointerCapture?.(e.pointerId);
-                                    if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
-                                    canvas.style.cursor = 'crosshair';
+                                    if (!r.isLocked) {
+                                        dragRectangleIndex = i;
+                                        dragRectanglePart = 1;
+                                        dragRectangleStartPos = startPosData;
+                                        isPointerDown = true;
+                                        canvas.setPointerCapture?.(e.pointerId);
+                                        if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        canvas.style.cursor = 'crosshair';
+                                    }
+                                    showRectangleToolbar(i);
+                                    renderFib();
                                     return;
                                 }
                                 // Corner 2 grab (p2)
                                 if (Math.hypot(x - x2, y - y2) <= HITBOX_RECT_CORNER) {
-                                    dragRectangleIndex = i;
-                                    dragRectanglePart = 2;
-                                    isPointerDown = true;
-                                    canvas.setPointerCapture?.(e.pointerId);
-                                    if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
-                                    canvas.style.cursor = 'crosshair';
+                                    if (!r.isLocked) {
+                                        dragRectangleIndex = i;
+                                        dragRectanglePart = 2;
+                                        dragRectangleStartPos = startPosData;
+                                        isPointerDown = true;
+                                        canvas.setPointerCapture?.(e.pointerId);
+                                        if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        canvas.style.cursor = 'crosshair';
+                                    }
+                                    showRectangleToolbar(i);
+                                    renderFib();
                                     return;
                                 }
                                 // Corner 3 grab (x1, y2)
                                 if (Math.hypot(x - x1, y - y2) <= HITBOX_RECT_CORNER) {
-                                    dragRectangleIndex = i;
-                                    dragRectanglePart = 4;
-                                    isPointerDown = true;
-                                    canvas.setPointerCapture?.(e.pointerId);
-                                    if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
-                                    canvas.style.cursor = 'crosshair';
+                                    if (!r.isLocked) {
+                                        dragRectangleIndex = i;
+                                        dragRectanglePart = 4;
+                                        dragRectangleStartPos = startPosData;
+                                        isPointerDown = true;
+                                        canvas.setPointerCapture?.(e.pointerId);
+                                        if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        canvas.style.cursor = 'crosshair';
+                                    }
+                                    showRectangleToolbar(i);
+                                    renderFib();
                                     return;
                                 }
                                 // Corner 4 grab (x2, y1)
                                 if (Math.hypot(x - x2, y - y1) <= HITBOX_RECT_CORNER) {
-                                    dragRectangleIndex = i;
-                                    dragRectanglePart = 5;
-                                    isPointerDown = true;
-                                    canvas.setPointerCapture?.(e.pointerId);
-                                    if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
-                                    canvas.style.cursor = 'crosshair';
+                                    if (!r.isLocked) {
+                                        dragRectangleIndex = i;
+                                        dragRectanglePart = 5;
+                                        dragRectangleStartPos = startPosData;
+                                        isPointerDown = true;
+                                        canvas.setPointerCapture?.(e.pointerId);
+                                        if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        canvas.style.cursor = 'crosshair';
+                                    }
+                                    showRectangleToolbar(i);
+                                    renderFib();
                                     return;
                                 }
                                 // Body translation
                                 if (x >= left - 6 && x <= right + 6 && y >= top - 6 && y <= bottom + 6) {
-                                    dragRectangleIndex = i;
-                                    dragRectanglePart = 3;
-                                    dragRectangleStartPos = {
-                                        x, y,
-                                        origP1: { time: r.p1.time, price: r.p1.price },
-                                        origP2: { time: r.p2.time, price: r.p2.price }
-                                    };
-                                    isPointerDown = true;
-                                    canvas.setPointerCapture?.(e.pointerId);
-                                    if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
-                                    canvas.style.cursor = 'move';
+                                    if (!r.isLocked) {
+                                        dragRectangleIndex = i;
+                                        dragRectanglePart = 3;
+                                        dragRectangleStartPos = startPosData;
+                                        isPointerDown = true;
+                                        canvas.setPointerCapture?.(e.pointerId);
+                                        if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        canvas.style.cursor = 'move';
+                                    }
+                                    showRectangleToolbar(i);
+                                    renderFib();
                                     return;
                                 }
                             } else {
@@ -4182,17 +4578,16 @@
                                     selectedTrendlineIndex = -1;
                                     selectedHorizontalLineIndex = -1;
                                     isFibSelected = false;
-                                    dragRectangleIndex = i;
-                                    dragRectanglePart = 3;
-                                    dragRectangleStartPos = {
-                                        x, y,
-                                        origP1: { time: r.p1.time, price: r.p1.price },
-                                        origP2: { time: r.p2.time, price: r.p2.price }
-                                    };
-                                    isPointerDown = true;
-                                    canvas.setPointerCapture?.(e.pointerId);
-                                    if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
-                                    canvas.style.cursor = 'move';
+                                    if (!r.isLocked) {
+                                        dragRectangleIndex = i;
+                                        dragRectanglePart = 3;
+                                        dragRectangleStartPos = startPosData;
+                                        isPointerDown = true;
+                                        canvas.setPointerCapture?.(e.pointerId);
+                                        if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                                        canvas.style.cursor = 'move';
+                                    }
+                                    showRectangleToolbar(i);
                                     renderFib();
                                     return;
                                 }
@@ -4540,6 +4935,60 @@
                 if (dragRectangleIndex >= 0 && rectangles[dragRectangleIndex]) {
                     crosshairPos = null;
                     const r = rectangles[dragRectangleIndex];
+                    if (r.isLocked) return;
+
+                    // If aspect ratio is locked and dragging a corner (parts 1, 2, 4, 5):
+                    if (r.lockAspect && dragRectangleStartPos && dragRectangleStartPos.origX1 !== undefined && (dragRectanglePart === 1 || dragRectanglePart === 2 || dragRectanglePart === 4 || dragRectanglePart === 5)) {
+                        const ox1 = dragRectangleStartPos.origX1;
+                        const oy1 = dragRectangleStartPos.origY1;
+                        const ox2 = dragRectangleStartPos.origX2;
+                        const oy2 = dragRectangleStartPos.origY2;
+                        const origW = Math.max(5, Math.abs(ox2 - ox1));
+                        const origH = Math.max(5, Math.abs(oy2 - oy1));
+
+                        let fixX = 0, fixY = 0;
+                        if (dragRectanglePart === 1) { // Corner 1 (ox1, oy1) -> fixed anchor is Corner 2 (ox2, oy2)
+                            fixX = ox2; fixY = oy2;
+                        } else if (dragRectanglePart === 2) { // Corner 2 (ox2, oy2) -> fixed anchor is Corner 1 (ox1, oy1)
+                            fixX = ox1; fixY = oy1;
+                        } else if (dragRectanglePart === 4) { // Corner 3 (ox1, oy2) -> fixed anchor is Corner 4 (ox2, oy1)
+                            fixX = ox2; fixY = oy1;
+                        } else if (dragRectanglePart === 5) { // Corner 4 (ox2, oy1) -> fixed anchor is Corner 3 (ox1, oy2)
+                            fixX = ox1; fixY = oy2;
+                        }
+
+                        const dx = clampedX - fixX;
+                        const dy = y - fixY;
+                        const scale = Math.max(0.05, Math.max(Math.abs(dx) / origW, Math.abs(dy) / origH));
+                        const newW = origW * scale;
+                        const newH = origH * scale;
+
+                        const signX = (dx >= 0) ? 1 : -1;
+                        const signY = (dy >= 0) ? 1 : -1;
+
+                        const targetX = Math.max(0, Math.min(maxContentX, fixX + (signX * newW)));
+                        const targetY = fixY + (signY * newH);
+
+                        const time = getTimeAtX(targetX);
+                        const price = getPriceAtY(targetY);
+
+                        if (time && price !== null) {
+                            if (dragRectanglePart === 1) {
+                                r.p1 = { time, price };
+                            } else if (dragRectanglePart === 2) {
+                                r.p2 = { time, price };
+                            } else if (dragRectanglePart === 4) {
+                                r.p1.time = time;
+                                r.p2.price = price;
+                            } else if (dragRectanglePart === 5) {
+                                r.p2.time = time;
+                                r.p1.price = price;
+                            }
+                            renderFib();
+                        }
+                        return;
+                    }
+
                     if (dragRectanglePart === 1) { // Corner 1 (p1: time, price)
                         const time = getTimeAtX(clampedX);
                         const price = getPriceAtY(y);
@@ -4774,9 +5223,31 @@
                 if (isDrawingRectangle && rectangleDrawState === 2) {
                     // If user dragged and released with distance >= 20px, finalize immediately (Drag gesture fallback)
                     if (dist >= 20 && tempRectangleP1 && tempRectangleP2) {
-                        const newRect = { id: 'rect_' + Date.now(), p1: tempRectangleP1, p2: tempRectangleP2 };
+                        const newRect = {
+                            id: 'rect_' + Date.now(),
+                            p1: tempRectangleP1,
+                            p2: tempRectangleP2,
+                            color: '#AB47BC',
+                            width: 2,
+                            style: 'solid',
+                            fillColor: '#AB47BC',
+                            fillOpacity: 0.2,
+                            text: '',
+                            textColor: '#FFFFFF',
+                            textSize: 14,
+                            textBold: false,
+                            textItalic: false,
+                            textValign: 'middle',
+                            textHalign: 'center',
+                            lockAspect: false,
+                            isLocked: false,
+                            hidden: false
+                        };
                         rectangles.push(newRect);
                         selectedRectangleIndex = rectangles.length - 1; // Enter edit mode upon placement
+                        selectedTrendlineIndex = -1;
+                        selectedHorizontalLineIndex = -1;
+                        isFibSelected = false;
                         isDrawingRectangle = false;
                         rectangleDrawState = 0;
                         tempRectangleP1 = null;
@@ -4788,6 +5259,7 @@
                         if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
                         canvas.style.cursor = 'default';
                         canvas.style.pointerEvents = 'none';
+                        showRectangleToolbar(selectedRectangleIndex);
                         renderFib();
                         notifyRectanglesChanged();
                         if (window.flutter_inappwebview?.callHandler) {
@@ -4903,33 +5375,6 @@
                 }
                 ctx.setLineDash([]);
 
-                // Right price pill badge (like TradingView price scale pill)
-                if (price !== null) {
-                    ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                    ctx.textBaseline = 'middle';
-                    const priceFormatted = price >= 1000
-                        ? Math.round(price).toLocaleString('en-US')
-                        : price.toFixed(2);
-                    const text = `${priceFormatted}`;
-                    const textWidth = ctx.measureText(text).width;
-                    const badgeHeight = 18;
-                    const badgeWidth = textWidth + 10;
-                    const badgeX = maxContentX - badgeWidth - 4;
-                    const badgeY = hy - (badgeHeight / 2);
-
-                    ctx.fillStyle = isDrawingTrendline ? '#7C4DFF' : (isDrawingRectangle ? '#AB47BC' : '#2962FF');
-                    if (ctx.roundRect) {
-                        ctx.beginPath();
-                        ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 3);
-                        ctx.fill();
-                    } else {
-                        ctx.fillRect(badgeX, badgeY, badgeWidth, badgeHeight);
-                    }
-
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.fillText(text, badgeX + 5, hy);
-                }
-
                 ctx.restore();
             }
 
@@ -4949,7 +5394,19 @@
                     const lineOpacity = (typeof h === 'object' && h.opacity !== undefined) ? h.opacity : 1.0;
                     const lineStyle = (typeof h === 'object' && h.style) ? h.style : 'solid';
 
-                    // Horizontal line stroke across chart content width
+                    // Calculate badge position for seamless connection
+                    const badgeText = formatHorizontalLinePrice(price);
+                    let badgeX = maxContentX;
+                    if (badgeText) {
+                        ctx.save();
+                        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                        const textW = ctx.measureText(badgeText).width;
+                        ctx.restore();
+                        const neededW = textW + 14;
+                        badgeX = Math.min(maxContentX, Math.round(width - 2 - neededW));
+                    }
+
+                    // Horizontal line stroke across chart content width (stops cleanly at badge left edge)
                     ctx.save();
                     ctx.beginPath();
                     ctx.strokeStyle = hexToRgba(lineColor, lineOpacity);
@@ -4962,35 +5419,8 @@
                         ctx.setLineDash([]);
                     }
                     ctx.moveTo(0, y);
-                    ctx.lineTo(maxContentX, y);
+                    ctx.lineTo(badgeX, y);
                     ctx.stroke();
-                    ctx.restore();
-
-                    // Price text badge
-                    ctx.save();
-                    ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                    ctx.textBaseline = 'middle';
-                    const priceFormatted = price >= 1000
-                        ? Math.round(price).toLocaleString('en-US')
-                        : price.toFixed(2);
-                    const text = `${priceFormatted}`;
-                    const textWidth = ctx.measureText(text).width;
-                    const badgeHeight = 20;
-                    const badgeWidth = textWidth + 10;
-                    const badgeX = maxContentX - badgeWidth - 6;
-                    const badgeY = y - (badgeHeight / 2);
-
-                    ctx.fillStyle = hexToRgba(lineColor, 0.9);
-                    if (ctx.roundRect) {
-                        ctx.beginPath();
-                        ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 4);
-                        ctx.fill();
-                    } else {
-                        ctx.fillRect(badgeX, badgeY, badgeWidth, badgeHeight);
-                    }
-
-                    ctx.fillStyle = '#051B24';
-                    ctx.fillText(text, badgeX + 5, y);
                     ctx.restore();
 
                     // Render custom text label along the horizontal line if provided
@@ -5010,7 +5440,7 @@
                             baseX = 16;
                             ctx.textAlign = 'left';
                         } else if (halign === 'right') {
-                            baseX = maxContentX - badgeWidth - 20;
+                            baseX = maxContentX - 16;
                             ctx.textAlign = 'right';
                         } else {
                             ctx.textAlign = 'center';
@@ -5287,6 +5717,7 @@
                 ctx.save();
                 for (let i = 0; i < rectangles.length; i++) {
                     const r = rectangles[i];
+                    if (r.hidden) continue;
                     const x1 = chart.timeScale().timeToCoordinate(r.p1.time);
                     const y1 = activeSeries.priceToCoordinate(r.p1.price);
                     const x2 = chart.timeScale().timeToCoordinate(r.p2.time);
@@ -5303,16 +5734,70 @@
                     const isSelected = (i === selectedRectangleIndex);
 
                     // Translucent fill
-                    ctx.fillStyle = isSelected ? 'rgba(171, 71, 188, 0.22)' : 'rgba(171, 71, 188, 0.14)';
+                    const fColor = r.fillColor || '#AB47BC';
+                    const fOp = (r.fillOpacity !== undefined) ? r.fillOpacity : 0.2;
+                    ctx.fillStyle = hexToRgba(fColor, fOp);
                     ctx.fillRect(left, top, boxW, boxH);
 
-                    // Solid border
+                    // Border stroke
                     ctx.beginPath();
-                    ctx.strokeStyle = '#AB47BC';
-                    ctx.lineWidth = isSelected ? 2.0 : 1.5;
+                    ctx.strokeStyle = r.color || '#AB47BC';
+                    ctx.lineWidth = r.width || 2;
+                    if (r.style === 'dashed') {
+                        ctx.setLineDash([6, 5]);
+                    } else if (r.style === 'dotted') {
+                        ctx.setLineDash([2, 3]);
+                    } else {
+                        ctx.setLineDash([]);
+                    }
                     ctx.strokeRect(left, top, boxW, boxH);
+                    ctx.setLineDash([]);
 
-                    // EDIT MODE: 4 Corner handles and Floating Action Pill
+                    // Optional Text Rendering
+                    if (r.text && String(r.text).trim().length > 0) {
+                        ctx.save();
+                        const fontSize = r.textSize || 14;
+                        const fontStyle = (r.textItalic ? 'italic ' : '') + (r.textBold ? 'bold ' : '');
+                        ctx.font = `${fontStyle}${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+                        ctx.fillStyle = r.textColor || '#FFFFFF';
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
+                        ctx.shadowBlur = 3;
+
+                        const halign = r.textHalign || 'center';
+                        let tx = (left + right) / 2;
+                        if (halign === 'left') {
+                            tx = left + 8;
+                            ctx.textAlign = 'left';
+                        } else if (halign === 'right') {
+                            tx = right - 8;
+                            ctx.textAlign = 'right';
+                        } else {
+                            ctx.textAlign = 'center';
+                        }
+
+                        const valign = r.textValign || 'middle';
+                        const lines = String(r.text).split('\n');
+                        const lineHeight = Math.round(fontSize * 1.25);
+                        let ty = top + 8;
+                        if (valign === 'bottom') {
+                            ty = bottom - 8 - ((lines.length - 1) * lineHeight);
+                            ctx.textBaseline = 'bottom';
+                        } else if (valign === 'middle') {
+                            const totalH = lines.length * lineHeight;
+                            ty = ((top + bottom) / 2) - (totalH / 2) + (lineHeight / 2);
+                            ctx.textBaseline = 'middle';
+                        } else {
+                            ty = top + 8;
+                            ctx.textBaseline = 'top';
+                        }
+
+                        for (let k = 0; k < lines.length; k++) {
+                            ctx.fillText(lines[k], tx, ty + (k * lineHeight));
+                        }
+                        ctx.restore();
+                    }
+
+                    // EDIT MODE: 4 Corner handles
                     if (isSelected) {
                         const corners = [
                             { x: left, y: top },
@@ -5321,13 +5806,14 @@
                             { x: left, y: bottom }
                         ];
 
+                        const handleColor = r.color || '#AB47BC';
                         corners.forEach(c => {
                             ctx.save();
                             ctx.beginPath();
                             ctx.arc(c.x, c.y, 7, 0, Math.PI * 2);
-                            ctx.fillStyle = 'rgba(171, 71, 188, 0.3)';
+                            ctx.fillStyle = hexToRgba(handleColor, 0.3);
                             ctx.fill();
-                            ctx.strokeStyle = '#AB47BC';
+                            ctx.strokeStyle = handleColor;
                             ctx.lineWidth = 1.5;
                             ctx.stroke();
 
@@ -5337,83 +5823,10 @@
                             ctx.fill();
                             ctx.beginPath();
                             ctx.arc(c.x, c.y, 1.8, 0, Math.PI * 2);
-                            ctx.fillStyle = '#AB47BC';
+                            ctx.fillStyle = handleColor;
                             ctx.fill();
                             ctx.restore();
                         });
-
-                        // Floating Context Action Pill
-                        const pillPos = getRectangleActionPillPos(left, top, right, bottom, maxContentX, height);
-                        const px = pillPos.x;
-                        const py = pillPos.y;
-
-                        ctx.save();
-                        // Capsule shadow
-                        ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-                        ctx.shadowBlur = 8;
-                        ctx.shadowOffsetY = 2;
-
-                        const pw = 40;
-                        const ph = 28;
-                        const pr = 14;
-                        const pillLeft = px - (pw / 2);
-                        const pillTop = py - (ph / 2);
-
-                        ctx.beginPath();
-                        if (ctx.roundRect) {
-                            ctx.roundRect(pillLeft, pillTop, pw, ph, pr);
-                        } else {
-                            ctx.arc(pillLeft + pr, py, pr, Math.PI / 2, Math.PI * 1.5);
-                            ctx.lineTo(pillLeft + pw - pr, pillTop);
-                            ctx.arc(pillLeft + pw - pr, py, pr, -Math.PI / 2, Math.PI / 2);
-                            ctx.lineTo(pillLeft + pr, pillTop + ph);
-                        }
-                        ctx.fillStyle = '#1E222D';
-                        ctx.fill();
-
-                        // Border stroke
-                        ctx.shadowColor = 'transparent';
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
-                        ctx.lineWidth = 1.2;
-                        ctx.stroke();
-
-                        // Vector Trash Can Icon inside pill
-                        ctx.save();
-                        ctx.strokeStyle = '#EF5350';
-                        ctx.lineWidth = 1.6;
-                        ctx.lineCap = 'round';
-                        ctx.lineJoin = 'round';
-
-                        // Lid handle
-                        ctx.beginPath();
-                        ctx.moveTo(px - 2.5, py - 6);
-                        ctx.lineTo(px + 2.5, py - 6);
-                        ctx.stroke();
-
-                        // Lid rim
-                        ctx.beginPath();
-                        ctx.moveTo(px - 6.5, py - 4);
-                        ctx.lineTo(px + 6.5, py - 4);
-                        ctx.stroke();
-
-                        // Can body
-                        ctx.beginPath();
-                        ctx.moveTo(px - 5, py - 3);
-                        ctx.lineTo(px - 4, py + 5.5);
-                        ctx.lineTo(px + 4, py + 5.5);
-                        ctx.lineTo(px + 5, py - 3);
-                        ctx.stroke();
-
-                        // 2 inner ribs
-                        ctx.beginPath();
-                        ctx.moveTo(px - 1.8, py - 1.5);
-                        ctx.lineTo(px - 1.8, py + 3.5);
-                        ctx.moveTo(px + 1.8, py - 1.5);
-                        ctx.lineTo(px + 1.8, py + 3.5);
-                        ctx.stroke();
-
-                        ctx.restore();
-                        ctx.restore();
                     }
                 }
                 ctx.restore();
@@ -5471,11 +5884,9 @@
             }
 
             // 2. Render Fibonacci Retracement
-            if (!currentShowFib) return;
-
-            if (isDrawingFib) {
-                // If Anchor 1 is set and waiting for Anchor 2, render Anchor 1 handle
-                if (fibPoint1 && fibDrawState === 2 && (!fibPoint2 || Math.abs(fibPoint2.price - fibPoint1.price) < 0.001)) {
+            if (currentShowFib) {
+                if (isDrawingFib && fibPoint1 && fibDrawState === 2 && (!fibPoint2 || Math.abs(fibPoint2.price - fibPoint1.price) < 0.001)) {
+                    // If Anchor 1 is set and waiting for Anchor 2, render Anchor 1 handle
                     const x1 = chart.timeScale().timeToCoordinate(fibPoint1.time);
                     const y1 = candleSeries.priceToCoordinate(fibPoint1.price);
                     if (x1 !== null && y1 !== null) {
@@ -5488,159 +5899,240 @@
                         ctx.arc(x1, y1, 3.5, 0, Math.PI * 2);
                         ctx.fill();
                     }
-                    return;
+                } else if (fibPoint1 && fibPoint2) {
+                    const priceDiff = fibPoint1.price - fibPoint2.price;
+                    if (Math.abs(priceDiff) >= 0.001) {
+                        const x1 = chart.timeScale().timeToCoordinate(fibPoint1.time);
+                        const y1 = candleSeries.priceToCoordinate(fibPoint1.price);
+                        const x2 = chart.timeScale().timeToCoordinate(fibPoint2.time);
+                        const y2 = candleSeries.priceToCoordinate(fibPoint2.price);
+
+                        if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
+                            // In TradingView: Horizontal lines span between the X coordinates of the anchors!
+                            const minX = Math.min(x1, x2);
+                            const maxX = Math.max(x1, x2);
+                            const lineStartX = Math.max(0, Math.min(minX, maxContentX));
+                            const lineEndX = Math.min(maxContentX, Math.max(minX + 40, maxX));
+                            const lineWidth = Math.max(0, lineEndX - lineStartX);
+
+                            // Calculate Y positions for all levels
+                            const levelYs = [];
+                            for (let i = 0; i < FIB_LEVELS.length; i++) {
+                                const item = FIB_LEVELS[i];
+                                const price = fibPoint2.price + (priceDiff * item.level);
+                                const y = candleSeries.priceToCoordinate(price);
+                                levelYs.push({ ...item, price, y });
+                            }
+
+                            // Draw filled zones between levels (from lineStartX to lineEndX)
+                            const sortedLevels = [...levelYs].sort((a, b) => b.level - a.level);
+                            for (let i = 0; i < sortedLevels.length - 1; i++) {
+                                const curr = sortedLevels[i];
+                                const next = sortedLevels[i + 1];
+                                if (curr.y !== null && next.y !== null && curr.fill !== 'transparent') {
+                                    ctx.fillStyle = curr.fill;
+                                    const topY = Math.min(curr.y, next.y);
+                                    const bandHeight = Math.abs(curr.y - next.y);
+                                    ctx.fillRect(lineStartX, topY, lineWidth, bandHeight);
+                                }
+                            }
+
+                            // Draw level lines and TradingView-style clean text labels
+                            ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                            ctx.textBaseline = 'bottom';
+
+                            for (let i = 0; i < levelYs.length; i++) {
+                                const item = levelYs[i];
+                                if (item.y === null || item.y < 0 || item.y > height) continue;
+
+                                ctx.beginPath();
+                                ctx.strokeStyle = item.color;
+                                ctx.lineWidth = 1.0;
+                                ctx.moveTo(lineStartX, item.y);
+                                ctx.lineTo(lineEndX, item.y);
+                                ctx.stroke();
+
+                                const priceFormatted = item.price >= 1000
+                                    ? Math.round(item.price).toLocaleString('en-US')
+                                    : item.price.toFixed(2);
+                                const text = `${item.label} (${priceFormatted})`;
+
+                                ctx.fillStyle = item.color;
+                                ctx.fillText(text, lineStartX + 4, item.y - 3);
+                            }
+
+                            // Handles
+                            if (isFibSelected) {
+                                ctx.beginPath();
+                                ctx.strokeStyle = '#9E9E9E';
+                                ctx.lineWidth = 1.4;
+                                ctx.setLineDash([5, 4]);
+                                ctx.moveTo(x1, y1);
+                                ctx.lineTo(x2, y2);
+                                ctx.stroke();
+                                ctx.setLineDash([]);
+
+                                const isA1Active = (dragMode === 1);
+                                ctx.save();
+                                ctx.beginPath();
+                                ctx.arc(x1, y1, isA1Active ? 12 : 9, 0, Math.PI * 2);
+                                ctx.fillStyle = isA1Active ? 'rgba(255, 179, 0, 0.45)' : 'rgba(255, 179, 0, 0.25)';
+                                ctx.fill();
+                                ctx.strokeStyle = '#FFB300';
+                                ctx.lineWidth = isA1Active ? 2 : 1.5;
+                                ctx.stroke();
+
+                                ctx.beginPath();
+                                ctx.arc(x1, y1, 4.5, 0, Math.PI * 2);
+                                ctx.fillStyle = '#FFFFFF';
+                                ctx.fill();
+                                ctx.beginPath();
+                                ctx.arc(x1, y1, 2.5, 0, Math.PI * 2);
+                                ctx.fillStyle = '#FFB300';
+                                ctx.fill();
+                                ctx.restore();
+
+                                const isA2Active = (dragMode === 2);
+                                ctx.save();
+                                ctx.beginPath();
+                                ctx.arc(x2, y2, isA2Active ? 12 : 9, 0, Math.PI * 2);
+                                ctx.fillStyle = isA2Active ? 'rgba(255, 179, 0, 0.45)' : 'rgba(255, 179, 0, 0.25)';
+                                ctx.fill();
+                                ctx.strokeStyle = '#FFB300';
+                                ctx.lineWidth = isA2Active ? 2 : 1.5;
+                                ctx.stroke();
+
+                                ctx.beginPath();
+                                ctx.arc(x2, y2, 4.5, 0, Math.PI * 2);
+                                ctx.fillStyle = '#FFFFFF';
+                                ctx.fill();
+                                ctx.beginPath();
+                                ctx.arc(x2, y2, 2.5, 0, Math.PI * 2);
+                                ctx.fillStyle = '#FFB300';
+                                ctx.fill();
+                                ctx.restore();
+                            } else {
+                                ctx.save();
+                                ctx.beginPath();
+                                ctx.arc(x1, y1, 3.5, 0, Math.PI * 2);
+                                ctx.fillStyle = '#FFB300';
+                                ctx.fill();
+                                ctx.strokeStyle = '#FFFFFF';
+                                ctx.lineWidth = 1.0;
+                                ctx.stroke();
+
+                                ctx.beginPath();
+                                ctx.arc(x2, y2, 3.5, 0, Math.PI * 2);
+                                ctx.fillStyle = '#FFB300';
+                                ctx.fill();
+                                ctx.strokeStyle = '#FFFFFF';
+                                ctx.lineWidth = 1.0;
+                                ctx.stroke();
+                                ctx.restore();
+                            }
+                        }
+                    }
                 }
-            }
-
-            if (!fibPoint1 || !fibPoint2) return;
-
-            const priceDiff = fibPoint1.price - fibPoint2.price;
-            if (Math.abs(priceDiff) < 0.001) return;
-
-            const x1 = chart.timeScale().timeToCoordinate(fibPoint1.time);
-            const y1 = candleSeries.priceToCoordinate(fibPoint1.price);
-            const x2 = chart.timeScale().timeToCoordinate(fibPoint2.time);
-            const y2 = candleSeries.priceToCoordinate(fibPoint2.price);
-
-            if (x1 === null || y1 === null || x2 === null || y2 === null) return;
-
-            // In TradingView: Horizontal lines span between the X coordinates of the anchors!
-            const minX = Math.min(x1, x2);
-            const maxX = Math.max(x1, x2);
-            const lineStartX = Math.max(0, Math.min(minX, maxContentX));
-            const lineEndX = Math.min(maxContentX, Math.max(minX + 40, maxX));
-            const lineWidth = Math.max(0, lineEndX - lineStartX);
-
-            // Calculate Y positions for all levels:
-            // Anchor 2 = 0.00% (end of move)
-            // Anchor 1 = 100.00% (origin of move)
-            // price = p2 + (p1 - p2) * level
-            const levelYs = [];
-            for (let i = 0; i < FIB_LEVELS.length; i++) {
-                const item = FIB_LEVELS[i];
-                const price = fibPoint2.price + (priceDiff * item.level);
-                const y = candleSeries.priceToCoordinate(price);
-                levelYs.push({ ...item, price, y });
-            }
-
-            // Draw filled zones between levels (from lineStartX to lineEndX)
-            // Sort by level to get consecutive bands
-            const sortedLevels = [...levelYs].sort((a, b) => b.level - a.level);
-            for (let i = 0; i < sortedLevels.length - 1; i++) {
-                const curr = sortedLevels[i];
-                const next = sortedLevels[i + 1];
-                if (curr.y !== null && next.y !== null && curr.fill !== 'transparent') {
-                    ctx.fillStyle = curr.fill;
-                    const topY = Math.min(curr.y, next.y);
-                    const bandHeight = Math.abs(curr.y - next.y);
-                    ctx.fillRect(lineStartX, topY, lineWidth, bandHeight);
-                }
-            }
-
-            // Draw level lines and TradingView-style clean text labels
-            ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-            ctx.textBaseline = 'bottom';
-
-            for (let i = 0; i < levelYs.length; i++) {
-                const item = levelYs[i];
-                if (item.y === null || item.y < 0 || item.y > height) continue;
-
-                // Horizontal line (between anchors)
-                ctx.beginPath();
-                ctx.strokeStyle = item.color;
-                ctx.lineWidth = 1.0;
-                ctx.moveTo(lineStartX, item.y);
-                ctx.lineTo(lineEndX, item.y);
-                ctx.stroke();
-
-                // TradingView label text: positioned at lineStartX above the line
-                const priceFormatted = item.price >= 1000
-                    ? Math.round(item.price).toLocaleString('en-US')
-                    : item.price.toFixed(2);
-                const text = `${item.label} (${priceFormatted})`;
-
-                ctx.fillStyle = item.color;
-                ctx.fillText(text, lineStartX + 4, item.y - 3);
-            }
-
-            // In Edit mode, show guideline and prominent grab handles; in non-edit mode, show subtle minimal endpoint dots
-            if (isFibSelected) {
-                // Trendline connecting Anchor 1 and Anchor 2
-                ctx.beginPath();
-                ctx.strokeStyle = '#9E9E9E';
-                ctx.lineWidth = 1.4;
-                ctx.setLineDash([5, 4]);
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
-                ctx.stroke();
-                ctx.setLineDash([]);
-
-                // Anchor 1 Handle (Edit mode: large ergonomic grab handle)
-                const isA1Active = (dragMode === 1);
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(x1, y1, isA1Active ? 12 : 9, 0, Math.PI * 2);
-                ctx.fillStyle = isA1Active ? 'rgba(255, 179, 0, 0.45)' : 'rgba(255, 179, 0, 0.25)';
-                ctx.fill();
-                ctx.strokeStyle = '#FFB300';
-                ctx.lineWidth = isA1Active ? 2 : 1.5;
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.arc(x1, y1, 4.5, 0, Math.PI * 2);
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(x1, y1, 2.5, 0, Math.PI * 2);
-                ctx.fillStyle = '#FFB300';
-                ctx.fill();
-                ctx.restore();
-
-                // Anchor 2 Handle (Edit mode: large ergonomic grab handle)
-                const isA2Active = (dragMode === 2);
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(x2, y2, isA2Active ? 12 : 9, 0, Math.PI * 2);
-                ctx.fillStyle = isA2Active ? 'rgba(255, 179, 0, 0.45)' : 'rgba(255, 179, 0, 0.25)';
-                ctx.fill();
-                ctx.strokeStyle = '#FFB300';
-                ctx.lineWidth = isA2Active ? 2 : 1.5;
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.arc(x2, y2, 4.5, 0, Math.PI * 2);
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(x2, y2, 2.5, 0, Math.PI * 2);
-                ctx.fillStyle = '#FFB300';
-                ctx.fill();
-                ctx.restore();
-            } else {
-                // Non-Edit Mode: Small, clean, non-intrusive endpoint dots
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(x1, y1, 3.5, 0, Math.PI * 2);
-                ctx.fillStyle = '#FFB300';
-                ctx.fill();
-                ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 1.0;
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.arc(x2, y2, 3.5, 0, Math.PI * 2);
-                ctx.fillStyle = '#FFB300';
-                ctx.fill();
-                ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 1.0;
-                ctx.stroke();
-                ctx.restore();
             }
 
             } finally {
                 // Restore clipping state
                 ctx.restore();
             }
+
+            // ----------------------------------------------------
+            // Render Price Scale Badges (in right price scale, seamlessly connected to horizontal lines)
+            // ----------------------------------------------------
+            if (horizontalLines && horizontalLines.length > 0 && activeSeries) {
+                for (let i = 0; i < horizontalLines.length; i++) {
+                    const h = horizontalLines[i];
+                    if (h.hidden) continue;
+                    const price = typeof h === 'object' ? h.price : h;
+                    const y = activeSeries.priceToCoordinate(price);
+                    if (y === null || y < 0 || y > pane0Height) continue;
+
+                    const lineColor = (typeof h === 'object' && h.color) ? h.color : '#00E5FF';
+                    const text = formatHorizontalLinePrice(price);
+                    if (!text) continue;
+
+                    ctx.save();
+                    ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                    ctx.textBaseline = 'middle';
+                    const textWidth = ctx.measureText(text).width;
+
+                    const badgeHeight = 20;
+                    const badgeY = Math.round(y - (badgeHeight / 2));
+                    const neededW = textWidth + 14;
+                    const badgeX = Math.min(maxContentX, Math.round(width - 2 - neededW));
+                    const badgeWidth = Math.round(width - 2 - badgeX);
+
+                    // Background pill in price scale (flush with horizontal line on left, rounded on right)
+                    ctx.fillStyle = lineColor;
+                    ctx.beginPath();
+                    if (ctx.roundRect) {
+                        ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, [0, 4, 4, 0]);
+                    } else {
+                        ctx.rect(badgeX, badgeY, badgeWidth, badgeHeight);
+                    }
+                    ctx.fill();
+
+                    // White text center-aligned in badge
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.textAlign = 'center';
+                    const textCenterX = badgeX + (badgeWidth / 2);
+                    ctx.fillText(text, textCenterX, y);
+                    ctx.restore();
+                }
+            }
+
+            // Render live crosshair guideline price badge on price scale if active
+            if ((isDrawingHorizontalLine || (isDrawingFib && fibDrawState > 0) || (isDrawingTrendline && trendlineDrawState > 0) || (isDrawingRectangle && rectangleDrawState > 0)) && crosshairPos) {
+                const hy = crosshairPos.y;
+                const price = getPriceAtY(hy);
+                if (price !== null && hy >= 0 && hy <= pane0Height) {
+                    const text = formatHorizontalLinePrice(price);
+                    if (text) {
+                        ctx.save();
+                        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                        ctx.textBaseline = 'middle';
+                        const textWidth = ctx.measureText(text).width;
+
+                        const badgeHeight = 20;
+                        const badgeY = Math.round(hy - (badgeHeight / 2));
+                        const neededW = textWidth + 14;
+                        const badgeX = Math.min(maxContentX, Math.round(width - 2 - neededW));
+                        const badgeWidth = Math.round(width - 2 - badgeX);
+
+                        ctx.fillStyle = isDrawingTrendline ? '#7C4DFF' : (isDrawingRectangle ? '#AB47BC' : (isDrawingHorizontalLine ? '#00E5FF' : '#2962FF'));
+                        ctx.beginPath();
+                        if (ctx.roundRect) {
+                            ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, [0, 4, 4, 0]);
+                        } else {
+                            ctx.rect(badgeX, badgeY, badgeWidth, badgeHeight);
+                        }
+                        ctx.fill();
+
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.textAlign = 'center';
+                        const textCenterX = badgeX + (badgeWidth / 2);
+                        ctx.fillText(text, textCenterX, hy);
+                        ctx.restore();
+                    }
+                }
+            }
+        }
+
+        function formatHorizontalLinePrice(price) {
+            if (price === null || price === undefined || isNaN(price)) return '';
+            const num = Math.round(Number(price));
+            const activeSeries = candleSeries || areaSeries;
+            try {
+                if (activeSeries && activeSeries.priceFormatter && typeof activeSeries.priceFormatter().format === 'function') {
+                    const formatted = activeSeries.priceFormatter().format(num);
+                    if (formatted) return formatted;
+                }
+            } catch (_) {}
+            return String(num);
         }
 
         function setFibonacci(showFib) {
@@ -5831,6 +6323,7 @@
             tempRectangleP2 = null;
             crosshairPos = null;
             selectedRectangleIndex = -1;
+            hideTrendlineToolbar();
             const canvas = document.getElementById('fib-canvas');
             if (canvas && !isDrawingFib && !isDrawingHorizontalLine && !isDrawingTrendline) {
                 canvas.style.pointerEvents = 'none';
@@ -5842,9 +6335,13 @@
 
         function setRectangles(rectsInput) {
             const rects = typeof rectsInput === 'string' ? JSON.parse(rectsInput) : rectsInput;
-            rectangles = Array.isArray(rects) ? rects : [];
+            const rawArr = Array.isArray(rects) ? rects : [];
+            rectangles = rawArr.map(normalizeRectangle).filter(Boolean);
             if (selectedRectangleIndex >= rectangles.length) {
                 selectedRectangleIndex = -1;
+                hideTrendlineToolbar();
+            } else if (selectedRectangleIndex >= 0) {
+                showRectangleToolbar(selectedRectangleIndex);
             }
             renderFib();
         }
@@ -5852,6 +6349,7 @@
         function clearRectangles() {
             rectangles = [];
             selectedRectangleIndex = -1;
+            hideTrendlineToolbar();
             cancelRectangleDrawing();
             notifyRectanglesChanged();
         }
@@ -5902,6 +6400,7 @@
                     borderVisible: false,
                     scaleMargins: { top: 0.08, bottom: 0.08 },
                     autoScale: true,
+                    minimumWidth: 55,
                 },
                 crosshair: {
                     mode: LightweightCharts.CrosshairMode.Normal,
