@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import 'package:cuan_app/components/chart_indicators_legend.dart';
+import 'package:cuan_app/components/indicators_modal_sheet.dart';
 import 'package:cuan_app/components/tv_chart_widget.dart';
 import 'package:cuan_app/data/model/candle_item.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +30,12 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
   bool _isDrawingRectangle = false;
   bool _showDrawingToolbar = false;
   Map<String, dynamic>? _crosshair;
+  String? _selectedLegendIndicatorId;
+  final Set<String> _favoriteIndicators = <String>{
+    'Moving Average (SMA)',
+    'Relative Strength Index (RSI)',
+    '24-hour Volume',
+  };
 
   int get _activeIndicatorsCount =>
       (_showSma ? 1 : 0) + (_showRsi ? 1 : 0) + (_showVolume ? 1 : 0);
@@ -141,213 +149,88 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext sheetContext) {
-        final ThemeData theme = Theme.of(sheetContext);
-        final ColorScheme cs = theme.colorScheme;
-        final bool isDark = theme.brightness == Brightness.dark;
-
-        // Same color as chart background (#121212 in dark mode, white in light mode)
-        final Color sheetBg = isDark ? const Color(0xFF121212) : Colors.white;
-        final Color borderColor = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA);
-        final Color handleColor = isDark ? const Color(0xFF3E3E42) : const Color(0xFFD1D1D6);
-
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setSheetState) {
-            return Container(
-              decoration: BoxDecoration(
-                color: sheetBg,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                border: Border(
-                  top: BorderSide(color: borderColor, width: 1),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.15),
-                    blurRadius: 20,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              padding: EdgeInsets.only(
-                top: 12,
-                left: 20,
-                right: 20,
-                bottom: MediaQuery.of(sheetContext).padding.bottom + 20,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Drag Handle Bar
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: handleColor,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Title Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF00A3A8).withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              'fx',
-                              style: TextStyle(
-                                color: Color(0xFF00A3A8),
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Indikator Teknikal',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 20),
-                        onPressed: () => Navigator.of(sheetContext).pop(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Divider(height: 1, color: borderColor),
-                  const SizedBox(height: 12),
-
-                  // SMA Item
-                  _buildIndicatorItem(
-                    title: 'SMA (Simple Moving Average)',
-                    subtitle: 'Periode 20 • Tren Harga Rata-Rata',
-                    color: const Color(0xFF2962FF),
-                    value: _showSma,
-                    onChanged: (bool val) {
-                      setState(() => _showSma = val);
-                      setSheetState(() {});
-                    },
-                    cs: cs,
-                    theme: theme,
-                  ),
-                  const SizedBox(height: 10),
-
-                  // RSI Item
-                  _buildIndicatorItem(
-                    title: 'RSI (Relative Strength Index)',
-                    subtitle: 'Periode 14 • Momentum Overbought / Oversold',
-                    color: const Color(0xFFE91E63),
-                    value: _showRsi,
-                    onChanged: (bool val) {
-                      setState(() => _showRsi = val);
-                      setSheetState(() {});
-                    },
-                    cs: cs,
-                    theme: theme,
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Volume Item
-                  _buildIndicatorItem(
-                    title: 'Volume',
-                    subtitle: 'Volume Bar Perdagangan',
-                    color: const Color(0xFF00B0FF),
-                    value: _showVolume,
-                    onChanged: (bool val) {
-                      setState(() => _showVolume = val);
-                      setSheetState(() {});
-                    },
-                    cs: cs,
-                    theme: theme,
-                  ),
-                ],
-              ),
-            );
+        return IndicatorsModalSheet(
+          showSma: _showSma,
+          showRsi: _showRsi,
+          showVolume: _showVolume,
+          showFibonacci: _showFibonacci,
+          favoriteIndicators: _favoriteIndicators,
+          onToggleFavorite: (String name) {
+            setState(() {
+              if (_favoriteIndicators.contains(name)) {
+                _favoriteIndicators.remove(name);
+              } else {
+                _favoriteIndicators.add(name);
+              }
+            });
           },
+          onToggleSma: (bool val) => setState(() => _showSma = val),
+          onToggleRsi: (bool val) => setState(() => _showRsi = val),
+          onToggleVolume: (bool val) => setState(() => _showVolume = val),
+          onToggleFibonacci: (bool val) => setState(() => _showFibonacci = val),
         );
       },
     );
   }
 
-  Widget _buildIndicatorItem({
-    required String title,
-    required String subtitle,
-    required Color color,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    required ColorScheme cs,
-    required ThemeData theme,
-  }) {
-    final bool isDark = theme.brightness == Brightness.dark;
-    final Color itemBg = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF7F7F8);
-    final Color itemBorder = isDark ? const Color(0xFF2A2A2D) : const Color(0xFFE5E5EA);
+  void _openIndicatorSettings(String id) {
+    final String title = id == 'sma'
+        ? 'Moving Average (SMA)'
+        : id == 'rsi'
+            ? 'Relative Strength Index (RSI)'
+            : 'Volume';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: value ? color.withValues(alpha: 0.1) : itemBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: value ? color.withValues(alpha: 0.6) : itemBorder,
-          width: value ? 1.5 : 1.0,
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext sheetCtx) {
+        final bool isDark = Theme.of(sheetCtx).brightness == Brightness.dark;
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E222D) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
           ),
-          const SizedBox(width: 12),
-          Expanded(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: SafeArea(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              children: <Widget>[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(sheetCtx).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 Text(
-                  title,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                  'Customization untuk $title akan dikonfigurasi di langkah berikutnya.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? const Color(0xFFD1D4DC) : const Color(0xFF4A4E5A),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurface.withValues(alpha: 0.6),
-                    fontSize: 11,
-                  ),
-                ),
+                const SizedBox(height: 20),
               ],
             ),
           ),
-          Switch(
-            value: value,
-            activeThumbColor: color,
-            activeTrackColor: color.withValues(alpha: 0.35),
-            inactiveThumbColor: isDark ? const Color(0xFF8E8E93) : const Color(0xFFE5E5EA),
-            inactiveTrackColor: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFD1D1D6),
-            onChanged: onChanged,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -592,6 +475,37 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                       interactive: true,
                       onCrosshairMove: (Map<String, dynamic>? v) =>
                           setState(() => _crosshair = v),
+                    ),
+
+                    // Tap-outside detector saat ada indikator legend yang sedang terseleksi
+                    if (_selectedLegendIndicatorId != null)
+                      Positioned.fill(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: () {
+                            setState(() {
+                              _selectedLegendIndicatorId = null;
+                            });
+                          },
+                        ),
+                      ),
+
+                    // Active Indicators Legend di Pojok Kiri Atas Chart (ala TradingView)
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: ChartIndicatorsLegend(
+                        selectedId: _selectedLegendIndicatorId,
+                        onSelectionChanged: (String? id) =>
+                            setState(() => _selectedLegendIndicatorId = id),
+                        showSma: _showSma,
+                        showRsi: _showRsi,
+                        showVolume: _showVolume,
+                        onToggleSma: (bool val) => setState(() => _showSma = val),
+                        onToggleRsi: (bool val) => setState(() => _showRsi = val),
+                        onToggleVolume: (bool val) => setState(() => _showVolume = val),
+                        onOpenSettings: (String id) => _openIndicatorSettings(id),
+                      ),
                     ),
 
                     // Active Drawing Prompt Banner (Memberikan instruksi saat user sedang menggambar)

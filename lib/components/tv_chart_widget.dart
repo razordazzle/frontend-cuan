@@ -1,11 +1,15 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../pages/screen/home_page.dart' show Ohlc, makeDummyCandles; 
 import '../data/model/chart_payload.dart';
 import 'web_message_listener.dart';
+
+const bool _kShowDebugReloadButton = true;
 
 class TvChartWidget extends StatefulWidget {
   final List<Ohlc> candles;
@@ -605,6 +609,78 @@ class _TvChartWidgetState extends State<TvChartWidget> {
       },
     );
 
-    return widget.interactive ? webview : IgnorePointer(child: webview);
+    final Widget chartContent = widget.interactive ? webview : IgnorePointer(child: webview);
+
+    if (!_kShowDebugReloadButton) {
+      return chartContent;
+    }
+
+    return Stack(
+      children: <Widget>[
+        chartContent,
+        Positioned(
+          top: 10,
+          right: 10,
+          child: SafeArea(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: _debugReloadChart,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xBF000000),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.amber, width: 1.2),
+                    boxShadow: const <BoxShadow>[
+                      BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 2)),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Icon(Icons.refresh_rounded, color: Colors.amber, size: 16),
+                      SizedBox(width: 4),
+                      Text(
+                        "Reload HTML",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _debugReloadChart() async {
+    try {
+      rootBundle.evict('assets/charts/tv_chart.html');
+      final String htmlData = await rootBundle.loadString('assets/charts/tv_chart.html');
+      await InAppWebViewController.clearAllCache();
+      WebUri? baseUri;
+      if (!kIsWeb && Platform.isAndroid) {
+        baseUri = WebUri('file:///android_asset/flutter_assets/assets/charts/');
+      }
+      await _ctrl?.loadData(
+        data: htmlData,
+        mimeType: 'text/html',
+        encoding: 'utf-8',
+        baseUrl: baseUri,
+      );
+    } catch (e) {
+      debugPrint("DEBUG_RELOAD_ERROR: $e");
+      await InAppWebViewController.clearAllCache();
+      await _ctrl?.reload();
+    }
   }
 }
