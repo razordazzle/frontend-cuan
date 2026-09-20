@@ -961,7 +961,324 @@
             background: #FFFFFF;
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
             cursor: pointer;
-            border: 2px solid #2962FF;
+        /* Fullscreen Setting Modal for Fibonacci Retracement */
+        .tv-settings-modal.fullscreen {
+            top: 0 !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            max-height: 100% !important;
+            border-radius: 0 !important;
+            border: none !important;
+            background: #000000 !important;
+            box-shadow: none !important;
+            transform: translateY(100%);
+            transition: transform 0.24s cubic-bezier(0.2, 0.9, 0.3, 1);
+        }
+
+        .tv-settings-modal.fullscreen.visible {
+            transform: translateY(0) !important;
+        }
+
+        .tv-settings-modal.fullscreen .tv-settings-header {
+            background: #000000;
+            padding: 16px 16px 10px 16px;
+        }
+
+        .tv-settings-modal.fullscreen .tv-settings-tabs {
+            background: #000000;
+            border-bottom: 1px solid #1E222D;
+            padding: 0 16px;
+        }
+
+        .tv-settings-modal.fullscreen .tv-settings-body {
+            background: #000000;
+            padding: 14px 16px;
+        }
+
+        .tv-settings-modal.fullscreen .tv-settings-footer {
+            background: #000000;
+            border-top: 1px solid #1E222D;
+            padding: 12px 16px;
+            padding-bottom: max(14px, env(safe-area-inset-bottom, 14px));
+        }
+
+        /* Trendline Combined Pill Button */
+        .tv-fib-trendline-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 82px;
+            height: 36px;
+            padding: 4px 8px;
+            background: #000000;
+            border: 1.5px solid #434651;
+            border-radius: 8px;
+            cursor: pointer;
+            box-sizing: border-box;
+            outline: none;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .tv-fib-trendline-pill.active {
+            border-color: #2962FF !important;
+            box-shadow: 0 0 0 1px #2962FF !important;
+        }
+
+        .tv-fib-pill-swatch {
+            width: 22px;
+            height: 22px;
+            border-radius: 5px;
+            background-color: #AB47BC;
+            flex-shrink: 0;
+        }
+
+        .tv-fib-pill-preview {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-left: 6px;
+            height: 100%;
+        }
+
+        .tv-fib-pill-preview svg {
+            width: 100%;
+            height: 12px;
+            overflow: visible;
+        }
+
+        /* TradingView Style & Color Popover for Trendline (Image 2) */
+        .tv-trendline-style-popover {
+            position: absolute;
+            top: 146px;
+            right: 16px;
+            width: 310px;
+            max-width: calc(100% - 32px);
+            background: #181B20;
+            border: 1px solid #2A2E39;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.9);
+            padding: 12px;
+            box-sizing: border-box;
+            z-index: 1080;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .tv-fib-palette-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 4px;
+        }
+
+        .tv-fib-palette-swatch {
+            aspect-ratio: 1;
+            width: 100%;
+            border-radius: 3.5px;
+            cursor: pointer;
+            box-sizing: border-box;
+            transition: transform 0.08s ease;
+        }
+
+        .tv-fib-palette-swatch:active {
+            transform: scale(0.9);
+        }
+
+        .tv-fib-palette-swatch.selected {
+            outline: 2px solid #FFFFFF;
+            outline-offset: 1px;
+            z-index: 2;
+        }
+
+        .tv-fib-recent-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #2A2E39;
+        }
+
+        .tv-fib-recent-colors {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tv-fib-recent-swatch {
+            width: 24px;
+            height: 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .tv-fib-recent-swatch.selected {
+            box-shadow: 0 0 0 2px #181B20, 0 0 0 4px #FFFFFF;
+            border-radius: 4px;
+        }
+
+        .tv-fib-add-color-btn {
+            width: 26px;
+            height: 26px;
+            border-radius: 5px;
+            background: transparent;
+            color: #FFFFFF;
+            font-size: 20px;
+            font-weight: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 1px dashed #434651;
+            transition: border-color 0.15s;
+        }
+
+        .tv-fib-add-color-btn:hover {
+            border-color: #868993;
+        }
+
+        .tv-fib-pop-section {
+            margin-top: 12px;
+        }
+
+        .tv-fib-pop-label {
+            font-size: 13px;
+            color: #868993;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .tv-fib-opacity-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tv-fib-slider-track-wrap {
+            flex: 1;
+            position: relative;
+            height: 12px;
+            border-radius: 6px;
+            background-color: #2A2E39;
+            background-image: 
+                linear-gradient(45deg, #181B20 25%, transparent 25%), 
+                linear-gradient(-45deg, #181B20 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #181B20 75%), 
+                linear-gradient(-45deg, transparent 75%, #181B20 75%);
+            background-size: 8px 8px;
+            background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+            display: flex;
+            align-items: center;
+        }
+
+        .tv-fib-opacity-gradient {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 6px;
+            pointer-events: none;
+        }
+
+        .tv-fib-opacity-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            background: transparent;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .tv-fib-opacity-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            border: 2px solid #000000;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+            cursor: pointer;
+        }
+
+        .tv-fib-opacity-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            border: 2px solid #000000;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+            cursor: pointer;
+        }
+
+        .tv-fib-opacity-badge {
+            border: 1px solid #434651;
+            border-radius: 5px;
+            padding: 3px 8px;
+            font-size: 13px;
+            color: #D1D4DC;
+            font-weight: 500;
+            min-width: 48px;
+            text-align: center;
+            box-sizing: border-box;
+            background: #131722;
+        }
+
+        .tv-fib-segmented-control {
+            display: flex;
+            width: 100%;
+            border: 1px solid #434651;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #131722;
+            height: 32px;
+            box-sizing: border-box;
+        }
+
+        .tv-fib-segment {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-right: 1px solid #434651;
+            background: transparent;
+            color: #FFFFFF;
+            transition: background 0.12s, color 0.12s;
+        }
+
+        .tv-fib-segment:last-child {
+            border-right: none;
+        }
+
+        .tv-fib-segment.selected {
+            background: #FFFFFF !important;
+            color: #000000 !important;
+        }
+
+        .tv-fib-seg-line {
+            display: block;
+            width: 26px;
+            background-color: currentColor;
+            border-radius: 1px;
+        }
+
+        .tv-fib-segment svg {
+            stroke: currentColor;
         }
 
         .tv-footer-btn-template {
@@ -1537,14 +1854,13 @@
                         <span>Trend line</span>
                     </label>
                     <div class="tv-fib-setting-right">
-                        <div class="tv-color-box-wrap">
-                            <input type="color" id="tv-fib-trendline-color-input" class="tv-hidden-color-input" value="#AB47BC">
-                            <button id="tv-fib-trendline-color-btn" class="tv-fib-swatch-btn" style="background-color: #AB47BC;"></button>
-                        </div>
-                        <button id="tv-fib-trendline-style-btn" class="tv-fib-mini-btn" title="Trend line style">
-                            <svg width="24" height="12" viewBox="0 0 24 12">
-                                <line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3" />
-                            </svg>
+                        <button id="tv-fib-trendline-pill-btn" class="tv-fib-trendline-pill" title="Trend line style" type="button">
+                            <div id="tv-fib-trendline-pill-swatch" class="tv-fib-pill-swatch"></div>
+                            <div id="tv-fib-trendline-pill-preview" class="tv-fib-pill-preview">
+                                <svg width="34" height="12" viewBox="0 0 34 12">
+                                    <line id="tv-fib-pill-line" x1="2" y1="6" x2="32" y2="6" stroke="#AB47BC" stroke-width="2" stroke-dasharray="5 3.5" />
+                                </svg>
+                            </div>
                         </button>
                     </div>
                 </div>
@@ -1697,6 +2013,74 @@
                 </div>
             </div>
 
+            <!-- TradingView Style & Color Popover for Trendline (Image 2) -->
+            <div id="tv-fib-trendline-popover" class="tv-trendline-style-popover" style="display: none;">
+                <!-- 1. Color Palette Grid (8x10) -->
+                <div id="tv-fib-palette-grid" class="tv-fib-palette-grid"></div>
+
+                <!-- 2. Recent Colors + Custom Color '+' -->
+                <div class="tv-fib-recent-row">
+                    <div id="tv-fib-recent-colors" class="tv-fib-recent-colors"></div>
+                    <label class="tv-fib-add-color-btn" title="Add custom color">
+                        +
+                        <input type="color" id="tv-fib-trendline-custom-color" class="tv-hidden-color-input" />
+                    </label>
+                </div>
+
+                <!-- 3. Opacity -->
+                <div class="tv-fib-pop-section">
+                    <div class="tv-fib-pop-label">Opacity</div>
+                    <div class="tv-fib-opacity-row">
+                        <div class="tv-fib-slider-track-wrap">
+                            <div id="tv-fib-opacity-gradient" class="tv-fib-opacity-gradient"></div>
+                            <input type="range" id="tv-fib-trendline-opacity-slider" class="tv-fib-opacity-slider" min="0" max="100" value="100" />
+                        </div>
+                        <div id="tv-fib-trendline-opacity-val" class="tv-fib-opacity-badge">100%</div>
+                    </div>
+                </div>
+
+                <!-- 4. Thickness -->
+                <div class="tv-fib-pop-section">
+                    <div class="tv-fib-pop-label">Thickness</div>
+                    <div class="tv-fib-segmented-control" id="tv-fib-thickness-segments">
+                        <div class="tv-fib-segment" data-thickness="1" title="1px">
+                            <span class="tv-fib-seg-line" style="height: 1px;"></span>
+                        </div>
+                        <div class="tv-fib-segment" data-thickness="2" title="2px">
+                            <span class="tv-fib-seg-line" style="height: 2px;"></span>
+                        </div>
+                        <div class="tv-fib-segment" data-thickness="3" title="3px">
+                            <span class="tv-fib-seg-line" style="height: 3px;"></span>
+                        </div>
+                        <div class="tv-fib-segment" data-thickness="4" title="4px">
+                            <span class="tv-fib-seg-line" style="height: 4px;"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Line style -->
+                <div class="tv-fib-pop-section">
+                    <div class="tv-fib-pop-label">Line style</div>
+                    <div class="tv-fib-segmented-control" id="tv-fib-style-segments">
+                        <div class="tv-fib-segment" data-style="solid" title="Solid">
+                            <svg width="34" height="12" viewBox="0 0 34 12">
+                                <line x1="2" y1="6" x2="32" y2="6" stroke="currentColor" stroke-width="2" />
+                            </svg>
+                        </div>
+                        <div class="tv-fib-segment" data-style="dashed" title="Dashed">
+                            <svg width="34" height="12" viewBox="0 0 34 12">
+                                <line x1="2" y1="6" x2="32" y2="6" stroke="currentColor" stroke-width="2" stroke-dasharray="5 3.5" />
+                            </svg>
+                        </div>
+                        <div class="tv-fib-segment" data-style="dotted" title="Dotted">
+                            <svg width="34" height="12" viewBox="0 0 34 12">
+                                <line x1="2" y1="6" x2="32" y2="6" stroke="currentColor" stroke-width="2.5" stroke-dasharray="0.5 4" stroke-linecap="round" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Font Size Dropdown Overlay (TradingView Mobile Style) -->
             <div id="tv-text-size-dropdown" class="tv-size-dropdown-overlay" style="display: none;">
                 <div class="tv-size-item" data-size="8">8</div>
@@ -1822,7 +2206,9 @@
         let fibSettings = {
             showTrendline: true,
             trendlineColor: '#AB47BC',
+            trendlineOpacity: 1.0,
             trendlineStyle: 'dashed',
+            trendlineWidth: 1,
             levelsLineStyle: 'solid',
             levelsLineWidth: 1,
             extend: 'none', // 'none', 'left', 'right', 'both'
@@ -2714,6 +3100,9 @@
 
         function openTrendlineSettingsModal() {
             isFibSettingsModalOpen = false;
+            const modal = document.getElementById('tv-settings-modal');
+            if (modal) modal.classList.remove('fullscreen');
+            if (typeof closeFibTrendlinePopover === 'function') closeFibTrendlinePopover();
             let drawing = null;
             let drawingTitle = 'Trendline';
             if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
@@ -2745,7 +3134,6 @@
             if (bodyText) bodyText.style.display = 'block';
 
             const backdrop = document.getElementById('tv-settings-backdrop');
-            const modal = document.getElementById('tv-settings-modal');
             if (!backdrop || !modal) return;
 
             hideAllPopovers();
@@ -2788,6 +3176,7 @@
             hideAllPopovers();
             closeSizeDropdown();
             closeAlignDropdowns();
+            if (typeof closeFibTrendlinePopover === 'function') closeFibTrendlinePopover();
             if (!backdrop || !modal) return;
 
             backdrop.classList.remove('visible');
@@ -2796,6 +3185,8 @@
             setTimeout(() => {
                 backdrop.style.display = 'none';
                 modal.style.display = 'none';
+                modal.classList.remove('fullscreen');
+                isFibSettingsModalOpen = false;
             }, 260);
         }
 
@@ -2845,16 +3236,160 @@
             }
         }
 
-        function updateTrendlineStyleBtnUI(style) {
-            const btn = document.getElementById('tv-fib-trendline-style-btn');
-            if (!btn) return;
-            if (style === 'solid') {
-                btn.innerHTML = '<svg width="24" height="12" viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" /></svg>';
-            } else if (style === 'dotted') {
-                btn.innerHTML = '<svg width="24" height="12" viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" stroke-dasharray="1 3" stroke-linecap="round" /></svg>';
-            } else {
-                btn.innerHTML = '<svg width="24" height="12" viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3" /></svg>';
+        function updateTrendlinePillUI() {
+            if (!pendingFibSettings) return;
+            const swatch = document.getElementById('tv-fib-trendline-pill-swatch');
+            const line = document.getElementById('tv-fib-pill-line');
+            const color = pendingFibSettings.trendlineColor || '#AB47BC';
+            const opacity = pendingFibSettings.trendlineOpacity !== undefined ? pendingFibSettings.trendlineOpacity : 1.0;
+            const style = pendingFibSettings.trendlineStyle || 'dashed';
+            const width = Math.max(1, Math.min(4, pendingFibSettings.trendlineWidth || 1));
+
+            const finalColor = hexToRgba(color, opacity);
+            if (swatch) {
+                swatch.style.backgroundColor = finalColor;
             }
+            if (line) {
+                line.setAttribute('stroke', finalColor);
+                line.setAttribute('stroke-width', String(Math.max(1.5, width)));
+                if (style === 'solid') {
+                    line.removeAttribute('stroke-dasharray');
+                    line.removeAttribute('stroke-linecap');
+                } else if (style === 'dotted') {
+                    line.setAttribute('stroke-dasharray', '0.5 4');
+                    line.setAttribute('stroke-linecap', 'round');
+                } else {
+                    line.setAttribute('stroke-dasharray', '5 3.5');
+                    line.removeAttribute('stroke-linecap');
+                }
+            }
+        }
+
+        let fibRecentTrendlineColors = ['#AB47BC', '#2A2E39'];
+
+        function closeFibTrendlinePopover() {
+            const pop = document.getElementById('tv-fib-trendline-popover');
+            const pill = document.getElementById('tv-fib-trendline-pill-btn');
+            if (pop) pop.style.display = 'none';
+            if (pill) pill.classList.remove('active');
+        }
+
+        function openFibTrendlinePopover() {
+            const pop = document.getElementById('tv-fib-trendline-popover');
+            const pill = document.getElementById('tv-fib-trendline-pill-btn');
+            if (!pop || !pill || !pendingFibSettings) return;
+
+            renderFibTrendlinePopoverUI();
+            pop.style.display = 'block';
+            pill.classList.add('active');
+        }
+
+        function toggleFibTrendlinePopover() {
+            const pop = document.getElementById('tv-fib-trendline-popover');
+            if (pop && pop.style.display === 'block') {
+                closeFibTrendlinePopover();
+            } else {
+                openFibTrendlinePopover();
+            }
+        }
+
+        function renderFibTrendlinePopoverUI() {
+            if (!pendingFibSettings) return;
+            const curColor = (pendingFibSettings.trendlineColor || '#AB47BC').toUpperCase();
+            const curOpacity = pendingFibSettings.trendlineOpacity !== undefined ? pendingFibSettings.trendlineOpacity : 1.0;
+            const curWidth = pendingFibSettings.trendlineWidth || 1;
+            const curStyle = pendingFibSettings.trendlineStyle || 'dashed';
+
+            // 1. Palette Grid (8x10)
+            const paletteGrid = document.getElementById('tv-fib-palette-grid');
+            if (paletteGrid) {
+                paletteGrid.innerHTML = '';
+                TV_PALETTE_COLORS.forEach(row => {
+                    row.forEach(col => {
+                        const sw = document.createElement('div');
+                        sw.className = 'tv-fib-palette-swatch' + (col.toUpperCase() === curColor ? ' selected' : '');
+                        sw.style.backgroundColor = col;
+                        sw.onclick = (e) => {
+                            e.stopPropagation();
+                            selectTrendlineColor(col);
+                        };
+                        paletteGrid.appendChild(sw);
+                    });
+                });
+            }
+
+            // 2. Recent colors
+            renderFibRecentColorsUI();
+
+            // 3. Opacity Slider & Badge
+            const opacitySlider = document.getElementById('tv-fib-trendline-opacity-slider');
+            const opacityGrad = document.getElementById('tv-fib-opacity-gradient');
+            const opacityVal = document.getElementById('tv-fib-trendline-opacity-val');
+            const pct = Math.round(curOpacity * 100);
+            if (opacitySlider) opacitySlider.value = String(pct);
+            if (opacityVal) opacityVal.textContent = `${pct}%`;
+            if (opacityGrad) {
+                opacityGrad.style.background = `linear-gradient(to right, ${hexToRgba(curColor, 0)}, ${hexToRgba(curColor, 1)})`;
+            }
+
+            // 4. Thickness Segments
+            updateThicknessSegmentsUI(curWidth);
+
+            // 5. Line Style Segments
+            updateStyleSegmentsUI(curStyle);
+        }
+
+        function renderFibRecentColorsUI() {
+            const container = document.getElementById('tv-fib-recent-colors');
+            if (!container || !pendingFibSettings) return;
+            container.innerHTML = '';
+            const curColor = (pendingFibSettings.trendlineColor || '#AB47BC').toUpperCase();
+
+            if (!fibRecentTrendlineColors.map(c => c.toUpperCase()).includes(curColor)) {
+                fibRecentTrendlineColors.unshift(curColor);
+                if (fibRecentTrendlineColors.length > 3) fibRecentTrendlineColors.pop();
+            }
+
+            fibRecentTrendlineColors.forEach(col => {
+                const sw = document.createElement('div');
+                sw.className = 'tv-fib-recent-swatch' + (col.toUpperCase() === curColor ? ' selected' : '');
+                sw.style.backgroundColor = col;
+                sw.onclick = (e) => {
+                    e.stopPropagation();
+                    selectTrendlineColor(col);
+                };
+                container.appendChild(sw);
+            });
+        }
+
+        function selectTrendlineColor(color) {
+            if (!pendingFibSettings) return;
+            pendingFibSettings.trendlineColor = color;
+            const curColor = color.toUpperCase();
+            if (!fibRecentTrendlineColors.map(c => c.toUpperCase()).includes(curColor)) {
+                fibRecentTrendlineColors.unshift(curColor);
+                if (fibRecentTrendlineColors.length > 3) fibRecentTrendlineColors.pop();
+            }
+            renderFibTrendlinePopoverUI();
+            updateTrendlinePillUI();
+            fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+            renderFib();
+        }
+
+        function updateThicknessSegmentsUI(w) {
+            const width = w || (pendingFibSettings ? (pendingFibSettings.trendlineWidth || 1) : 1);
+            document.querySelectorAll('#tv-fib-thickness-segments .tv-fib-segment').forEach(seg => {
+                const segW = parseInt(seg.getAttribute('data-thickness'), 10);
+                seg.classList.toggle('selected', segW === width);
+            });
+        }
+
+        function updateStyleSegmentsUI(s) {
+            const style = s || (pendingFibSettings ? (pendingFibSettings.trendlineStyle || 'dashed') : 'dashed');
+            document.querySelectorAll('#tv-fib-style-segments .tv-fib-segment').forEach(seg => {
+                const segStyle = seg.getAttribute('data-style');
+                seg.classList.toggle('selected', segStyle === style);
+            });
         }
 
         function updateLevelsStyleBtnUI(style) {
@@ -2952,6 +3487,9 @@
             originalFibSettings = JSON.parse(JSON.stringify(fibSettings));
             pendingFibSettings = JSON.parse(JSON.stringify(fibSettings));
 
+            const modal = document.getElementById('tv-settings-modal');
+            if (modal) modal.classList.add('fullscreen');
+
             const titleEl = document.getElementById('tv-settings-title-text') || document.querySelector('#tv-settings-modal .tv-settings-title-group span');
             if (titleEl) titleEl.textContent = 'Fib retracement';
 
@@ -2970,11 +3508,8 @@
             // Populate Trend line
             const trendCheck = document.getElementById('tv-fib-trendline-check');
             if (trendCheck) trendCheck.checked = !!pendingFibSettings.showTrendline;
-            const trendColorBtn = document.getElementById('tv-fib-trendline-color-btn');
-            const trendColorInput = document.getElementById('tv-fib-trendline-color-input');
-            if (trendColorBtn) trendColorBtn.style.backgroundColor = pendingFibSettings.trendlineColor || '#AB47BC';
-            if (trendColorInput) trendColorInput.value = pendingFibSettings.trendlineColor || '#AB47BC';
-            updateTrendlineStyleBtnUI(pendingFibSettings.trendlineStyle);
+            closeFibTrendlinePopover();
+            updateTrendlinePillUI();
 
             // Populate Levels line
             updateLevelsStyleBtnUI(pendingFibSettings.levelsLineStyle);
@@ -3036,7 +3571,6 @@
             if (logCheck) logCheck.checked = !!pendingFibSettings.logScale;
 
             const backdrop = document.getElementById('tv-settings-backdrop');
-            const modal = document.getElementById('tv-settings-modal');
             if (!backdrop || !modal) return;
 
             hideAllPopovers();
@@ -3068,33 +3602,71 @@
                 };
             }
 
-            const trendColorBtn = document.getElementById('tv-fib-trendline-color-btn');
-            const trendColorInput = document.getElementById('tv-fib-trendline-color-input');
-            if (trendColorBtn && trendColorInput) {
-                trendColorBtn.onclick = (e) => {
+            const pillBtn = document.getElementById('tv-fib-trendline-pill-btn');
+            if (pillBtn) {
+                pillBtn.onclick = (e) => {
                     e.stopPropagation();
-                    trendColorInput.click();
+                    toggleFibTrendlinePopover();
                 };
-                trendColorInput.oninput = (e) => {
-                    const c = e.target.value;
-                    if (pendingFibSettings) pendingFibSettings.trendlineColor = c;
-                    trendColorBtn.style.backgroundColor = c;
+            }
+
+            const customColorInput = document.getElementById('tv-fib-trendline-custom-color');
+            if (customColorInput) {
+                customColorInput.oninput = (e) => {
+                    selectTrendlineColor(e.target.value);
+                };
+            }
+
+            const trendOpacitySlider = document.getElementById('tv-fib-trendline-opacity-slider');
+            if (trendOpacitySlider) {
+                trendOpacitySlider.oninput = () => {
+                    if (!pendingFibSettings) return;
+                    const pct = parseInt(trendOpacitySlider.value, 10);
+                    pendingFibSettings.trendlineOpacity = pct / 100;
+                    const opacityVal = document.getElementById('tv-fib-trendline-opacity-val');
+                    if (opacityVal) opacityVal.textContent = `${pct}%`;
+                    updateTrendlinePillUI();
                     fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
                     renderFib();
                 };
             }
 
-            const trendStyleBtn = document.getElementById('tv-fib-trendline-style-btn');
-            if (trendStyleBtn) {
-                trendStyleBtn.onclick = (e) => {
+            document.querySelectorAll('#tv-fib-thickness-segments .tv-fib-segment').forEach(seg => {
+                seg.onclick = (e) => {
                     e.stopPropagation();
                     if (!pendingFibSettings) return;
-                    const order = ['dashed', 'solid', 'dotted'];
-                    const curIdx = order.indexOf(pendingFibSettings.trendlineStyle || 'dashed');
-                    pendingFibSettings.trendlineStyle = order[(curIdx + 1) % order.length];
-                    updateTrendlineStyleBtnUI(pendingFibSettings.trendlineStyle);
+                    const w = parseInt(seg.getAttribute('data-thickness'), 10) || 1;
+                    pendingFibSettings.trendlineWidth = w;
+                    updateThicknessSegmentsUI(w);
+                    updateTrendlinePillUI();
                     fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
                     renderFib();
+                };
+            });
+
+            document.querySelectorAll('#tv-fib-style-segments .tv-fib-segment').forEach(seg => {
+                seg.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!pendingFibSettings) return;
+                    const s = seg.getAttribute('data-style') || 'dashed';
+                    pendingFibSettings.trendlineStyle = s;
+                    updateStyleSegmentsUI(s);
+                    updateTrendlinePillUI();
+                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                    renderFib();
+                };
+            });
+
+            const popoverEl = document.getElementById('tv-fib-trendline-popover');
+            if (popoverEl) {
+                popoverEl.onpointerdown = (e) => e.stopPropagation();
+                popoverEl.onclick = (e) => e.stopPropagation();
+            }
+
+            const bodyFib = document.getElementById('tv-settings-body-fib');
+            if (bodyFib) {
+                bodyFib.onscroll = () => {
+                    closeFibTrendlinePopover();
                 };
             }
 
@@ -4695,6 +5267,9 @@
                     }
                     if (e.target && !e.target.closest('#tv-text-valign-dropdown, #tv-text-valign-btn, #tv-text-halign-dropdown, #tv-text-halign-btn')) {
                         closeAlignDropdowns();
+                    }
+                    if (e.target && !e.target.closest('#tv-fib-trendline-popover, #tv-fib-trendline-pill-btn')) {
+                        closeFibTrendlinePopover();
                     }
                 };
                 settingsModal.ontouchstart = (e) => e.stopPropagation();
@@ -7328,16 +7903,21 @@
                             if (fibSettings.showTrendline) {
                                 ctx.save();
                                 ctx.beginPath();
-                                ctx.strokeStyle = fibSettings.trendlineColor || '#AB47BC';
-                                ctx.lineWidth = 1.5;
+                                const tColor = fibSettings.trendlineColor || '#AB47BC';
+                                const tOpacity = fibSettings.trendlineOpacity !== undefined ? fibSettings.trendlineOpacity : 1.0;
+                                ctx.strokeStyle = hexToRgba(tColor, tOpacity);
+                                const tWidth = fibSettings.trendlineWidth || 1;
+                                ctx.lineWidth = tWidth;
                                 const tStyle = fibSettings.trendlineStyle || 'dashed';
                                 if (tStyle === 'solid') {
+                                    ctx.lineCap = 'round';
                                     ctx.setLineDash([]);
                                 } else if (tStyle === 'dotted') {
                                     ctx.lineCap = 'round';
-                                    ctx.setLineDash([0, 5]);
+                                    ctx.setLineDash([0, Math.max(5, tWidth * 2.5)]);
                                 } else {
-                                    ctx.setLineDash([5, 4]);
+                                    ctx.lineCap = 'butt';
+                                    ctx.setLineDash([Math.max(5, tWidth * 3), Math.max(4, tWidth * 2)]);
                                 }
                                 ctx.moveTo(x1, y1);
                                 ctx.lineTo(x2, y2);
