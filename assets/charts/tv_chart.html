@@ -610,15 +610,16 @@
             left: 0;
             right: 0;
             bottom: 0;
-            top: 138px;
+            top: auto;
+            max-height: 55vh;
             background: #1E1E1E;
             border-top: 1px solid #2C2C2E;
-            border-top-left-radius: 14px;
-            border-top-right-radius: 14px;
-            box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.7);
-            z-index: 30;
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.85);
+            z-index: 2200;
             overflow-y: auto;
-            padding: 10px 14px 20px 14px;
+            padding: 12px 14px max(24px, env(safe-area-inset-bottom, 24px)) 14px;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
@@ -652,8 +653,8 @@
         }
 
         .tv-size-item.selected {
-            background: #F0F3FA;
-            color: #121212;
+            background: #FFFFFF !important;
+            color: #000000 !important;
             font-weight: 600;
         }
 
@@ -830,11 +831,16 @@
             padding: 0;
             flex-shrink: 0;
             outline: none;
-            transition: transform 0.1s, border-color 0.12s;
+            transition: transform 0.1s, border-color 0.12s, box-shadow 0.12s;
         }
 
         .tv-fib-swatch-btn:active {
             transform: scale(0.94);
+        }
+
+        .tv-fib-swatch-btn.active {
+            border-color: #2962FF !important;
+            box-shadow: 0 0 0 2px #2962FF !important;
         }
 
         .tv-color-box-wrap {
@@ -852,12 +858,11 @@
         }
 
         .tv-fib-mini-btn {
-            height: 32px;
-            min-width: 38px;
+            height: 34px;
             padding: 0 8px;
-            border-radius: 6px;
-            border: 1px solid #2A2E39;
-            background: #131722;
+            border-radius: 7px;
+            border: 1px solid #3A3A3C;
+            background: #2A2A2A;
             color: #D1D4DC;
             cursor: pointer;
             display: inline-flex;
@@ -866,17 +871,81 @@
             font-size: 13px;
             font-weight: 500;
             outline: none;
-            transition: border-color 0.12s;
+            transition: border-color 0.15s, box-shadow 0.15s;
         }
 
-        .tv-fib-mini-btn:hover, .tv-fib-mini-btn:active {
-            border-color: #4A4E5A;
+        .tv-fib-mini-btn:hover {
+            border-color: #50535E;
+        }
+
+        .tv-fib-mini-btn.active {
+            border-color: #2962FF !important;
+            box-shadow: 0 0 0 1px #2962FF !important;
+        }
+
+        .tv-fib-width-btn {
+            min-width: 52px;
+        }
+
+        .tv-fib-style-btn {
+            min-width: 38px;
+        }
+
+        .tv-fib-select-btn {
+            height: 34px;
+            min-width: 84px;
+            padding: 0 10px 0 12px;
+            border-radius: 6px;
+            border: 1px solid #3A3A3C;
+            background: #2A2A2A;
+            color: #D1D4DC;
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            cursor: pointer;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .tv-fib-select-btn:hover {
+            border-color: #50535E;
+        }
+
+        .tv-fib-select-btn.active {
+            border-color: #2962FF !important;
+            box-shadow: 0 0 0 1px #2962FF !important;
+        }
+
+        .tv-fib-extend-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #D1D4DC;
+            border-radius: 8px;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background 0.12s;
+        }
+
+        .tv-fib-extend-item:hover {
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .tv-select-control {
             height: 34px;
-            background-color: #131722;
-            border: 1px solid #2A2E39;
+            background-color: #2A2A2A;
+            border: 1px solid #3A3A3C;
             color: #D1D4DC;
             font-size: 13px;
             font-weight: 500;
@@ -909,17 +978,18 @@
         }
 
         .tv-fib-lvl-input {
-            flex: 1;
-            max-width: 140px;
+            width: 76px;
+            flex: none;
             height: 32px;
-            background: #131722;
-            border: 1px solid #2A2E39;
+            background: #2A2A2A;
+            border: 1px solid #3A3A3C;
             border-radius: 6px;
             color: #FFFFFF;
             font-size: 13.5px;
             font-weight: 500;
             padding: 0 10px;
             outline: none;
+            box-sizing: border-box;
             transition: border-color 0.15s;
         }
 
@@ -961,21 +1031,29 @@
             background: #FFFFFF;
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
             cursor: pointer;
+            border: 2px solid #2962FF;
+        }
+
         /* Fullscreen Setting Modal for Fibonacci Retracement */
         .tv-settings-modal.fullscreen {
+            position: fixed !important;
             top: 0 !important;
             bottom: 0 !important;
             left: 0 !important;
             right: 0 !important;
-            width: 100% !important;
+            width: 100vw !important;
             height: 100% !important;
-            max-height: 100% !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            max-height: none !important;
             border-radius: 0 !important;
             border: none !important;
-            background: #000000 !important;
+            background: #1E1E1E !important;
             box-shadow: none !important;
             transform: translateY(100%);
             transition: transform 0.24s cubic-bezier(0.2, 0.9, 0.3, 1);
+            z-index: 2000 !important;
+            margin: 0 !important;
         }
 
         .tv-settings-modal.fullscreen.visible {
@@ -983,26 +1061,26 @@
         }
 
         .tv-settings-modal.fullscreen .tv-settings-header {
-            background: #000000;
+            background: #1E1E1E;
             padding: 16px 16px 10px 16px;
         }
 
         .tv-settings-modal.fullscreen .tv-settings-tabs {
-            background: #000000;
-            border-bottom: 1px solid #1E222D;
+            background: #1E1E1E;
+            border-bottom: 1px solid #2C2C2E;
             padding: 0 16px;
         }
 
         .tv-settings-modal.fullscreen .tv-settings-body {
-            background: #000000;
-            padding: 14px 16px;
+            background: #1E1E1E;
+            padding: 14px 16px 20px 16px;
         }
 
         .tv-settings-modal.fullscreen .tv-settings-footer {
-            background: #000000;
-            border-top: 1px solid #1E222D;
+            background: #1E1E1E;
+            border-top: 1px solid #2C2C2E;
             padding: 12px 16px;
-            padding-bottom: max(14px, env(safe-area-inset-bottom, 14px));
+            padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
         }
 
         /* Trendline Combined Pill Button */
@@ -1013,8 +1091,8 @@
             width: 82px;
             height: 36px;
             padding: 4px 8px;
-            background: #000000;
-            border: 1.5px solid #434651;
+            background: #2A2A2A;
+            border: 1.5px solid #3A3A3C;
             border-radius: 8px;
             cursor: pointer;
             box-sizing: border-box;
@@ -1059,13 +1137,13 @@
             right: 16px;
             width: 310px;
             max-width: calc(100% - 32px);
-            background: #181B20;
-            border: 1px solid #2A2E39;
+            background: #1E1E1E;
+            border: 1px solid #2C2C2E;
             border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.9);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75);
             padding: 12px;
             box-sizing: border-box;
-            z-index: 1080;
+            z-index: 2100;
             user-select: none;
             -webkit-user-select: none;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -1102,7 +1180,7 @@
             gap: 8px;
             margin-top: 10px;
             padding-top: 10px;
-            border-top: 1px solid #2A2E39;
+            border-top: 1px solid #2C2C2E;
         }
 
         .tv-fib-recent-colors {
@@ -1121,7 +1199,7 @@
         }
 
         .tv-fib-recent-swatch.selected {
-            box-shadow: 0 0 0 2px #181B20, 0 0 0 4px #FFFFFF;
+            box-shadow: 0 0 0 2px #1E1E1E, 0 0 0 4px #FFFFFF;
             border-radius: 4px;
         }
 
@@ -1137,7 +1215,7 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            border: 1px dashed #434651;
+            border: 1px dashed #50535E;
             transition: border-color 0.15s;
         }
 
@@ -1167,12 +1245,12 @@
             position: relative;
             height: 12px;
             border-radius: 6px;
-            background-color: #2A2E39;
+            background-color: #2C2C2E;
             background-image: 
-                linear-gradient(45deg, #181B20 25%, transparent 25%), 
-                linear-gradient(-45deg, #181B20 25%, transparent 25%), 
-                linear-gradient(45deg, transparent 75%, #181B20 75%), 
-                linear-gradient(-45deg, transparent 75%, #181B20 75%);
+                linear-gradient(45deg, #1E1E1E 25%, transparent 25%), 
+                linear-gradient(-45deg, #1E1E1E 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #1E1E1E 75%), 
+                linear-gradient(-45deg, transparent 75%, #1E1E1E 75%);
             background-size: 8px 8px;
             background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
             display: flex;
@@ -1226,7 +1304,7 @@
         }
 
         .tv-fib-opacity-badge {
-            border: 1px solid #434651;
+            border: 1px solid #3A3A3C;
             border-radius: 5px;
             padding: 3px 8px;
             font-size: 13px;
@@ -1235,16 +1313,16 @@
             min-width: 48px;
             text-align: center;
             box-sizing: border-box;
-            background: #131722;
+            background: #2A2A2A;
         }
 
         .tv-fib-segmented-control {
             display: flex;
             width: 100%;
-            border: 1px solid #434651;
+            border: 1px solid #3A3A3C;
             border-radius: 6px;
             overflow: hidden;
-            background: #131722;
+            background: #2A2A2A;
             height: 32px;
             box-sizing: border-box;
         }
@@ -1255,7 +1333,7 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            border-right: 1px solid #434651;
+            border-right: 1px solid #3A3A3C;
             background: transparent;
             color: #FFFFFF;
             transition: background 0.12s, color 0.12s;
@@ -1279,6 +1357,77 @@
 
         .tv-fib-segment svg {
             stroke: currentColor;
+        }
+
+        /* Levels Width and Style Dropdowns (TradingView Style) */
+        .tv-fib-dropdown {
+            position: absolute;
+            background: #1E1E1E;
+            border: 1px solid #2C2C2E;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75);
+            padding: 6px;
+            box-sizing: border-box;
+            z-index: 2100;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .tv-fib-width-dropdown {
+            width: 96px;
+        }
+
+        .tv-fib-style-dropdown {
+            width: 176px;
+        }
+
+        .tv-fib-dropdown-item {
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            background: transparent;
+            color: #FFFFFF;
+            transition: background 0.1s, color 0.1s;
+            margin: 3px 0;
+            box-sizing: border-box;
+        }
+
+        .tv-fib-dropdown-item:active {
+            background: #2A2A2A;
+        }
+
+        .tv-fib-dropdown-item.selected {
+            background: #FFFFFF !important;
+            color: #000000 !important;
+        }
+
+        .tv-fib-dropdown-item.selected .tv-fib-seg-line {
+            background-color: #000000 !important;
+        }
+
+        .tv-fib-style-item {
+            justify-content: flex-start;
+            padding: 0 12px;
+            gap: 12px;
+            font-size: 14.5px;
+            font-weight: 500;
+        }
+
+        .tv-fib-style-item svg {
+            flex-shrink: 0;
+            stroke: currentColor;
+        }
+
+        .tv-fib-style-item.selected svg {
+            stroke: #000000 !important;
+        }
+
+        .tv-fib-style-item.selected span {
+            color: #000000 !important;
         }
 
         .tv-footer-btn-template {
@@ -1869,14 +2018,14 @@
                 <div class="tv-fib-setting-row">
                     <span class="tv-fib-setting-left">Levels line</span>
                     <div class="tv-fib-setting-right">
-                        <button id="tv-fib-levels-style-btn" class="tv-fib-mini-btn" title="Levels style">
-                            <svg width="24" height="12" viewBox="0 0 24 12">
-                                <line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" />
+                        <button id="tv-fib-levels-width-btn" class="tv-fib-mini-btn tv-fib-width-btn" title="Levels width" type="button">
+                            <svg width="28" height="12" viewBox="0 0 28 12">
+                                <line x1="2" y1="6" x2="26" y2="6" stroke="currentColor" stroke-width="1.5" />
                             </svg>
                         </button>
-                        <button id="tv-fib-levels-width-btn" class="tv-fib-mini-btn" title="Levels width">
+                        <button id="tv-fib-levels-style-btn" class="tv-fib-mini-btn tv-fib-style-btn" title="Levels style" type="button">
                             <svg width="20" height="12" viewBox="0 0 20 12">
-                                <line x1="2" y1="6" x2="18" y2="6" stroke="currentColor" stroke-width="1.5" />
+                                <line x1="1" y1="6" x2="19" y2="6" stroke="currentColor" stroke-width="2" />
                             </svg>
                         </button>
                     </div>
@@ -1886,12 +2035,14 @@
                 <div class="tv-fib-setting-row">
                     <span class="tv-fib-setting-left">Extend</span>
                     <div class="tv-fib-setting-right">
-                        <select id="tv-fib-extend-select" class="tv-select-control">
-                            <option value="none">Don't extend</option>
-                            <option value="left">Extend left</option>
-                            <option value="right">Extend right</option>
-                            <option value="both">Extend both</option>
-                        </select>
+                        <div id="tv-fib-extend-btn" class="tv-fib-select-btn" title="Extend" tabindex="0">
+                            <span id="tv-fib-extend-val">None</span>
+                            <div id="tv-fib-extend-chevron" class="tv-size-chevron">
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1905,7 +2056,6 @@
                     <span class="tv-fib-setting-left">Use one color</span>
                     <div class="tv-fib-setting-right">
                         <div class="tv-color-box-wrap">
-                            <input type="color" id="tv-fib-single-color-input" class="tv-hidden-color-input" value="#AB47BC">
                             <button id="tv-fib-single-color-btn" class="tv-fib-swatch-btn" style="background-color: #AB47BC;"></button>
                         </div>
                     </div>
@@ -1945,10 +2095,14 @@
                         <span>Levels</span>
                     </label>
                     <div class="tv-fib-setting-right">
-                        <select id="tv-fib-levels-format-select" class="tv-select-control">
-                            <option value="percents">Percents</option>
-                            <option value="values">Values</option>
-                        </select>
+                        <div id="tv-fib-levels-format-btn" class="tv-fib-select-btn" title="Levels format" tabindex="0">
+                            <span id="tv-fib-levels-format-val">Percents</span>
+                            <div id="tv-fib-levels-format-chevron" class="tv-size-chevron">
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1956,16 +2110,22 @@
                 <div class="tv-fib-setting-row">
                     <span class="tv-fib-setting-left">Labels</span>
                     <div class="tv-fib-setting-right">
-                        <select id="tv-fib-labels-halign-select" class="tv-select-control">
-                            <option value="left">Left</option>
-                            <option value="center">Center</option>
-                            <option value="right">Right</option>
-                        </select>
-                        <select id="tv-fib-labels-valign-select" class="tv-select-control">
-                            <option value="top">Top</option>
-                            <option value="middle">Middle</option>
-                            <option value="bottom">Bottom</option>
-                        </select>
+                        <div id="tv-fib-labels-halign-btn" class="tv-fib-select-btn" title="Horizontal align" tabindex="0">
+                            <span id="tv-fib-labels-halign-val">Left</span>
+                            <div id="tv-fib-labels-halign-chevron" class="tv-size-chevron">
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div id="tv-fib-labels-valign-btn" class="tv-fib-select-btn" title="Vertical align" tabindex="0">
+                            <span id="tv-fib-labels-valign-val">Top</span>
+                            <div id="tv-fib-labels-valign-chevron" class="tv-size-chevron">
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1976,16 +2136,22 @@
                         <span>Text</span>
                     </label>
                     <div class="tv-fib-setting-right">
-                        <select id="tv-fib-text-halign-select" class="tv-select-control">
-                            <option value="center">Center</option>
-                            <option value="left">Left</option>
-                            <option value="right">Right</option>
-                        </select>
-                        <select id="tv-fib-text-valign-select" class="tv-select-control">
-                            <option value="middle">Middle</option>
-                            <option value="top">Top</option>
-                            <option value="bottom">Bottom</option>
-                        </select>
+                        <div id="tv-fib-text-halign-btn" class="tv-fib-select-btn" title="Horizontal align" tabindex="0">
+                            <span id="tv-fib-text-halign-val">Center</span>
+                            <div id="tv-fib-text-halign-chevron" class="tv-size-chevron">
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div id="tv-fib-text-valign-btn" class="tv-fib-select-btn" title="Vertical align" tabindex="0">
+                            <span id="tv-fib-text-valign-val">Middle</span>
+                            <div id="tv-fib-text-valign-chevron" class="tv-size-chevron">
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1993,23 +2159,15 @@
                 <div class="tv-fib-setting-row">
                     <span class="tv-fib-setting-left">Font size</span>
                     <div class="tv-fib-setting-right">
-                        <select id="tv-fib-fontsize-select" class="tv-select-control">
-                            <option value="10">10</option>
-                            <option value="11">11</option>
-                            <option value="12" selected>12</option>
-                            <option value="14">14</option>
-                            <option value="16">16</option>
-                            <option value="20">20</option>
-                        </select>
+                        <div id="tv-fib-fontsize-btn" class="tv-fib-select-btn" title="Font size" tabindex="0">
+                            <span id="tv-fib-fontsize-val">12</span>
+                            <div id="tv-fib-fontsize-chevron" class="tv-size-chevron">
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
+                                </svg>
+                            </div>
+                        </div>
                     </div>
-                </div>
-
-                <!-- 13. Fib levels based on log scale row -->
-                <div class="tv-fib-setting-row" style="margin-bottom: 20px;">
-                    <label class="tv-fib-checkbox-label">
-                        <input type="checkbox" id="tv-fib-logscale-check" class="tv-checkbox">
-                        <span>Fib levels based on log scale</span>
-                    </label>
                 </div>
             </div>
 
@@ -2081,6 +2239,44 @@
                 </div>
             </div>
 
+            <!-- Levels Width (Thickness) Dropdown (Image 1) -->
+            <div id="tv-fib-levels-width-dropdown" class="tv-fib-dropdown tv-fib-width-dropdown" style="display: none;">
+                <div class="tv-fib-dropdown-item" data-width="1" title="1px">
+                    <span class="tv-fib-seg-line" style="height: 1px; width: 44px;"></span>
+                </div>
+                <div class="tv-fib-dropdown-item" data-width="2" title="2px">
+                    <span class="tv-fib-seg-line" style="height: 2px; width: 44px;"></span>
+                </div>
+                <div class="tv-fib-dropdown-item" data-width="3" title="3px">
+                    <span class="tv-fib-seg-line" style="height: 3px; width: 44px;"></span>
+                </div>
+                <div class="tv-fib-dropdown-item" data-width="4" title="4px">
+                    <span class="tv-fib-seg-line" style="height: 4px; width: 44px;"></span>
+                </div>
+            </div>
+
+            <!-- Levels Line Style Dropdown (Image 2) -->
+            <div id="tv-fib-levels-style-dropdown" class="tv-fib-dropdown tv-fib-style-dropdown" style="display: none;">
+                <div class="tv-fib-dropdown-item tv-fib-style-item" data-style="solid" title="Line">
+                    <svg width="24" height="12" viewBox="0 0 24 12">
+                        <line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                    <span>Line</span>
+                </div>
+                <div class="tv-fib-dropdown-item tv-fib-style-item" data-style="dashed" title="Dashed line">
+                    <svg width="24" height="12" viewBox="0 0 24 12">
+                        <line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" stroke-dasharray="4 2.5" />
+                    </svg>
+                    <span>Dashed line</span>
+                </div>
+                <div class="tv-fib-dropdown-item tv-fib-style-item" data-style="dotted" title="Dotted line">
+                    <svg width="24" height="12" viewBox="0 0 24 12">
+                        <line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2.5" stroke-dasharray="0.5 3.5" stroke-linecap="round" />
+                    </svg>
+                    <span>Dotted line</span>
+                </div>
+            </div>
+
             <!-- Font Size Dropdown Overlay (TradingView Mobile Style) -->
             <div id="tv-text-size-dropdown" class="tv-size-dropdown-overlay" style="display: none;">
                 <div class="tv-size-item" data-size="8">8</div>
@@ -2112,15 +2308,91 @@
                 <div class="tv-size-item tv-halign-item" data-halign="right">Right</div>
             </div>
 
+            <!-- Fib Extend Dropdown Overlay (Image 1) -->
+            <div id="tv-fib-extend-dropdown" class="tv-size-dropdown-overlay" style="display: none;">
+                <label class="tv-fib-extend-item">
+                    <input type="checkbox" id="tv-fib-extend-left-check" class="tv-checkbox">
+                    <span>Extend lines left</span>
+                </label>
+                <label class="tv-fib-extend-item">
+                    <input type="checkbox" id="tv-fib-extend-right-check" class="tv-checkbox">
+                    <span>Extend lines right</span>
+                </label>
+            </div>
+
+            <!-- Fib Levels Format Dropdown Overlay (Image 3) -->
+            <div id="tv-fib-levels-format-dropdown" class="tv-size-dropdown-overlay" style="display: none;">
+                <div class="tv-size-item tv-fib-format-item" data-value="values">Values</div>
+                <div class="tv-size-item tv-fib-format-item selected" data-value="percents">Percents</div>
+            </div>
+
+            <!-- Fib Labels Align Dropdowns (Image 3) -->
+            <div id="tv-fib-labels-halign-dropdown" class="tv-size-dropdown-overlay" style="display: none;">
+                <div class="tv-size-item tv-fib-lhalign-item" data-value="left">Left</div>
+                <div class="tv-size-item tv-fib-lhalign-item" data-value="center">Center</div>
+                <div class="tv-size-item tv-fib-lhalign-item" data-value="right">Right</div>
+            </div>
+            <div id="tv-fib-labels-valign-dropdown" class="tv-size-dropdown-overlay" style="display: none;">
+                <div class="tv-size-item tv-fib-lvalign-item" data-value="top">Top</div>
+                <div class="tv-size-item tv-fib-lvalign-item" data-value="middle">Middle</div>
+                <div class="tv-size-item tv-fib-lvalign-item" data-value="bottom">Bottom</div>
+            </div>
+
+            <!-- Fib Text Align Dropdowns (Image 3) -->
+            <div id="tv-fib-text-halign-dropdown" class="tv-size-dropdown-overlay" style="display: none;">
+                <div class="tv-size-item tv-fib-thalign-item" data-value="left">Left</div>
+                <div class="tv-size-item tv-fib-thalign-item" data-value="center">Center</div>
+                <div class="tv-size-item tv-fib-thalign-item" data-value="right">Right</div>
+            </div>
+            <div id="tv-fib-text-valign-dropdown" class="tv-size-dropdown-overlay" style="display: none;">
+                <div class="tv-size-item tv-fib-tvalign-item" data-value="top">Top</div>
+                <div class="tv-size-item tv-fib-tvalign-item" data-value="middle">Middle</div>
+                <div class="tv-size-item tv-fib-tvalign-item" data-value="bottom">Bottom</div>
+            </div>
+
+            <!-- Fib Font Size Dropdown Overlay (Image 4) -->
+            <div id="tv-fib-fontsize-dropdown" class="tv-size-dropdown-overlay" style="display: none;">
+                <div class="tv-size-item tv-fib-fontsize-item" data-size="8">8</div>
+                <div class="tv-size-item tv-fib-fontsize-item" data-size="10">10</div>
+                <div class="tv-size-item tv-fib-fontsize-item" data-size="11">11</div>
+                <div class="tv-size-item tv-fib-fontsize-item" data-size="12">12</div>
+                <div class="tv-size-item tv-fib-fontsize-item" data-size="14">14</div>
+                <div class="tv-size-item tv-fib-fontsize-item" data-size="16">16</div>
+                <div class="tv-size-item tv-fib-fontsize-item" data-size="18">18</div>
+                <div class="tv-size-item tv-fib-fontsize-item" data-size="20">20</div>
+                <div class="tv-size-item tv-fib-fontsize-item" data-size="22">22</div>
+                <div class="tv-size-item tv-fib-fontsize-item" data-size="24">24</div>
+            </div>
+
+            <!-- Levels & Single Color Picker Popover (Image 2) -->
+            <div id="tv-fib-color-picker-popover" class="tv-trendline-style-popover" style="display: none;">
+                <!-- 1. Color Palette Grid (8x10) -->
+                <div id="tv-fib-cp-palette-grid" class="tv-fib-palette-grid"></div>
+
+                <!-- 2. Recent Colors + Custom Color '+' -->
+                <div class="tv-fib-recent-row">
+                    <div id="tv-fib-cp-recent-colors" class="tv-fib-recent-colors"></div>
+                    <label class="tv-fib-add-color-btn" title="Add custom color">
+                        +
+                        <input type="color" id="tv-fib-cp-custom-color" class="tv-hidden-color-input" />
+                    </label>
+                </div>
+
+                <!-- 3. Opacity -->
+                <div class="tv-fib-pop-section">
+                    <div class="tv-fib-pop-label">Opacity</div>
+                    <div class="tv-fib-opacity-row">
+                        <div class="tv-fib-slider-track-wrap">
+                            <div id="tv-fib-cp-opacity-gradient" class="tv-fib-opacity-gradient"></div>
+                            <input type="range" id="tv-fib-cp-opacity-slider" class="tv-fib-opacity-slider" min="0" max="100" value="100" />
+                        </div>
+                        <div id="tv-fib-cp-opacity-val" class="tv-fib-opacity-badge">100%</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Footer -->
             <div class="tv-settings-footer">
-                <button id="tv-settings-btn-template" class="tv-footer-btn-template" title="Template">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                        <circle cx="5" cy="12" r="2.2"/>
-                        <circle cx="12" cy="12" r="2.2"/>
-                        <circle cx="19" cy="12" r="2.2"/>
-                    </svg>
-                </button>
                 <div class="tv-footer-actions">
                     <button id="tv-settings-btn-cancel" class="tv-footer-btn-cancel">Cancel</button>
                     <button id="tv-settings-btn-ok" class="tv-footer-btn-ok">Ok</button>
@@ -3177,6 +3449,9 @@
             closeSizeDropdown();
             closeAlignDropdowns();
             if (typeof closeFibTrendlinePopover === 'function') closeFibTrendlinePopover();
+            if (typeof closeFibLevelsDropdowns === 'function') closeFibLevelsDropdowns();
+            if (typeof closeAllFibDropdownOverlays === 'function') closeAllFibDropdownOverlays();
+            if (typeof closeFibColorPickerPopover === 'function') closeFibColorPickerPopover();
             if (!backdrop || !modal) return;
 
             backdrop.classList.remove('visible');
@@ -3277,11 +3552,21 @@
         function openFibTrendlinePopover() {
             const pop = document.getElementById('tv-fib-trendline-popover');
             const pill = document.getElementById('tv-fib-trendline-pill-btn');
+            const modal = document.getElementById('tv-settings-modal');
             if (!pop || !pill || !pendingFibSettings) return;
 
             renderFibTrendlinePopoverUI();
             pop.style.display = 'block';
             pill.classList.add('active');
+
+            if (modal) {
+                const modalRect = modal.getBoundingClientRect();
+                const pillRect = pill.getBoundingClientRect();
+                const topOffset = Math.round(pillRect.bottom - modalRect.top + 6);
+                pop.style.top = `${topOffset}px`;
+                const rightOffset = Math.round(modalRect.right - pillRect.right);
+                pop.style.right = `${Math.max(12, rightOffset)}px`;
+            }
         }
 
         function toggleFibTrendlinePopover() {
@@ -3396,11 +3681,11 @@
             const btn = document.getElementById('tv-fib-levels-style-btn');
             if (!btn) return;
             if (style === 'dashed') {
-                btn.innerHTML = '<svg width="24" height="12" viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3" /></svg>';
+                btn.innerHTML = '<svg width="20" height="12" viewBox="0 0 20 12"><line x1="1" y1="6" x2="19" y2="6" stroke="currentColor" stroke-width="2" stroke-dasharray="4 2.5" /></svg>';
             } else if (style === 'dotted') {
-                btn.innerHTML = '<svg width="24" height="12" viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" stroke-dasharray="1 3" stroke-linecap="round" /></svg>';
+                btn.innerHTML = '<svg width="20" height="12" viewBox="0 0 20 12"><line x1="1" y1="6" x2="19" y2="6" stroke="currentColor" stroke-width="2.5" stroke-dasharray="0.5 3.5" stroke-linecap="round" /></svg>';
             } else {
-                btn.innerHTML = '<svg width="24" height="12" viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="currentColor" stroke-width="2" /></svg>';
+                btn.innerHTML = '<svg width="20" height="12" viewBox="0 0 20 12"><line x1="1" y1="6" x2="19" y2="6" stroke="currentColor" stroke-width="2" /></svg>';
             }
         }
 
@@ -3408,7 +3693,320 @@
             const btn = document.getElementById('tv-fib-levels-width-btn');
             if (!btn) return;
             const strokeW = Math.max(1, Math.min(4, w || 1));
-            btn.innerHTML = `<svg width="20" height="12" viewBox="0 0 20 12"><line x1="2" y1="6" x2="18" y2="6" stroke="currentColor" stroke-width="${strokeW}" /></svg>`;
+            btn.innerHTML = `<svg width="28" height="12" viewBox="0 0 28 12"><line x1="2" y1="6" x2="26" y2="6" stroke="currentColor" stroke-width="${strokeW}" /></svg>`;
+        }
+
+        function closeFibLevelsDropdowns() {
+            const widthDrop = document.getElementById('tv-fib-levels-width-dropdown');
+            const styleDrop = document.getElementById('tv-fib-levels-style-dropdown');
+            const widthBtn = document.getElementById('tv-fib-levels-width-btn');
+            const styleBtn = document.getElementById('tv-fib-levels-style-btn');
+            if (widthDrop) widthDrop.style.display = 'none';
+            if (styleDrop) styleDrop.style.display = 'none';
+            if (widthBtn) widthBtn.classList.remove('active');
+            if (styleBtn) styleBtn.classList.remove('active');
+        }
+
+        function toggleFibLevelsWidthDropdown() {
+            const drop = document.getElementById('tv-fib-levels-width-dropdown');
+            const btn = document.getElementById('tv-fib-levels-width-btn');
+            const modal = document.getElementById('tv-settings-modal');
+            if (!drop || !btn || !pendingFibSettings) return;
+
+            if (drop.style.display === 'block') {
+                closeFibLevelsDropdowns();
+                return;
+            }
+
+            closeFibLevelsDropdowns();
+            closeFibTrendlinePopover();
+
+            const curW = pendingFibSettings.levelsLineWidth || 1;
+            document.querySelectorAll('#tv-fib-levels-width-dropdown .tv-fib-dropdown-item').forEach(item => {
+                const w = parseInt(item.getAttribute('data-width'), 10);
+                item.classList.toggle('selected', w === curW);
+            });
+
+            drop.style.display = 'block';
+            btn.classList.add('active');
+
+            if (modal) {
+                const modalRect = modal.getBoundingClientRect();
+                const btnRect = btn.getBoundingClientRect();
+                const topOffset = Math.round(btnRect.bottom - modalRect.top + 6);
+                drop.style.top = `${topOffset}px`;
+                const leftOffset = Math.round(btnRect.left - modalRect.left);
+                drop.style.left = `${Math.max(12, leftOffset)}px`;
+                drop.style.right = 'auto';
+            }
+        }
+
+        function toggleFibLevelsStyleDropdown() {
+            const drop = document.getElementById('tv-fib-levels-style-dropdown');
+            const btn = document.getElementById('tv-fib-levels-style-btn');
+            const modal = document.getElementById('tv-settings-modal');
+            if (!drop || !btn || !pendingFibSettings) return;
+
+            if (drop.style.display === 'block') {
+                closeFibLevelsDropdowns();
+                return;
+            }
+
+            closeFibLevelsDropdowns();
+            closeFibTrendlinePopover();
+
+            const curStyle = pendingFibSettings.levelsLineStyle || 'solid';
+            document.querySelectorAll('#tv-fib-levels-style-dropdown .tv-fib-dropdown-item').forEach(item => {
+                const s = item.getAttribute('data-style');
+                item.classList.toggle('selected', s === curStyle);
+            });
+
+            drop.style.display = 'block';
+            btn.classList.add('active');
+
+            if (modal) {
+                const modalRect = modal.getBoundingClientRect();
+                const btnRect = btn.getBoundingClientRect();
+                const topOffset = Math.round(btnRect.bottom - modalRect.top + 6);
+                drop.style.top = `${topOffset}px`;
+                const rightOffset = Math.round(modalRect.right - btnRect.right);
+                drop.style.right = `${Math.max(12, rightOffset)}px`;
+                drop.style.left = 'auto';
+            }
+        }
+
+        let currentFibColorPickerTarget = null;
+        let currentFibColorPickerCallback = null;
+        let currentFibColorPickerColor = '#FFFFFF';
+        let currentFibColorPickerOpacity = 1.0;
+        let fibRecentColorsList = ['#FFFFFF', '#000000', '#2A2E39', '#AB47BC'];
+
+        function closeFibColorPickerPopover() {
+            const pop = document.getElementById('tv-fib-color-picker-popover');
+            if (pop) pop.style.display = 'none';
+            if (currentFibColorPickerTarget) {
+                currentFibColorPickerTarget.classList.remove('active');
+                currentFibColorPickerTarget = null;
+            }
+            currentFibColorPickerCallback = null;
+        }
+
+        function openFibColorPicker(targetBtn, initialColor, initialOpacity, onColorChange) {
+            const pop = document.getElementById('tv-fib-color-picker-popover');
+            const modal = document.getElementById('tv-settings-modal');
+            if (!pop || !targetBtn) return;
+
+            if (currentFibColorPickerTarget === targetBtn && pop.style.display === 'block') {
+                closeFibColorPickerPopover();
+                return;
+            }
+
+            closeFibColorPickerPopover();
+            closeAllFibDropdownOverlays();
+            closeFibLevelsDropdowns();
+            closeFibTrendlinePopover();
+
+            currentFibColorPickerTarget = targetBtn;
+            currentFibColorPickerCallback = onColorChange;
+            currentFibColorPickerColor = (initialColor || '#AB47BC').toUpperCase();
+            currentFibColorPickerOpacity = initialOpacity !== undefined ? initialOpacity : 1.0;
+            targetBtn.classList.add('active');
+
+            // 1. Render Palette Grid (10x8)
+            const grid = document.getElementById('tv-fib-cp-palette-grid');
+            if (grid) {
+                grid.innerHTML = '';
+                TV_PALETTE_COLORS.forEach(row => {
+                    row.forEach(col => {
+                        const sw = document.createElement('div');
+                        sw.className = 'tv-fib-palette-swatch' + (col.toUpperCase() === currentFibColorPickerColor ? ' selected' : '');
+                        sw.style.backgroundColor = col;
+                        sw.onclick = (e) => {
+                            e.stopPropagation();
+                            selectFibColorPickerColor(col);
+                        };
+                        grid.appendChild(sw);
+                    });
+                });
+            }
+
+            // 2. Render Recent Colors
+            renderFibColorPickerRecentUI();
+
+            // 3. Opacity Slider & Badge
+            const opacitySlider = document.getElementById('tv-fib-cp-opacity-slider');
+            const opacityGrad = document.getElementById('tv-fib-cp-opacity-gradient');
+            const opacityVal = document.getElementById('tv-fib-cp-opacity-val');
+            const pct = Math.round(currentFibColorPickerOpacity * 100);
+            if (opacitySlider) opacitySlider.value = String(pct);
+            if (opacityVal) opacityVal.textContent = `${pct}%`;
+            if (opacityGrad) {
+                opacityGrad.style.background = `linear-gradient(to right, ${hexToRgba(currentFibColorPickerColor, 0)}, ${hexToRgba(currentFibColorPickerColor, 1)})`;
+            }
+
+            pop.style.display = 'block';
+
+            if (modal) {
+                const modalRect = modal.getBoundingClientRect();
+                const btnRect = targetBtn.getBoundingClientRect();
+                const popWidth = 310;
+                const topOffset = Math.max(12, Math.min(modalRect.height - 350, btnRect.top - modalRect.top - 12));
+                pop.style.top = `${Math.round(topOffset)}px`;
+                const leftPos = btnRect.right - modalRect.left + 8;
+                if (leftPos + popWidth > modalRect.width - 12) {
+                    pop.style.right = '12px';
+                    pop.style.left = 'auto';
+                } else {
+                    pop.style.left = `${Math.round(leftPos)}px`;
+                    pop.style.right = 'auto';
+                }
+            }
+        }
+
+        function renderFibColorPickerRecentUI() {
+            const container = document.getElementById('tv-fib-cp-recent-colors');
+            if (!container) return;
+            container.innerHTML = '';
+            if (!fibRecentColorsList.map(c => c.toUpperCase()).includes(currentFibColorPickerColor)) {
+                fibRecentColorsList.unshift(currentFibColorPickerColor);
+                if (fibRecentColorsList.length > 4) fibRecentColorsList.pop();
+            }
+            fibRecentColorsList.forEach(col => {
+                const sw = document.createElement('div');
+                sw.className = 'tv-fib-recent-swatch' + (col.toUpperCase() === currentFibColorPickerColor ? ' selected' : '');
+                sw.style.backgroundColor = col;
+                sw.onclick = (e) => {
+                    e.stopPropagation();
+                    selectFibColorPickerColor(col);
+                };
+                container.appendChild(sw);
+            });
+        }
+
+        function selectFibColorPickerColor(col) {
+            currentFibColorPickerColor = col.toUpperCase();
+            if (!fibRecentColorsList.map(c => c.toUpperCase()).includes(currentFibColorPickerColor)) {
+                fibRecentColorsList.unshift(currentFibColorPickerColor);
+                if (fibRecentColorsList.length > 4) fibRecentColorsList.pop();
+            }
+            renderFibColorPickerRecentUI();
+            document.querySelectorAll('#tv-fib-cp-palette-grid .tv-fib-palette-swatch').forEach(sw => {
+                const bg = sw.style.backgroundColor;
+                sw.classList.toggle('selected', !!bg && colToHex(bg).toUpperCase() === currentFibColorPickerColor);
+            });
+            const opacityGrad = document.getElementById('tv-fib-cp-opacity-gradient');
+            if (opacityGrad) {
+                opacityGrad.style.background = `linear-gradient(to right, ${hexToRgba(currentFibColorPickerColor, 0)}, ${hexToRgba(currentFibColorPickerColor, 1)})`;
+            }
+            if (typeof currentFibColorPickerCallback === 'function') {
+                currentFibColorPickerCallback(col, currentFibColorPickerOpacity);
+            }
+        }
+
+        function closeAllFibDropdownOverlays() {
+            const overlays = [
+                { id: 'tv-fib-extend-dropdown', chevron: 'tv-fib-extend-chevron', btn: 'tv-fib-extend-btn' },
+                { id: 'tv-fib-levels-format-dropdown', chevron: 'tv-fib-levels-format-chevron', btn: 'tv-fib-levels-format-btn' },
+                { id: 'tv-fib-labels-halign-dropdown', chevron: 'tv-fib-labels-halign-chevron', btn: 'tv-fib-labels-halign-btn' },
+                { id: 'tv-fib-labels-valign-dropdown', chevron: 'tv-fib-labels-valign-chevron', btn: 'tv-fib-labels-valign-btn' },
+                { id: 'tv-fib-text-halign-dropdown', chevron: 'tv-fib-text-halign-chevron', btn: 'tv-fib-text-halign-btn' },
+                { id: 'tv-fib-text-valign-dropdown', chevron: 'tv-fib-text-valign-chevron', btn: 'tv-fib-text-valign-btn' },
+                { id: 'tv-fib-fontsize-dropdown', chevron: 'tv-fib-fontsize-chevron', btn: 'tv-fib-fontsize-btn' },
+            ];
+            overlays.forEach(o => {
+                const el = document.getElementById(o.id);
+                if (el) el.style.display = 'none';
+                const chev = document.getElementById(o.chevron);
+                if (chev) chev.classList.remove('open');
+                const btn = document.getElementById(o.btn);
+                if (btn) btn.classList.remove('active');
+            });
+        }
+
+        function toggleFibOverlay(overlayId, chevronId, btnId) {
+            const overlay = document.getElementById(overlayId);
+            const chevron = document.getElementById(chevronId);
+            const btn = document.getElementById(btnId);
+            if (!overlay) return;
+
+            const isOpen = overlay.style.display === 'flex';
+            closeAllFibDropdownOverlays();
+            closeFibColorPickerPopover();
+            closeFibLevelsDropdowns();
+            closeFibTrendlinePopover();
+
+            if (!isOpen) {
+                overlay.style.display = 'flex';
+                if (chevron) chevron.classList.add('open');
+                if (btn) btn.classList.add('active');
+            }
+        }
+
+        function updateExtendBtnUI() {
+            const valEl = document.getElementById('tv-fib-extend-val');
+            const leftCheck = document.getElementById('tv-fib-extend-left-check');
+            const rightCheck = document.getElementById('tv-fib-extend-right-check');
+            if (!pendingFibSettings) return;
+
+            const ext = pendingFibSettings.extend || 'none';
+            if (valEl) {
+                if (ext === 'both') valEl.textContent = 'Both';
+                else if (ext === 'left') valEl.textContent = 'Left';
+                else if (ext === 'right') valEl.textContent = 'Right';
+                else valEl.textContent = 'None';
+            }
+            if (leftCheck) leftCheck.checked = (ext === 'left' || ext === 'both');
+            if (rightCheck) rightCheck.checked = (ext === 'right' || ext === 'both');
+        }
+
+        function updateLevelsFormatBtnUI(val) {
+            const valEl = document.getElementById('tv-fib-levels-format-val');
+            const curVal = val || (pendingFibSettings ? pendingFibSettings.levelsFormat : 'percents') || 'percents';
+            if (valEl) valEl.textContent = curVal === 'values' ? 'Values' : 'Percents';
+            document.querySelectorAll('#tv-fib-levels-format-dropdown .tv-fib-format-item').forEach(item => {
+                item.classList.toggle('selected', item.getAttribute('data-value') === curVal);
+            });
+        }
+
+        function updateLabelsAlignBtnUI() {
+            if (!pendingFibSettings) return;
+            const hVal = pendingFibSettings.labelsHAlign || 'left';
+            const vVal = pendingFibSettings.labelsVAlign || 'top';
+            const hEl = document.getElementById('tv-fib-labels-halign-val');
+            const vEl = document.getElementById('tv-fib-labels-valign-val');
+            if (hEl) hEl.textContent = hVal.charAt(0).toUpperCase() + hVal.slice(1);
+            if (vEl) vEl.textContent = vVal.charAt(0).toUpperCase() + vVal.slice(1);
+            document.querySelectorAll('#tv-fib-labels-halign-dropdown .tv-fib-lhalign-item').forEach(item => {
+                item.classList.toggle('selected', item.getAttribute('data-value') === hVal);
+            });
+            document.querySelectorAll('#tv-fib-labels-valign-dropdown .tv-fib-lvalign-item').forEach(item => {
+                item.classList.toggle('selected', item.getAttribute('data-value') === vVal);
+            });
+        }
+
+        function updateTextAlignBtnUI() {
+            if (!pendingFibSettings) return;
+            const hVal = pendingFibSettings.textHAlign || 'center';
+            const vVal = pendingFibSettings.textVAlign || 'middle';
+            const hEl = document.getElementById('tv-fib-text-halign-val');
+            const vEl = document.getElementById('tv-fib-text-valign-val');
+            if (hEl) hEl.textContent = hVal.charAt(0).toUpperCase() + hVal.slice(1);
+            if (vEl) vEl.textContent = vVal.charAt(0).toUpperCase() + vVal.slice(1);
+            document.querySelectorAll('#tv-fib-text-halign-dropdown .tv-fib-thalign-item').forEach(item => {
+                item.classList.toggle('selected', item.getAttribute('data-value') === hVal);
+            });
+            document.querySelectorAll('#tv-fib-text-valign-dropdown .tv-fib-tvalign-item').forEach(item => {
+                item.classList.toggle('selected', item.getAttribute('data-value') === vVal);
+            });
+        }
+
+        function updateFontSizeBtnUI(size) {
+            const s = size || (pendingFibSettings ? pendingFibSettings.fontSize : 12) || 12;
+            const valEl = document.getElementById('tv-fib-fontsize-val');
+            if (valEl) valEl.textContent = String(s);
+            document.querySelectorAll('#tv-fib-fontsize-dropdown .tv-fib-fontsize-item').forEach(item => {
+                item.classList.toggle('selected', parseInt(item.getAttribute('data-size'), 10) === s);
+            });
         }
 
         function renderFibLevelsListUI() {
@@ -3427,32 +4025,51 @@
 
                 const inp = document.createElement('input');
                 inp.type = 'text';
+                inp.inputMode = 'decimal';
                 inp.className = 'tv-fib-lvl-input' + (lvl.enabled ? '' : ' disabled');
                 inp.value = String(lvl.level);
+
+                inp.onbeforeinput = (e) => {
+                    if (e.data && !/^[\d.\-]+$/.test(e.data)) {
+                        e.preventDefault();
+                    }
+                };
+
+                inp.oninput = () => {
+                    let val = inp.value.replace(/[^0-9.\-]/g, '');
+                    if (val.indexOf('-') > 0) {
+                        val = val[0] === '-' ? '-' + val.substring(1).replace(/-/g, '') : val.replace(/-/g, '');
+                    }
+                    const parts = val.split('.');
+                    if (parts.length > 2) {
+                        val = parts[0] + '.' + parts.slice(1).join('');
+                    }
+                    if (inp.value !== val) inp.value = val;
+                    const parsed = parseFloat(inp.value);
+                    if (!isNaN(parsed)) {
+                        lvl.level = parsed;
+                        fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                        renderFib();
+                    }
+                };
 
                 const swatchWrap = document.createElement('div');
                 swatchWrap.className = 'tv-color-box-wrap';
 
-                const colorInput = document.createElement('input');
-                colorInput.type = 'color';
-                colorInput.className = 'tv-hidden-color-input';
-                colorInput.value = lvl.color || '#AB47BC';
-
                 const swatchBtn = document.createElement('button');
+                swatchBtn.type = 'button';
                 swatchBtn.className = 'tv-fib-swatch-btn';
                 swatchBtn.style.backgroundColor = lvl.color || '#AB47BC';
 
                 swatchBtn.onclick = (e) => {
                     e.stopPropagation();
-                    colorInput.click();
-                };
-
-                colorInput.oninput = (e) => {
-                    const c = e.target.value;
-                    lvl.color = c;
-                    swatchBtn.style.backgroundColor = c;
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    openFibColorPicker(swatchBtn, lvl.color, lvl.opacity !== undefined ? lvl.opacity : 1.0, (newCol, newOp) => {
+                        lvl.color = newCol;
+                        lvl.opacity = newOp;
+                        swatchBtn.style.backgroundColor = newCol;
+                        fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                        renderFib();
+                    });
                 };
 
                 chk.onchange = () => {
@@ -3462,16 +4079,6 @@
                     renderFib();
                 };
 
-                inp.oninput = () => {
-                    const parsed = parseFloat(inp.value);
-                    if (!isNaN(parsed)) {
-                        lvl.level = parsed;
-                        fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                        renderFib();
-                    }
-                };
-
-                swatchWrap.appendChild(colorInput);
                 swatchWrap.appendChild(swatchBtn);
 
                 row.appendChild(chk);
@@ -3509,6 +4116,9 @@
             const trendCheck = document.getElementById('tv-fib-trendline-check');
             if (trendCheck) trendCheck.checked = !!pendingFibSettings.showTrendline;
             closeFibTrendlinePopover();
+            closeFibLevelsDropdowns();
+            closeAllFibDropdownOverlays();
+            closeFibColorPickerPopover();
             updateTrendlinePillUI();
 
             // Populate Levels line
@@ -3516,17 +4126,14 @@
             updateLevelsWidthBtnUI(pendingFibSettings.levelsLineWidth);
 
             // Populate Extend
-            const extendSelect = document.getElementById('tv-fib-extend-select');
-            if (extendSelect) extendSelect.value = pendingFibSettings.extend || 'none';
+            updateExtendBtnUI();
 
             // Populate Levels list
             renderFibLevelsListUI();
 
             // Populate Use one color
             const singleColorBtn = document.getElementById('tv-fib-single-color-btn');
-            const singleColorInput = document.getElementById('tv-fib-single-color-input');
             if (singleColorBtn) singleColorBtn.style.backgroundColor = pendingFibSettings.singleColor || '#AB47BC';
-            if (singleColorInput) singleColorInput.value = pendingFibSettings.singleColor || '#AB47BC';
 
             // Populate Background & Opacity
             const bgCheck = document.getElementById('tv-fib-bg-check');
@@ -3545,30 +4152,18 @@
             // Populate Levels
             const levelsCheck = document.getElementById('tv-fib-levels-check');
             if (levelsCheck) levelsCheck.checked = !!pendingFibSettings.showLevels;
-            const levelsFormatSelect = document.getElementById('tv-fib-levels-format-select');
-            if (levelsFormatSelect) levelsFormatSelect.value = pendingFibSettings.levelsFormat || 'percents';
+            updateLevelsFormatBtnUI(pendingFibSettings.levelsFormat);
 
             // Populate Labels
-            const labelsHAlign = document.getElementById('tv-fib-labels-halign-select');
-            if (labelsHAlign) labelsHAlign.value = pendingFibSettings.labelsHAlign || 'left';
-            const labelsVAlign = document.getElementById('tv-fib-labels-valign-select');
-            if (labelsVAlign) labelsVAlign.value = pendingFibSettings.labelsVAlign || 'top';
+            updateLabelsAlignBtnUI();
 
             // Populate Text
             const textCheck = document.getElementById('tv-fib-text-check');
             if (textCheck) textCheck.checked = !!pendingFibSettings.showText;
-            const textHAlign = document.getElementById('tv-fib-text-halign-select');
-            if (textHAlign) textHAlign.value = pendingFibSettings.textHAlign || 'center';
-            const textVAlign = document.getElementById('tv-fib-text-valign-select');
-            if (textVAlign) textVAlign.value = pendingFibSettings.textVAlign || 'middle';
+            updateTextAlignBtnUI();
 
             // Populate Font size
-            const fontSizeSelect = document.getElementById('tv-fib-fontsize-select');
-            if (fontSizeSelect) fontSizeSelect.value = String(pendingFibSettings.fontSize || 12);
-
-            // Populate Log scale
-            const logCheck = document.getElementById('tv-fib-logscale-check');
-            if (logCheck) logCheck.checked = !!pendingFibSettings.logScale;
+            updateFontSizeBtnUI(pendingFibSettings.fontSize || 12);
 
             const backdrop = document.getElementById('tv-settings-backdrop');
             if (!backdrop || !modal) return;
@@ -3667,20 +4262,9 @@
             if (bodyFib) {
                 bodyFib.onscroll = () => {
                     closeFibTrendlinePopover();
-                };
-            }
-
-            const lvlStyleBtn = document.getElementById('tv-fib-levels-style-btn');
-            if (lvlStyleBtn) {
-                lvlStyleBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    if (!pendingFibSettings) return;
-                    const order = ['solid', 'dashed', 'dotted'];
-                    const curIdx = order.indexOf(pendingFibSettings.levelsLineStyle || 'solid');
-                    pendingFibSettings.levelsLineStyle = order[(curIdx + 1) % order.length];
-                    updateLevelsStyleBtnUI(pendingFibSettings.levelsLineStyle);
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    closeFibLevelsDropdowns();
+                    closeAllFibDropdownOverlays();
+                    closeFibColorPickerPopover();
                 };
             }
 
@@ -3688,46 +4272,124 @@
             if (lvlWidthBtn) {
                 lvlWidthBtn.onclick = (e) => {
                     e.stopPropagation();
+                    toggleFibLevelsWidthDropdown();
+                };
+            }
+
+            const lvlStyleBtn = document.getElementById('tv-fib-levels-style-btn');
+            if (lvlStyleBtn) {
+                lvlStyleBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleFibLevelsStyleDropdown();
+                };
+            }
+
+            const widthDropEl = document.getElementById('tv-fib-levels-width-dropdown');
+            if (widthDropEl) {
+                widthDropEl.onpointerdown = (e) => e.stopPropagation();
+                widthDropEl.onclick = (e) => e.stopPropagation();
+            }
+
+            const styleDropEl = document.getElementById('tv-fib-levels-style-dropdown');
+            if (styleDropEl) {
+                styleDropEl.onpointerdown = (e) => e.stopPropagation();
+                styleDropEl.onclick = (e) => e.stopPropagation();
+            }
+
+            document.querySelectorAll('#tv-fib-levels-width-dropdown .tv-fib-dropdown-item').forEach(item => {
+                item.onclick = (e) => {
+                    e.stopPropagation();
                     if (!pendingFibSettings) return;
-                    const curW = pendingFibSettings.levelsLineWidth || 1;
-                    pendingFibSettings.levelsLineWidth = (curW % 4) + 1;
-                    fibLineWidth = pendingFibSettings.levelsLineWidth;
-                    updateLevelsWidthBtnUI(pendingFibSettings.levelsLineWidth);
+                    const w = parseInt(item.getAttribute('data-width'), 10) || 1;
+                    pendingFibSettings.levelsLineWidth = w;
+                    fibLineWidth = w;
+                    updateLevelsWidthBtnUI(w);
+                    closeFibLevelsDropdowns();
                     fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
                     renderFib();
                 };
-            }
+            });
 
-            const extendSelect = document.getElementById('tv-fib-extend-select');
-            if (extendSelect) {
-                extendSelect.onchange = () => {
-                    if (pendingFibSettings) pendingFibSettings.extend = extendSelect.value;
+            document.querySelectorAll('#tv-fib-levels-style-dropdown .tv-fib-dropdown-item').forEach(item => {
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!pendingFibSettings) return;
+                    const s = item.getAttribute('data-style') || 'solid';
+                    pendingFibSettings.levelsLineStyle = s;
+                    updateLevelsStyleBtnUI(s);
+                    closeFibLevelsDropdowns();
                     fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
                     renderFib();
                 };
-            }
+            });
 
+            // 1. Extend combobox & checkboxes (Image 1)
+            const extendBtn = document.getElementById('tv-fib-extend-btn');
+            if (extendBtn) {
+                extendBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleFibOverlay('tv-fib-extend-dropdown', 'tv-fib-extend-chevron', 'tv-fib-extend-btn');
+                };
+            }
+            const leftCheck = document.getElementById('tv-fib-extend-left-check');
+            const rightCheck = document.getElementById('tv-fib-extend-right-check');
+            const handleExtendChange = () => {
+                if (!pendingFibSettings) return;
+                const l = !!leftCheck?.checked;
+                const r = !!rightCheck?.checked;
+                if (l && r) pendingFibSettings.extend = 'both';
+                else if (l) pendingFibSettings.extend = 'left';
+                else if (r) pendingFibSettings.extend = 'right';
+                else pendingFibSettings.extend = 'none';
+                updateExtendBtnUI();
+                fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                renderFib();
+            };
+            if (leftCheck) leftCheck.onchange = handleExtendChange;
+            if (rightCheck) rightCheck.onchange = handleExtendChange;
+
+            // 2. Single color swatch button (Image 2)
             const singleColorBtn = document.getElementById('tv-fib-single-color-btn');
-            const singleColorInput = document.getElementById('tv-fib-single-color-input');
-            if (singleColorBtn && singleColorInput) {
+            if (singleColorBtn) {
                 singleColorBtn.onclick = (e) => {
                     e.stopPropagation();
-                    singleColorInput.click();
-                };
-                singleColorInput.oninput = (e) => {
-                    const c = e.target.value;
-                    if (pendingFibSettings) {
+                    if (!pendingFibSettings) return;
+                    openFibColorPicker(singleColorBtn, pendingFibSettings.singleColor || '#AB47BC', 1.0, (c, op) => {
                         pendingFibSettings.singleColor = c;
                         pendingFibSettings.useOneColor = true;
-                    }
-                    singleColorBtn.style.backgroundColor = c;
-                    const oneColorCheck = document.getElementById('tv-fib-use-one-color-check');
-                    if (oneColorCheck) oneColorCheck.checked = true;
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                        singleColorBtn.style.backgroundColor = c;
+                        fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
+                        renderFib();
+                    });
                 };
             }
 
+            // 3. Color Picker Popover event wiring
+            const cpPopover = document.getElementById('tv-fib-color-picker-popover');
+            if (cpPopover) {
+                cpPopover.onpointerdown = (e) => e.stopPropagation();
+                cpPopover.onclick = (e) => e.stopPropagation();
+            }
+            const cpCustomColor = document.getElementById('tv-fib-cp-custom-color');
+            if (cpCustomColor) {
+                cpCustomColor.oninput = (e) => {
+                    selectFibColorPickerColor(e.target.value);
+                };
+            }
+            const cpOpacitySlider = document.getElementById('tv-fib-cp-opacity-slider');
+            if (cpOpacitySlider) {
+                cpOpacitySlider.oninput = () => {
+                    const pct = parseInt(cpOpacitySlider.value, 10);
+                    currentFibColorPickerOpacity = pct / 100;
+                    const opacityVal = document.getElementById('tv-fib-cp-opacity-val');
+                    if (opacityVal) opacityVal.textContent = `${pct}%`;
+                    if (typeof currentFibColorPickerCallback === 'function') {
+                        currentFibColorPickerCallback(currentFibColorPickerColor, currentFibColorPickerOpacity);
+                    }
+                };
+            }
+
+            // 4. Background & Opacity
             const bgCheck = document.getElementById('tv-fib-bg-check');
             if (bgCheck) {
                 bgCheck.onchange = () => {
@@ -3752,6 +4414,7 @@
                 };
             }
 
+            // 5. Reverse
             const revCheck = document.getElementById('tv-fib-reverse-check');
             if (revCheck) {
                 revCheck.onchange = () => {
@@ -3761,6 +4424,7 @@
                 };
             }
 
+            // 6. Prices
             const pricesCheck = document.getElementById('tv-fib-prices-check');
             if (pricesCheck) {
                 pricesCheck.onchange = () => {
@@ -3770,6 +4434,7 @@
                 };
             }
 
+            // 7. Levels check & format combobox (Image 3)
             const levelsCheck = document.getElementById('tv-fib-levels-check');
             if (levelsCheck) {
                 levelsCheck.onchange = () => {
@@ -3778,34 +4443,68 @@
                     renderFib();
                 };
             }
-
-            const levelsFormatSelect = document.getElementById('tv-fib-levels-format-select');
-            if (levelsFormatSelect) {
-                levelsFormatSelect.onchange = () => {
-                    if (pendingFibSettings) pendingFibSettings.levelsFormat = levelsFormatSelect.value;
+            const lvlFormatBtn = document.getElementById('tv-fib-levels-format-btn');
+            if (lvlFormatBtn) {
+                lvlFormatBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleFibOverlay('tv-fib-levels-format-dropdown', 'tv-fib-levels-format-chevron', 'tv-fib-levels-format-btn');
+                };
+            }
+            document.querySelectorAll('#tv-fib-levels-format-dropdown .tv-fib-format-item').forEach(item => {
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!pendingFibSettings) return;
+                    const val = item.getAttribute('data-value') || 'percents';
+                    pendingFibSettings.levelsFormat = val;
+                    updateLevelsFormatBtnUI(val);
+                    closeAllFibDropdownOverlays();
                     fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
                     renderFib();
                 };
-            }
+            });
 
-            const labelsHAlign = document.getElementById('tv-fib-labels-halign-select');
-            if (labelsHAlign) {
-                labelsHAlign.onchange = () => {
-                    if (pendingFibSettings) pendingFibSettings.labelsHAlign = labelsHAlign.value;
+            // 8. Labels HAlign & VAlign comboboxes (Image 3)
+            const labelsHAlignBtn = document.getElementById('tv-fib-labels-halign-btn');
+            if (labelsHAlignBtn) {
+                labelsHAlignBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleFibOverlay('tv-fib-labels-halign-dropdown', 'tv-fib-labels-halign-chevron', 'tv-fib-labels-halign-btn');
+                };
+            }
+            document.querySelectorAll('#tv-fib-labels-halign-dropdown .tv-fib-lhalign-item').forEach(item => {
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!pendingFibSettings) return;
+                    const val = item.getAttribute('data-value') || 'left';
+                    pendingFibSettings.labelsHAlign = val;
+                    updateLabelsAlignBtnUI();
+                    closeAllFibDropdownOverlays();
                     fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
                     renderFib();
                 };
-            }
+            });
 
-            const labelsVAlign = document.getElementById('tv-fib-labels-valign-select');
-            if (labelsVAlign) {
-                labelsVAlign.onchange = () => {
-                    if (pendingFibSettings) pendingFibSettings.labelsVAlign = labelsVAlign.value;
+            const labelsVAlignBtn = document.getElementById('tv-fib-labels-valign-btn');
+            if (labelsVAlignBtn) {
+                labelsVAlignBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleFibOverlay('tv-fib-labels-valign-dropdown', 'tv-fib-labels-valign-chevron', 'tv-fib-labels-valign-btn');
+                };
+            }
+            document.querySelectorAll('#tv-fib-labels-valign-dropdown .tv-fib-lvalign-item').forEach(item => {
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!pendingFibSettings) return;
+                    const val = item.getAttribute('data-value') || 'top';
+                    pendingFibSettings.labelsVAlign = val;
+                    updateLabelsAlignBtnUI();
+                    closeAllFibDropdownOverlays();
                     fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
                     renderFib();
                 };
-            }
+            });
 
+            // 9. Text check, HAlign & VAlign comboboxes (Image 3 & Item 8)
             const textCheck = document.getElementById('tv-fib-text-check');
             if (textCheck) {
                 textCheck.onchange = () => {
@@ -3814,42 +4513,85 @@
                     renderFib();
                 };
             }
-
-            const textHAlign = document.getElementById('tv-fib-text-halign-select');
-            if (textHAlign) {
-                textHAlign.onchange = () => {
-                    if (pendingFibSettings) pendingFibSettings.textHAlign = textHAlign.value;
+            const textHAlignBtn = document.getElementById('tv-fib-text-halign-btn');
+            if (textHAlignBtn) {
+                textHAlignBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleFibOverlay('tv-fib-text-halign-dropdown', 'tv-fib-text-halign-chevron', 'tv-fib-text-halign-btn');
+                };
+            }
+            document.querySelectorAll('#tv-fib-text-halign-dropdown .tv-fib-thalign-item').forEach(item => {
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!pendingFibSettings) return;
+                    const val = item.getAttribute('data-value') || 'center';
+                    pendingFibSettings.textHAlign = val;
+                    updateTextAlignBtnUI();
+                    closeAllFibDropdownOverlays();
                     fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
                     renderFib();
                 };
-            }
+            });
 
-            const textVAlign = document.getElementById('tv-fib-text-valign-select');
-            if (textVAlign) {
-                textVAlign.onchange = () => {
-                    if (pendingFibSettings) pendingFibSettings.textVAlign = textVAlign.value;
+            const textVAlignBtn = document.getElementById('tv-fib-text-valign-btn');
+            if (textVAlignBtn) {
+                textVAlignBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleFibOverlay('tv-fib-text-valign-dropdown', 'tv-fib-text-valign-chevron', 'tv-fib-text-valign-btn');
+                };
+            }
+            document.querySelectorAll('#tv-fib-text-valign-dropdown .tv-fib-tvalign-item').forEach(item => {
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!pendingFibSettings) return;
+                    const val = item.getAttribute('data-value') || 'middle';
+                    pendingFibSettings.textVAlign = val;
+                    updateTextAlignBtnUI();
+                    closeAllFibDropdownOverlays();
                     fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
                     renderFib();
                 };
-            }
+            });
 
-            const fontSizeSelect = document.getElementById('tv-fib-fontsize-select');
-            if (fontSizeSelect) {
-                fontSizeSelect.onchange = () => {
-                    if (pendingFibSettings) pendingFibSettings.fontSize = parseInt(fontSizeSelect.value, 10) || 12;
+            // 10. Font size combobox (Image 4)
+            const fontSizeBtn = document.getElementById('tv-fib-fontsize-btn');
+            if (fontSizeBtn) {
+                fontSizeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleFibOverlay('tv-fib-fontsize-dropdown', 'tv-fib-fontsize-chevron', 'tv-fib-fontsize-btn');
+                };
+            }
+            document.querySelectorAll('#tv-fib-fontsize-dropdown .tv-fib-fontsize-item').forEach(item => {
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!pendingFibSettings) return;
+                    const s = parseInt(item.getAttribute('data-size'), 10) || 12;
+                    pendingFibSettings.fontSize = s;
+                    fibFontSize = s;
+                    updateFontSizeBtnUI(s);
+                    closeAllFibDropdownOverlays();
                     fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
                     renderFib();
                 };
-            }
+            });
 
-            const logCheck = document.getElementById('tv-fib-logscale-check');
-            if (logCheck) {
-                logCheck.onchange = () => {
-                    if (pendingFibSettings) pendingFibSettings.logScale = logCheck.checked;
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
-                };
-            }
+            // 11. Stop propagation on all overlays
+            const allOverlays = [
+                'tv-fib-extend-dropdown',
+                'tv-fib-levels-format-dropdown',
+                'tv-fib-labels-halign-dropdown',
+                'tv-fib-labels-valign-dropdown',
+                'tv-fib-text-halign-dropdown',
+                'tv-fib-text-valign-dropdown',
+                'tv-fib-fontsize-dropdown'
+            ];
+            allOverlays.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.onpointerdown = (e) => e.stopPropagation();
+                    el.onclick = (e) => e.stopPropagation();
+                }
+            });
         }
 
         function openObjectTreeModal() {
@@ -4455,14 +5197,22 @@
             if (isFibSelected && currentShowFib && fibPoint1 && fibPoint2) {
                 if (colorHex) {
                     fibCustomColor = colorHex;
+                    fibSettings.trendlineColor = colorHex;
+                    if (pendingFibSettings) pendingFibSettings.trendlineColor = colorHex;
                     const lineInd = document.getElementById('tv-indicator-line-color');
                     if (lineInd) lineInd.style.background = fibCustomColor;
                     updateSliderGradient(fibCustomColor);
                 } else if (colorHex === null) {
                     // Reset to rainbow
                     fibCustomColor = null;
+                    fibSettings.trendlineColor = '#AB47BC';
+                    if (pendingFibSettings) pendingFibSettings.trendlineColor = '#AB47BC';
                     const lineInd = document.getElementById('tv-indicator-line-color');
                     if (lineInd) lineInd.style.background = 'linear-gradient(90deg, #00B0FF 0%, #00E676 35%, #FFEB3B 65%, #FF5722 100%)';
+                }
+                if (opacityVal !== undefined) {
+                    fibSettings.trendlineOpacity = opacityVal;
+                    if (pendingFibSettings) pendingFibSettings.trendlineOpacity = opacityVal;
                 }
                 document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
                     sw.classList.toggle('selected', !!fibCustomColor && sw.getAttribute('data-color')?.toUpperCase() === fibCustomColor.toUpperCase());
@@ -5270,6 +6020,15 @@
                     }
                     if (e.target && !e.target.closest('#tv-fib-trendline-popover, #tv-fib-trendline-pill-btn')) {
                         closeFibTrendlinePopover();
+                    }
+                    if (e.target && !e.target.closest('#tv-fib-levels-width-dropdown, #tv-fib-levels-width-btn, #tv-fib-levels-style-dropdown, #tv-fib-levels-style-btn')) {
+                        closeFibLevelsDropdowns();
+                    }
+                    if (e.target && !e.target.closest('#tv-fib-color-picker-popover, .tv-fib-swatch-btn')) {
+                        closeFibColorPickerPopover();
+                    }
+                    if (e.target && !e.target.closest('.tv-size-dropdown-overlay, .tv-fib-select-btn, .tv-fmt-size-btn, #tv-fib-levels-width-dropdown, #tv-fib-levels-width-btn, #tv-fib-levels-style-dropdown, #tv-fib-levels-style-btn, #tv-fib-trendline-popover, #tv-fib-trendline-pill-btn, #tv-fib-color-picker-popover')) {
+                        closeAllFibDropdownOverlays();
                     }
                 };
                 settingsModal.ontouchstart = (e) => e.stopPropagation();
@@ -7903,7 +8662,7 @@
                             if (fibSettings.showTrendline) {
                                 ctx.save();
                                 ctx.beginPath();
-                                const tColor = fibSettings.trendlineColor || '#AB47BC';
+                                const tColor = fibCustomColor || fibSettings.trendlineColor || '#AB47BC';
                                 const tOpacity = fibSettings.trendlineOpacity !== undefined ? fibSettings.trendlineOpacity : 1.0;
                                 ctx.strokeStyle = hexToRgba(tColor, tOpacity);
                                 const tWidth = fibSettings.trendlineWidth || 1;
