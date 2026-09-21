@@ -16,6 +16,7 @@ class IhsgTradingViewPage extends StatefulWidget {
 }
 
 class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
+  final GlobalKey _chartKey = GlobalKey();
   bool _isCandle = true;
   bool _showSma = false;
   bool _showRsi = false;
@@ -35,32 +36,26 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
   Map<String, dynamic>? _crosshair;
   String? _selectedLegendIndicatorId;
   final Set<String> _favoriteIndicators = <String>{
-    'Moving Average (SMA)',
-    'Relative Strength Index (RSI)',
-    '24-hour Volume',
+    'Moving Average',
+    'Relative Strength Index',
+    'Volume',
   };
 
   int get _activeIndicatorsCount =>
       (_showSma ? 1 : 0) + (_showRsi ? 1 : 0) + (_showVolume ? 1 : 0);
 
-  void _toggleFibonacci() {
+  void _startDrawingFibonacci() {
     setState(() {
       _isDrawingHorizontalLine = false;
       _isDrawingTrendline = false;
       _isDrawingRectangle = false;
-      if (_showFibonacci) {
-        _showFibonacci = false;
-        _isDrawingFib = false;
-      } else {
-        _showFibonacci = true;
-        _isDrawingFib = true;
-      }
+      _showFibonacci = true;
+      _isDrawingFib = true;
     });
   }
 
   void _startDrawingHorizontalLine() {
     setState(() {
-      if (_isDrawingFib) _showFibonacci = false;
       _isDrawingFib = false;
       _isDrawingTrendline = false;
       _isDrawingRectangle = false;
@@ -70,7 +65,6 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
 
   void _startDrawingTrendline() {
     setState(() {
-      if (_isDrawingFib) _showFibonacci = false;
       _isDrawingFib = false;
       _isDrawingHorizontalLine = false;
       _isDrawingRectangle = false;
@@ -80,7 +74,6 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
 
   void _startDrawingRectangle() {
     setState(() {
-      if (_isDrawingFib) _showFibonacci = false;
       _isDrawingFib = false;
       _isDrawingHorizontalLine = false;
       _isDrawingTrendline = false;
@@ -130,7 +123,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
           },
           onSelectFibonacci: () {
             Navigator.of(sheetContext).pop();
-            _toggleFibonacci();
+            _startDrawingFibonacci();
           },
           onSelectRectangle: () {
             Navigator.of(sheetContext).pop();
@@ -403,6 +396,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                 child: Stack(
                   children: [
                     TvChartWidget(
+                      key: _chartKey,
                       symbol: 'IHSG',
                       timeframe: p.indexInterval,
                       candles: candles,
@@ -531,6 +525,8 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                           _showVolume = false;
                           _visibleVolume = true;
                         }),
+                        symbol: 'IHSG',
+                        timeframe: p.indexInterval,
                         onOpenSettings: (String id) => _openIndicatorSettings(id),
                       ),
                     ),
@@ -544,23 +540,17 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                           decoration: BoxDecoration(
-                            color: cs.surface.withValues(alpha: 0.92),
-                            borderRadius: BorderRadius.circular(10),
+                            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: _isDrawingHorizontalLine
-                                  ? const Color(0xFF00E5FF)
-                                  : _isDrawingTrendline
-                                      ? const Color(0xFF00A3A8)
-                                      : _isDrawingRectangle
-                                          ? const Color(0xFFAB47BC)
-                                          : const Color(0xFFFFB300),
-                              width: 1.5,
+                              color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE0E3EB),
+                              width: 1.0,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
                               ),
                             ],
                           ),
@@ -569,13 +559,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                               Icon(
                                 Icons.touch_app_outlined,
                                 size: 16,
-                                color: _isDrawingHorizontalLine
-                                    ? const Color(0xFF00E5FF)
-                                    : _isDrawingTrendline
-                                        ? const Color(0xFF00A3A8)
-                                        : _isDrawingRectangle
-                                            ? const Color(0xFFAB47BC)
-                                            : const Color(0xFFFFB300),
+                                color: isDark ? const Color(0xFFD8D8D8) : const Color(0xFF373737),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -590,7 +574,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w600,
-                                    color: cs.onSurface,
+                                    color: isDark ? const Color(0xFFD8D8D8) : const Color(0xFF373737),
                                   ),
                                 ),
                               ),
@@ -600,15 +584,16 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                                     _isDrawingHorizontalLine = false;
                                     _isDrawingTrendline = false;
                                     _isDrawingRectangle = false;
-                                    if (_isDrawingFib) {
-                                      _showFibonacci = false;
-                                    }
                                     _isDrawingFib = false;
                                   });
                                 },
-                                child: const Padding(
-                                  padding: EdgeInsets.all(4),
-                                  child: Icon(Icons.close, size: 16),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4),
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: isDark ? const Color(0xFF868993) : const Color(0xFF787B86),
+                                  ),
                                 ),
                               ),
                             ],
@@ -626,7 +611,13 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                           child: _DrawingToolbar(
                             showFib: _showFibonacci,
                             isDrawingFib: _isDrawingFib,
-                            onToggleFib: _toggleFibonacci,
+                            onToggleFib: () {
+                              if (_isDrawingFib) {
+                                setState(() => _isDrawingFib = false);
+                              } else {
+                                _startDrawingFibonacci();
+                              }
+                            },
                             isDrawingHLine: _isDrawingHorizontalLine,
                             onToggleHLine: () {
                               if (_isDrawingHorizontalLine) {
@@ -920,10 +911,10 @@ class _DrawingToolbar extends StatelessWidget {
             // Fibonacci Retracement
             _FavoriteToolButton(
               tooltip: 'Fib retracement',
-              isSelected: showFib || isDrawingFib,
+              isSelected: isDrawingFib,
               onTap: onToggleFib,
               icon: _FibVectorIcon(
-                color: (showFib || isDrawingFib) ? activeIconColor : defaultIconColor,
+                color: isDrawingFib ? activeIconColor : defaultIconColor,
               ),
             ),
             const SizedBox(width: 4),
@@ -1329,7 +1320,7 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
         category: 'GANN AND FIBONACCI',
         iconBuilder: (Color c) => _FibVectorIcon(color: c),
         isFavorite: true,
-        isSelected: widget.showFibonacci || widget.isDrawingFib,
+        isSelected: widget.isDrawingFib,
         onSelect: widget.onSelectFibonacci,
       ),
       _DrawingToolItem(

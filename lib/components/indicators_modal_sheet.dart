@@ -60,7 +60,7 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
   static const List<IndicatorItem> _allIndicators = <IndicatorItem>[
     IndicatorItem(
       id: 'atr',
-      name: 'Average True Range (ATR)',
+      name: 'Average True Range',
       description: 'Indikator volatilitas pasar yang mengukur rentang rata-rata pergerakan harga saham.',
       isSupported: false,
     ),
@@ -72,25 +72,25 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
     ),
     IndicatorItem(
       id: 'ema',
-      name: 'Exponential Moving Average (EMA)',
+      name: 'Exponential Moving Average',
       description: 'Rata-rata pergerakan harga dengan pembobotan lebih besar pada pergerakan data harga terbaru.',
       isSupported: false,
     ),
     IndicatorItem(
       id: 'macd',
-      name: 'MACD (Moving Average Convergence Divergence)',
+      name: 'Moving Average Convergence Divergence',
       description: 'Indikator momentum trend-following yang membandingkan pergerakan dua moving average.',
       isSupported: false,
     ),
     IndicatorItem(
       id: 'sma',
-      name: 'Moving Average (SMA)',
+      name: 'Moving Average',
       description: 'Rata-rata pergerakan harga sederhana selama 20 periode terakhir.',
       isSupported: true,
     ),
     IndicatorItem(
       id: 'rsi',
-      name: 'Relative Strength Index (RSI)',
+      name: 'Relative Strength Index',
       description: 'Oscillator momentum untuk mengidentifikasi kondisi Overbought (>70) dan Oversold (<30).',
       isSupported: true,
     ),
@@ -351,7 +351,9 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
     final List<IndicatorItem> searchResults = query.isEmpty
         ? const <IndicatorItem>[]
         : _allIndicators
-            .where((IndicatorItem item) => item.name.toLowerCase().contains(query))
+            .where((IndicatorItem item) =>
+                item.name.toLowerCase().contains(query) ||
+                item.id.toLowerCase().contains(query))
             .toList();
 
     return Column(
@@ -493,7 +495,9 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
   }) {
     final String query = _techSearchCtrl.text.trim().toLowerCase();
     final List<IndicatorItem> filtered = _allIndicators.where((IndicatorItem item) {
-      final bool matchesQuery = query.isEmpty || item.name.toLowerCase().contains(query);
+      final bool matchesQuery = query.isEmpty ||
+          item.name.toLowerCase().contains(query) ||
+          item.id.toLowerCase().contains(query);
       return matchesQuery;
     }).toList();
 
@@ -582,8 +586,14 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
   }) {
     final String query = _favSearchCtrl.text.trim().toLowerCase();
     final List<IndicatorItem> favItems = _allIndicators.where((IndicatorItem item) {
-      final bool isFav = _favs.contains(item.name);
-      final bool matchesQuery = query.isEmpty || item.name.toLowerCase().contains(query);
+      final bool isFav = _favs.contains(item.name) ||
+          _favs.contains(item.id) ||
+          (_favs.contains('Moving Average (SMA)') && item.id == 'sma') ||
+          (_favs.contains('Relative Strength Index (RSI)') && item.id == 'rsi') ||
+          (_favs.contains('24-hour Volume') && item.id == 'vol');
+      final bool matchesQuery = query.isEmpty ||
+          item.name.toLowerCase().contains(query) ||
+          item.id.toLowerCase().contains(query);
       return isFav && matchesQuery;
     }).toList();
 

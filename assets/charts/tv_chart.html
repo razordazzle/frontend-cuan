@@ -1669,6 +1669,11 @@
             color: #2962FF;
         }
 
+        .tv-tree-action-btn.dimmed-action {
+            color: #50535E;
+            opacity: 0.6;
+        }
+
         .tv-tree-action-btn.danger:hover {
             color: #EF5350;
         }
@@ -1876,9 +1881,9 @@
                 <span id="tv-sheet-lock-label">Lock</span>
             </div>
             <div class="tv-sheet-item" id="tv-sheet-hide">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5-7.5-5.5z" />
-                    <path d="M3 3l14 14" />
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
                 </svg>
                 <span>Hide</span>
             </div>
@@ -2439,12 +2444,56 @@
         let currentShowFib = false;
         let isDrawingFib = false;
         let isFibSelected = false; // true: Edit Mode (large handles, dashed line), false: Non-Edit Mode (subtle dots)
-        let fibPoint1 = null; // { time, price }
-        let fibPoint2 = null; // { time, price }
+        let fibonaccis = []; // Support multiple Fibonaccis: { id, p1, p2, settings, isLocked, hidden, customColor }
+        let selectedFibIndex = -1;
+        let tempFibP1 = null;
+        let tempFibP2 = null;
+        let fibPoint1 = null; // { time, price } (active fib anchor 1 reference)
+        let fibPoint2 = null; // { time, price } (active fib anchor 2 reference)
         let fibCustomColor = null; // null: rainbow default per line, hex: uniform custom color
         let fibLineWidth = 2;
         let fibIsLocked = false;
         let fibDragStartPos = null;
+
+        function syncActiveFibFromIndex() {
+            if (selectedFibIndex >= 0 && selectedFibIndex < fibonaccis.length) {
+                const f = fibonaccis[selectedFibIndex];
+                fibPoint1 = f.p1;
+                fibPoint2 = f.p2;
+                fibIsLocked = !!f.isLocked;
+                fibCustomColor = f.customColor !== undefined ? f.customColor : null;
+                fibLineWidth = f.lineWidth || (f.settings && f.settings.levelsLineWidth) || 2;
+                if (f.settings) fibSettings = JSON.parse(JSON.stringify(f.settings));
+                isFibSelected = true;
+            } else {
+                fibPoint1 = null;
+                fibPoint2 = null;
+                isFibSelected = false;
+                selectedFibIndex = -1;
+            }
+        }
+
+        function syncActiveFibToIndex() {
+            if (selectedFibIndex >= 0 && selectedFibIndex < fibonaccis.length) {
+                const f = fibonaccis[selectedFibIndex];
+                f.p1 = fibPoint1;
+                f.p2 = fibPoint2;
+                f.isLocked = fibIsLocked;
+                f.customColor = fibCustomColor;
+                f.lineWidth = fibLineWidth || 2;
+                f.settings = JSON.parse(JSON.stringify(fibSettings));
+            }
+        }
+
+        function commitFibSettings(newSettings) {
+            if (!newSettings) return;
+            fibSettings = JSON.parse(JSON.stringify(newSettings));
+            pendingFibSettings = JSON.parse(JSON.stringify(newSettings));
+            if (selectedFibIndex >= 0 && selectedFibIndex < fibonaccis.length) {
+                fibonaccis[selectedFibIndex].settings = JSON.parse(JSON.stringify(fibSettings));
+            }
+            renderFib();
+        }
 
         const DEFAULT_FIB_LEVELS_CONFIG = [
             { level: 0, enabled: true, color: '#AB47BC' },
@@ -2501,6 +2550,21 @@
         };
 
         let isFibSettingsModalOpen = false;
+
+        let lastTrendlineStyle = {
+            color: '#7C4DFF',
+            width: 2,
+            style: 'solid',
+            opacity: 1.0
+        };
+
+        let lastHLineStyle = {
+            color: '#2962FF',
+            width: 2,
+            style: 'solid',
+            opacity: 1.0,
+            showPrice: true
+        };
         let originalFibSettings = null;
         let pendingFibSettings = null;
         let rawCandlesData = [];
@@ -3655,8 +3719,7 @@
             }
             renderFibTrendlinePopoverUI();
             updateTrendlinePillUI();
-            fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-            renderFib();
+            commitFibSettings(pendingFibSettings);
         }
 
         function updateThicknessSegmentsUI(w) {
@@ -3779,6 +3842,17 @@
         let currentFibColorPickerOpacity = 1.0;
         let fibRecentColorsList = ['#FFFFFF', '#000000', '#2A2E39', '#AB47BC'];
 
+        function colToHex(col) {
+            if (!col) return '';
+            if (col.startsWith('#')) return col;
+            const rgb = col.match(/\d+/g);
+            if (!rgb || rgb.length < 3) return col;
+            const r = parseInt(rgb[0], 10).toString(16).padStart(2, '0');
+            const g = parseInt(rgb[1], 10).toString(16).padStart(2, '0');
+            const b = parseInt(rgb[2], 10).toString(16).padStart(2, '0');
+            return '#' + r + g + b;
+        }
+
         function closeFibColorPickerPopover() {
             const pop = document.getElementById('tv-fib-color-picker-popover');
             if (pop) pop.style.display = 'none';
@@ -3819,6 +3893,7 @@
                         const sw = document.createElement('div');
                         sw.className = 'tv-fib-palette-swatch' + (col.toUpperCase() === currentFibColorPickerColor ? ' selected' : '');
                         sw.style.backgroundColor = col;
+                        sw.setAttribute('data-color', col);
                         sw.onclick = (e) => {
                             e.stopPropagation();
                             selectFibColorPickerColor(col);
@@ -3873,6 +3948,7 @@
                 const sw = document.createElement('div');
                 sw.className = 'tv-fib-recent-swatch' + (col.toUpperCase() === currentFibColorPickerColor ? ' selected' : '');
                 sw.style.backgroundColor = col;
+                sw.setAttribute('data-color', col);
                 sw.onclick = (e) => {
                     e.stopPropagation();
                     selectFibColorPickerColor(col);
@@ -3889,8 +3965,8 @@
             }
             renderFibColorPickerRecentUI();
             document.querySelectorAll('#tv-fib-cp-palette-grid .tv-fib-palette-swatch').forEach(sw => {
-                const bg = sw.style.backgroundColor;
-                sw.classList.toggle('selected', !!bg && colToHex(bg).toUpperCase() === currentFibColorPickerColor);
+                const dataCol = sw.getAttribute('data-color') || colToHex(sw.style.backgroundColor);
+                sw.classList.toggle('selected', !!dataCol && dataCol.toUpperCase() === currentFibColorPickerColor);
             });
             const opacityGrad = document.getElementById('tv-fib-cp-opacity-gradient');
             if (opacityGrad) {
@@ -4046,8 +4122,7 @@
                     const parsed = parseFloat(inp.value);
                     if (!isNaN(parsed)) {
                         lvl.level = parsed;
-                        fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                        renderFib();
+                        commitFibSettings(pendingFibSettings);
                     }
                 };
 
@@ -4062,19 +4137,22 @@
                 swatchBtn.onclick = (e) => {
                     e.stopPropagation();
                     openFibColorPicker(swatchBtn, lvl.color, lvl.opacity !== undefined ? lvl.opacity : 1.0, (newCol, newOp) => {
+                        if (pendingFibSettings && pendingFibSettings.levels && pendingFibSettings.levels[idx]) {
+                            pendingFibSettings.levels[idx].color = newCol;
+                            pendingFibSettings.levels[idx].opacity = newOp;
+                        }
                         lvl.color = newCol;
                         lvl.opacity = newOp;
                         swatchBtn.style.backgroundColor = newCol;
-                        fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                        renderFib();
+                        pendingFibSettings.useOneColor = false;
+                        commitFibSettings(pendingFibSettings);
                     });
                 };
 
                 chk.onchange = () => {
                     lvl.enabled = chk.checked;
                     inp.classList.toggle('disabled', !chk.checked);
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
 
                 swatchWrap.appendChild(swatchBtn);
@@ -4089,6 +4167,14 @@
 
         function openFibSettingsModal() {
             isFibSettingsModalOpen = true;
+            if (selectedFibIndex >= 0 && selectedFibIndex < fibonaccis.length) {
+                const curFib = fibonaccis[selectedFibIndex];
+                if (curFib.settings) {
+                    fibSettings = JSON.parse(JSON.stringify(curFib.settings));
+                }
+                fibCustomColor = curFib.customColor !== undefined ? curFib.customColor : null;
+                fibLineWidth = curFib.lineWidth || (fibSettings.levelsLineWidth) || 2;
+            }
             originalFibSettings = JSON.parse(JSON.stringify(fibSettings));
             pendingFibSettings = JSON.parse(JSON.stringify(fibSettings));
 
@@ -4190,8 +4276,7 @@
             if (trendCheck) {
                 trendCheck.onchange = () => {
                     if (pendingFibSettings) pendingFibSettings.showTrendline = trendCheck.checked;
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             }
 
@@ -4219,8 +4304,7 @@
                     const opacityVal = document.getElementById('tv-fib-trendline-opacity-val');
                     if (opacityVal) opacityVal.textContent = `${pct}%`;
                     updateTrendlinePillUI();
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             }
 
@@ -4232,8 +4316,7 @@
                     pendingFibSettings.trendlineWidth = w;
                     updateThicknessSegmentsUI(w);
                     updateTrendlinePillUI();
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             });
 
@@ -4245,8 +4328,7 @@
                     pendingFibSettings.trendlineStyle = s;
                     updateStyleSegmentsUI(s);
                     updateTrendlinePillUI();
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             });
 
@@ -4303,8 +4385,7 @@
                     fibLineWidth = w;
                     updateLevelsWidthBtnUI(w);
                     closeFibLevelsDropdowns();
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             });
 
@@ -4316,8 +4397,7 @@
                     pendingFibSettings.levelsLineStyle = s;
                     updateLevelsStyleBtnUI(s);
                     closeFibLevelsDropdowns();
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             });
 
@@ -4340,13 +4420,12 @@
                 else if (r) pendingFibSettings.extend = 'right';
                 else pendingFibSettings.extend = 'none';
                 updateExtendBtnUI();
-                fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                renderFib();
+                commitFibSettings(pendingFibSettings);
             };
             if (leftCheck) leftCheck.onchange = handleExtendChange;
             if (rightCheck) rightCheck.onchange = handleExtendChange;
 
-            // 2. Single color swatch button (Image 2)
+            // 2. Single color swatch button (changes both levels + trendline, just like pencil)
             const singleColorBtn = document.getElementById('tv-fib-single-color-btn');
             if (singleColorBtn) {
                 singleColorBtn.onclick = (e) => {
@@ -4355,9 +4434,10 @@
                     openFibColorPicker(singleColorBtn, pendingFibSettings.singleColor || '#AB47BC', 1.0, (c, op) => {
                         pendingFibSettings.singleColor = c;
                         pendingFibSettings.useOneColor = true;
+                        pendingFibSettings.trendlineColor = c;
                         singleColorBtn.style.backgroundColor = c;
-                        fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                        renderFib();
+                        updateTrendlinePillUI();
+                        commitFibSettings(pendingFibSettings);
                     });
                 };
             }
@@ -4392,8 +4472,7 @@
             if (bgCheck) {
                 bgCheck.onchange = () => {
                     if (pendingFibSettings) pendingFibSettings.showBackground = bgCheck.checked;
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             }
 
@@ -4407,8 +4486,7 @@
                             if (bgCheck) bgCheck.checked = true;
                         }
                     }
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             }
 
@@ -4417,8 +4495,7 @@
             if (revCheck) {
                 revCheck.onchange = () => {
                     if (pendingFibSettings) pendingFibSettings.reverse = revCheck.checked;
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             }
 
@@ -4427,8 +4504,7 @@
             if (pricesCheck) {
                 pricesCheck.onchange = () => {
                     if (pendingFibSettings) pendingFibSettings.showPrices = pricesCheck.checked;
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             }
 
@@ -4437,8 +4513,7 @@
             if (levelsCheck) {
                 levelsCheck.onchange = () => {
                     if (pendingFibSettings) pendingFibSettings.showLevels = levelsCheck.checked;
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             }
             const lvlFormatBtn = document.getElementById('tv-fib-levels-format-btn');
@@ -4456,8 +4531,7 @@
                     pendingFibSettings.levelsFormat = val;
                     updateLevelsFormatBtnUI(val);
                     closeAllFibDropdownOverlays();
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             });
 
@@ -4477,8 +4551,7 @@
                     pendingFibSettings.labelsHAlign = val;
                     updateLabelsAlignBtnUI();
                     closeAllFibDropdownOverlays();
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             });
 
@@ -4497,8 +4570,7 @@
                     pendingFibSettings.labelsVAlign = val;
                     updateLabelsAlignBtnUI();
                     closeAllFibDropdownOverlays();
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             });
 
@@ -4507,8 +4579,7 @@
             if (textCheck) {
                 textCheck.onchange = () => {
                     if (pendingFibSettings) pendingFibSettings.showText = textCheck.checked;
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             }
             const textHAlignBtn = document.getElementById('tv-fib-text-halign-btn');
@@ -4526,8 +4597,7 @@
                     pendingFibSettings.textHAlign = val;
                     updateTextAlignBtnUI();
                     closeAllFibDropdownOverlays();
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             });
 
@@ -4546,8 +4616,7 @@
                     pendingFibSettings.textVAlign = val;
                     updateTextAlignBtnUI();
                     closeAllFibDropdownOverlays();
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             });
 
@@ -4568,8 +4637,7 @@
                     fibFontSize = s;
                     updateFontSizeBtnUI(s);
                     closeAllFibDropdownOverlays();
-                    fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                    renderFib();
+                    commitFibSettings(pendingFibSettings);
                 };
             });
 
@@ -4636,6 +4704,19 @@
         }
         window.setChartInfo = setChartInfo;
 
+        function getMaterialEyeSvg(isHidden, size = 18) {
+            if (isHidden) {
+                return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>`;
+            }
+            return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+            </svg>`;
+        }
+
         function refreshObjectTree() {
             const body = document.getElementById('tv-object-tree-body');
             if (!body) return;
@@ -4691,11 +4772,11 @@
 
                     row.innerHTML = `
                         <div class="tv-tree-item-left">
-                            <div class="tv-tree-item-icon" style="color: ${t.color || '#7C4DFF'};">
-                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-                                    <circle cx="3.5" cy="14.5" r="1.8" />
-                                    <circle cx="14.5" cy="3.5" r="1.8" />
-                                    <line x1="4.8" y1="13.2" x2="13.2" y2="4.8" />
+                            <div class="tv-tree-item-icon" style="color: #D1D4DC;">
+                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                                    <circle cx="3.8" cy="14.2" r="1.6" />
+                                    <line x1="4.9" y1="13.1" x2="13.1" y2="4.9" />
+                                    <circle cx="14.2" cy="3.8" r="1.6" />
                                 </svg>
                             </div>
                             <span class="tv-tree-item-label">${labelText}</span>
@@ -4714,18 +4795,8 @@
                                     </svg>
                                 `}
                             </button>
-                            <button class="tv-tree-action-btn tv-tree-btn-eye ${isHidden ? 'active-action' : ''}" title="${isHidden ? 'Show / Unhide' : 'Hide'}">
-                                ${isHidden ? `
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-                                        <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5-7.5-5.5z" />
-                                        <path d="M3 3l14 14" />
-                                    </svg>
-                                ` : `
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-                                        <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5z" />
-                                        <circle cx="10" cy="10" r="2.5" />
-                                    </svg>
-                                `}
+                            <button class="tv-tree-action-btn tv-tree-btn-eye ${isHidden ? 'dimmed-action' : ''}" title="${isHidden ? 'Show / Unhide' : 'Hide'}">
+                                ${getMaterialEyeSvg(isHidden, 18)}
                             </button>
                             <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
                                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
@@ -4820,7 +4891,7 @@
                     row.className = 'tv-tree-item' + (isSelected ? ' selected' : '') + (isHidden ? ' hidden-item' : '');
                     row.innerHTML = `
                         <div class="tv-tree-item-left">
-                            <div class="tv-tree-item-icon" style="color: ${rect.color || '#AB47BC'};">
+                            <div class="tv-tree-item-icon" style="color: #D1D4DC;">
                                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
                                     <rect x="2.5" y="4.5" width="13" height="9" rx="1.5" />
                                 </svg>
@@ -4841,18 +4912,8 @@
                                     </svg>
                                 `}
                             </button>
-                            <button class="tv-tree-action-btn tv-tree-btn-eye ${isHidden ? 'active-action' : ''}" title="${isHidden ? 'Show / Unhide' : 'Hide'}">
-                                ${isHidden ? `
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-                                        <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5-7.5-5.5z" />
-                                        <path d="M3 3l14 14" />
-                                    </svg>
-                                ` : `
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-                                        <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5-7.5-5.5z" />
-                                        <circle cx="10" cy="10" r="2.5" />
-                                    </svg>
-                                `}
+                            <button class="tv-tree-action-btn tv-tree-btn-eye ${isHidden ? 'dimmed-action' : ''}" title="${isHidden ? 'Show / Unhide' : 'Hide'}">
+                                ${getMaterialEyeSvg(isHidden, 18)}
                             </button>
                             <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
                                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
@@ -4942,18 +5003,17 @@
                     const isSelected = (selectedHorizontalLineIndex === hIdx);
                     const isHidden = !!hLine.hidden;
                     const isLocked = !!hLine.isLocked;
-                    const priceVal = typeof hLine === 'object' ? hLine.price : hLine;
-                    const priceFormatted = formatHorizontalLinePrice(priceVal);
-                    const labelText = hLine.text ? `Horizontal ray ("${hLine.text}")` : `Horizontal ray (${priceFormatted})`;
+                    const labelText = hLine.text ? `Horizontal line ("${hLine.text}")` : 'Horizontal line';
 
                     const row = document.createElement('div');
                     row.className = 'tv-tree-item' + (isSelected ? ' selected' : '') + (isHidden ? ' hidden-item' : '');
                     row.innerHTML = `
                         <div class="tv-tree-item-left">
-                            <div class="tv-tree-item-icon" style="color: ${hLine.color || '#00E5FF'};">
-                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-                                    <circle cx="4" cy="9" r="2" />
-                                    <line x1="6" y1="9" x2="16" y2="9" />
+                            <div class="tv-tree-item-icon" style="color: #D1D4DC;">
+                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                                    <line x1="2" y1="9" x2="7.3" y2="9" />
+                                    <circle cx="9" cy="9" r="1.6" />
+                                    <line x1="10.7" y1="9" x2="16" y2="9" />
                                 </svg>
                             </div>
                             <span class="tv-tree-item-label">${labelText}</span>
@@ -4972,18 +5032,8 @@
                                     </svg>
                                 `}
                             </button>
-                            <button class="tv-tree-action-btn tv-tree-btn-eye ${isHidden ? 'active-action' : ''}" title="${isHidden ? 'Show / Unhide' : 'Hide'}">
-                                ${isHidden ? `
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-                                        <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5-7.5-5.5z" />
-                                        <path d="M3 3l14 14" />
-                                    </svg>
-                                ` : `
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-                                        <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5z" />
-                                        <circle cx="10" cy="10" r="2.5" />
-                                    </svg>
-                                `}
+                            <button class="tv-tree-action-btn tv-tree-btn-eye ${isHidden ? 'dimmed-action' : ''}" title="${isHidden ? 'Show / Unhide' : 'Hide'}">
+                                ${getMaterialEyeSvg(isHidden, 18)}
                             </button>
                             <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
                                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
@@ -5070,93 +5120,117 @@
                 });
             }
 
-            // 5. Fibonacci Retracement
-            if (currentShowFib && fibPoint1 && fibPoint2) {
-                const isSelected = isFibSelected;
-                const isLocked = !!fibIsLocked;
-                const row = document.createElement('div');
-                row.className = 'tv-tree-item' + (isSelected ? ' selected' : '');
-                const iconColor = fibCustomColor || '#FFB300';
-                row.innerHTML = `
-                    <div class="tv-tree-item-left">
-                        <div class="tv-tree-item-icon" style="color: ${iconColor};">
-                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-                                <line x1="2" y1="4" x2="16" y2="4" />
-                                <line x1="2" y1="9" x2="16" y2="9" />
-                                <line x1="2" y1="14" x2="16" y2="14" />
-                            </svg>
+            // 5. Fibonacci Retracement (Supports multiple Fibonaccis!)
+            if (currentShowFib && fibonaccis && fibonaccis.length > 0) {
+                fibonaccis.forEach((fib, fIdx) => {
+                    const isSelected = (isFibSelected && selectedFibIndex === fIdx);
+                    const isHidden = !!fib.hidden;
+                    const isLocked = !!fib.isLocked;
+                    const row = document.createElement('div');
+                    row.className = 'tv-tree-item' + (isSelected ? ' selected' : '') + (isHidden ? ' hidden-item' : '');
+                    const labelText = fibonaccis.length > 1 ? `Fib retracement ${fIdx + 1}` : 'Fib retracement';
+                    row.innerHTML = `
+                        <div class="tv-tree-item-left">
+                            <div class="tv-tree-item-icon" style="color: #D1D4DC;">
+                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                                    <line x1="2" y1="3.5" x2="16" y2="3.5" />
+                                    <line x1="2" y1="7.5" x2="12.5" y2="7.5" />
+                                    <circle cx="14.3" cy="7.5" r="1.6" />
+                                    <line x1="2" y1="11.5" x2="16" y2="11.5" />
+                                    <circle cx="3.7" cy="15.5" r="1.6" />
+                                    <line x1="5.5" y1="15.5" x2="16" y2="15.5" />
+                                </svg>
+                            </div>
+                            <span class="tv-tree-item-label">${labelText}</span>
                         </div>
-                        <span class="tv-tree-item-label">Fib Retracement</span>
-                    </div>
-                    <div class="tv-tree-item-actions">
-                        <button class="tv-tree-action-btn tv-tree-btn-lock ${isLocked ? 'active-action' : ''}" title="${isLocked ? 'Unlock' : 'Lock'}">
-                            ${isLocked ? `
+                        <div class="tv-tree-item-actions">
+                            <button class="tv-tree-action-btn tv-tree-btn-lock ${isLocked ? 'active-action' : ''}" title="${isLocked ? 'Unlock' : 'Lock'}">
+                                ${isLocked ? `
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                        <rect x="4" y="9" width="12" height="8" rx="2" />
+                                        <path d="M7 9V6a3 3 0 0 1 6 0v3" />
+                                    </svg>
+                                ` : `
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                        <rect x="4" y="9" width="12" height="8" rx="2" />
+                                        <path d="M7 9V6a3 3 0 0 1 6 0" />
+                                    </svg>
+                                `}
+                            </button>
+                            <button class="tv-tree-action-btn tv-tree-btn-eye ${isHidden ? 'dimmed-action' : ''}" title="${isHidden ? 'Show / Unhide' : 'Hide'}">
+                                ${getMaterialEyeSvg(isHidden, 18)}
+                            </button>
+                            <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
                                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-                                    <rect x="4" y="9" width="12" height="8" rx="2" />
-                                    <path d="M7 9V6a3 3 0 0 1 6 0v3" />
+                                    <path d="M3.5 5.5h13" />
+                                    <path d="M7.5 3.5h5" />
+                                    <path d="M5.5 5.5l.8 10a1.5 1.5 0 0 0 1.5 1.4h4.4a1.5 1.5 0 0 0 1.5-1.4l.8-10" />
                                 </svg>
-                            ` : `
-                                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-                                    <rect x="4" y="9" width="12" height="8" rx="2" />
-                                    <path d="M7 9V6a3 3 0 0 1 6 0" />
-                                </svg>
-                            `}
-                        </button>
-                        <button class="tv-tree-action-btn tv-tree-btn-eye" title="Hide">
-                            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-                                <path d="M2.5 10s3-5.5 7.5-5.5 7.5 5.5 7.5 5.5-3 5.5-7.5 5.5-7.5-5.5-7.5-5.5z" />
-                                <circle cx="10" cy="10" r="2.5" />
-                            </svg>
-                        </button>
-                        <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
-                            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-                                <path d="M3.5 5.5h13" />
-                                <path d="M7.5 3.5h5" />
-                                <path d="M5.5 5.5l.8 10a1.5 1.5 0 0 0 1.5 1.4h4.4a1.5 1.5 0 0 0 1.5-1.4l.8-10" />
-                            </svg>
-                        </button>
-                    </div>
-                `;
+                            </button>
+                        </div>
+                    `;
 
-                row.onclick = (e) => {
-                    e.stopPropagation();
-                    isFibSelected = true;
-                    selectedHorizontalLineIndex = -1;
-                    selectedTrendlineIndex = -1;
-                    selectedRectangleIndex = -1;
-                    showFibToolbar();
-                    renderFib();
-                    refreshObjectTree();
-                };
-
-                const btnLock = row.querySelector('.tv-tree-btn-lock');
-                if (btnLock) {
-                    btnLock.onclick = (e) => {
+                    row.onclick = (e) => {
                         e.stopPropagation();
-                        fibIsLocked = !fibIsLocked;
-                        updateLockSheetUI(fibIsLocked);
+                        selectedFibIndex = fIdx;
+                        syncActiveFibFromIndex();
+                        selectedHorizontalLineIndex = -1;
+                        selectedTrendlineIndex = -1;
+                        selectedRectangleIndex = -1;
+                        showFibToolbar();
                         renderFib();
                         refreshObjectTree();
                     };
-                }
 
-                const btnEye = row.querySelector('.tv-tree-btn-eye');
-                if (btnEye) {
-                    btnEye.onclick = (e) => {
-                        e.stopPropagation();
-                        clearFibonacci();
-                    };
-                }
+                    const btnLock = row.querySelector('.tv-tree-btn-lock');
+                    if (btnLock) {
+                        btnLock.onclick = (e) => {
+                            e.stopPropagation();
+                            fib.isLocked = !fib.isLocked;
+                            if (selectedFibIndex === fIdx) {
+                                fibIsLocked = fib.isLocked;
+                                updateLockSheetUI(fibIsLocked);
+                            }
+                            renderFib();
+                            refreshObjectTree();
+                        };
+                    }
 
-                const btnDel = row.querySelector('.tv-tree-btn-delete');
-                if (btnDel) {
-                    btnDel.onclick = (e) => {
-                        e.stopPropagation();
-                        clearFibonacci();
-                    };
-                }
+                    const btnEye = row.querySelector('.tv-tree-btn-eye');
+                    if (btnEye) {
+                        btnEye.onclick = (e) => {
+                            e.stopPropagation();
+                            fib.hidden = !fib.hidden;
+                            renderFib();
+                            refreshObjectTree();
+                        };
+                    }
 
-                body.appendChild(row);
+                    const btnDel = row.querySelector('.tv-tree-btn-delete');
+                    if (btnDel) {
+                        btnDel.onclick = (e) => {
+                            e.stopPropagation();
+                            fibonaccis.splice(fIdx, 1);
+                            if (selectedFibIndex === fIdx) {
+                                selectedFibIndex = -1;
+                                syncActiveFibFromIndex();
+                                hideTrendlineToolbar();
+                            } else if (selectedFibIndex > fIdx) {
+                                selectedFibIndex--;
+                            }
+                            if (fibonaccis.length === 0) {
+                                currentShowFib = false;
+                                if (window.flutter_inappwebview?.callHandler) {
+                                    window.flutter_inappwebview.callHandler('onFibDeleted');
+                                }
+                            }
+                            renderFib();
+                            refreshObjectTree();
+                        };
+                    }
+
+                    body.appendChild(row);
+                });
             }
         }
 
@@ -5196,7 +5270,13 @@
                 if (colorHex) {
                     fibCustomColor = colorHex;
                     fibSettings.trendlineColor = colorHex;
-                    if (pendingFibSettings) pendingFibSettings.trendlineColor = colorHex;
+                    fibSettings.singleColor = colorHex;
+                    fibSettings.useOneColor = true;
+                    if (pendingFibSettings) {
+                        pendingFibSettings.trendlineColor = colorHex;
+                        pendingFibSettings.singleColor = colorHex;
+                        pendingFibSettings.useOneColor = true;
+                    }
                     const lineInd = document.getElementById('tv-indicator-line-color');
                     if (lineInd) lineInd.style.background = fibCustomColor;
                     updateSliderGradient(fibCustomColor);
@@ -5204,7 +5284,11 @@
                     // Reset to rainbow
                     fibCustomColor = null;
                     fibSettings.trendlineColor = '#AB47BC';
-                    if (pendingFibSettings) pendingFibSettings.trendlineColor = '#AB47BC';
+                    fibSettings.useOneColor = false;
+                    if (pendingFibSettings) {
+                        pendingFibSettings.trendlineColor = '#AB47BC';
+                        pendingFibSettings.useOneColor = false;
+                    }
                     const lineInd = document.getElementById('tv-indicator-line-color');
                     if (lineInd) lineInd.style.background = 'linear-gradient(90deg, #00B0FF 0%, #00E676 35%, #FFEB3B 65%, #FF5722 100%)';
                 }
@@ -5215,6 +5299,7 @@
                 document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
                     sw.classList.toggle('selected', !!fibCustomColor && sw.getAttribute('data-color')?.toUpperCase() === fibCustomColor.toUpperCase());
                 });
+                syncActiveFibToIndex();
                 renderFib();
                 refreshObjectTree();
                 return;
@@ -5239,6 +5324,13 @@
             if (activeColorPickerTarget === 'line') {
                 if (colorHex) drawing.color = colorHex;
                 if (opacityVal !== undefined) drawing.opacity = opacityVal;
+                if (isHLine) {
+                    if (colorHex) lastHLineStyle.color = colorHex;
+                    if (opacityVal !== undefined) lastHLineStyle.opacity = opacityVal;
+                } else if (!isRect) {
+                    if (colorHex) lastTrendlineStyle.color = colorHex;
+                    if (opacityVal !== undefined) lastTrendlineStyle.opacity = opacityVal;
+                }
                 const lineInd = document.getElementById('tv-indicator-line-color');
                 if (lineInd && drawing.color) lineInd.style.backgroundColor = drawing.color;
                 updateSliderGradient(drawing.color || (isHLine ? '#00E5FF' : (isRect ? '#AB47BC' : '#7C4DFF')));
@@ -5289,11 +5381,18 @@
         function applySelectedWidth(w) {
             if (isFibSelected && currentShowFib && fibPoint1 && fibPoint2) {
                 fibLineWidth = parseInt(w) || 2;
+                fibSettings.levelsLineWidth = fibLineWidth;
+                fibSettings.trendlineWidth = fibLineWidth;
+                if (pendingFibSettings) {
+                    pendingFibSettings.levelsLineWidth = fibLineWidth;
+                    pendingFibSettings.trendlineWidth = fibLineWidth;
+                }
                 const widthLabel = document.getElementById('tv-label-width');
                 if (widthLabel) widthLabel.textContent = fibLineWidth + 'px';
                 document.querySelectorAll('#tv-popover-width .tv-menu-item').forEach(item => {
                     item.classList.toggle('selected', parseInt(item.getAttribute('data-width')) === fibLineWidth);
                 });
+                syncActiveFibToIndex();
                 hideAllPopovers();
                 renderFib();
                 return;
@@ -5316,6 +5415,11 @@
             }
 
             drawing.width = parseInt(w);
+            if (isHLine) {
+                lastHLineStyle.width = drawing.width;
+            } else if (!isRect) {
+                lastTrendlineStyle.width = drawing.width;
+            }
             const widthLabel = document.getElementById('tv-label-width');
             if (widthLabel) widthLabel.textContent = drawing.width + 'px';
 
@@ -5352,6 +5456,11 @@
             }
 
             drawing.style = s;
+            if (isHLine) {
+                lastHLineStyle.style = drawing.style;
+            } else if (!isRect) {
+                lastTrendlineStyle.style = drawing.style;
+            }
             const styleInd = document.getElementById('tv-indicator-line-style');
             if (styleInd) {
                 if (s === 'dashed') {
@@ -6109,8 +6218,7 @@
 
             function handleSettingsCancel() {
                 if (isFibSettingsModalOpen && originalFibSettings) {
-                    fibSettings = JSON.parse(JSON.stringify(originalFibSettings));
-                    renderFib();
+                    commitFibSettings(originalFibSettings);
                 }
                 closeTrendlineSettingsModal();
             }
@@ -6145,8 +6253,7 @@
                     e.preventDefault();
                     if (isFibSettingsModalOpen) {
                         if (pendingFibSettings) {
-                            fibSettings = JSON.parse(JSON.stringify(pendingFibSettings));
-                            renderFib();
+                            commitFibSettings(pendingFibSettings);
                         }
                         closeTrendlineSettingsModal();
                     } else {
@@ -6468,63 +6575,69 @@
                     if (!activeSeries || !chart) return;
 
                     // 1. FIBONACCI RESIZE HIT TEST (Comfortable 76px touch zone)
-                    if (currentShowFib && fibPoint1 && fibPoint2) {
-                        const x1 = chart.timeScale().timeToCoordinate(fibPoint1.time);
-                        const y1 = activeSeries.priceToCoordinate(fibPoint1.price);
-                        const x2 = chart.timeScale().timeToCoordinate(fibPoint2.time);
-                        const y2 = activeSeries.priceToCoordinate(fibPoint2.price);
+                    if (currentShowFib && fibonaccis && fibonaccis.length > 0) {
+                        for (let i = fibonaccis.length - 1; i >= 0; i--) {
+                            const fib = fibonaccis[i];
+                            if (fib.hidden) continue;
+                            const x1 = chart.timeScale().timeToCoordinate(fib.p1.time);
+                            const y1 = activeSeries.priceToCoordinate(fib.p1.price);
+                            const x2 = chart.timeScale().timeToCoordinate(fib.p2.time);
+                            const y2 = activeSeries.priceToCoordinate(fib.p2.price);
 
-                        const hit1 = x1 !== null && y1 !== null && Math.hypot(x - x1, y - y1) <= HITBOX_FIB_ANCHOR;
-                        const hit2 = x2 !== null && y2 !== null && Math.hypot(x - x2, y - y2) <= HITBOX_FIB_ANCHOR;
-                        const hitDiagonal = (x1 !== null && y1 !== null && x2 !== null && y2 !== null) && distToSegment(x, y, x1, y1, x2, y2) <= 24;
-                        const minX = (x1 !== null && x2 !== null) ? Math.min(x1, x2) : 0;
-                        const maxX = (x1 !== null && x2 !== null) ? Math.max(x1, x2) : 0;
-                        const minY = (y1 !== null && y2 !== null) ? Math.min(y1, y2) : 0;
-                        const maxY = (y1 !== null && y2 !== null) ? Math.max(y1, y2) : 0;
-                        const hitInsideBox = (x1 !== null && y1 !== null && x2 !== null && y2 !== null) &&
-                            (x >= minX - 10 && x <= maxX + 10 && y >= minY - 10 && y <= maxY + 10);
+                            const hit1 = x1 !== null && y1 !== null && Math.hypot(x - x1, y - y1) <= HITBOX_FIB_ANCHOR;
+                            const hit2 = x2 !== null && y2 !== null && Math.hypot(x - x2, y - y2) <= HITBOX_FIB_ANCHOR;
+                            const hitDiagonal = (x1 !== null && y1 !== null && x2 !== null && y2 !== null) && distToSegment(x, y, x1, y1, x2, y2) <= 24;
+                            const minX = (x1 !== null && x2 !== null) ? Math.min(x1, x2) : 0;
+                            const maxX = (x1 !== null && x2 !== null) ? Math.max(x1, x2) : 0;
+                            const minY = (y1 !== null && y2 !== null) ? Math.min(y1, y2) : 0;
+                            const maxY = (y1 !== null && y2 !== null) ? Math.max(y1, y2) : 0;
+                            const hitInsideBox = (x1 !== null && y1 !== null && x2 !== null && y2 !== null) &&
+                                (x >= minX - 10 && x <= maxX + 10 && y >= minY - 10 && y <= maxY + 10);
 
-                        if (hit1 || hit2) {
-                            e.stopPropagation();
-                            e.stopImmediatePropagation();
-                            e.preventDefault();
+                            if (hit1 || hit2) {
+                                e.stopPropagation();
+                                e.stopImmediatePropagation();
+                                e.preventDefault();
 
-                            isFibSelected = true;
-                            selectedTrendlineIndex = -1;
-                            selectedHorizontalLineIndex = -1;
-                            selectedRectangleIndex = -1;
-                            if (!fibIsLocked) {
-                                dragMode = hit1 ? 1 : 2;
-                                isPointerDown = true;
-                                try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
-                                chart.applyOptions({ handleScroll: false, handleScale: false });
+                                selectedFibIndex = i;
+                                syncActiveFibFromIndex();
+                                selectedTrendlineIndex = -1;
+                                selectedHorizontalLineIndex = -1;
+                                selectedRectangleIndex = -1;
+                                if (!fib.isLocked) {
+                                    dragMode = hit1 ? 1 : 2;
+                                    isPointerDown = true;
+                                    try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                    chart.applyOptions({ handleScroll: false, handleScale: false });
+                                }
+                                showFibToolbar();
+                                renderFib();
+                                return;
+                            } else if (hitDiagonal || hitInsideBox) {
+                                e.stopPropagation();
+                                e.stopImmediatePropagation();
+                                e.preventDefault();
+
+                                selectedFibIndex = i;
+                                syncActiveFibFromIndex();
+                                selectedTrendlineIndex = -1;
+                                selectedHorizontalLineIndex = -1;
+                                selectedRectangleIndex = -1;
+                                if (!fib.isLocked) {
+                                    dragMode = 3;
+                                    fibDragStartPos = {
+                                        x, y,
+                                        origP1: { time: fib.p1.time, price: fib.p1.price },
+                                        origP2: { time: fib.p2.time, price: fib.p2.price }
+                                    };
+                                    isPointerDown = true;
+                                    try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
+                                    chart.applyOptions({ handleScroll: false, handleScale: false });
+                                }
+                                showFibToolbar();
+                                renderFib();
+                                return;
                             }
-                            showFibToolbar();
-                            renderFib();
-                            return;
-                        } else if (hitDiagonal || hitInsideBox) {
-                            e.stopPropagation();
-                            e.stopImmediatePropagation();
-                            e.preventDefault();
-
-                            isFibSelected = true;
-                            selectedTrendlineIndex = -1;
-                            selectedHorizontalLineIndex = -1;
-                            selectedRectangleIndex = -1;
-                            if (!fibIsLocked) {
-                                dragMode = 3;
-                                fibDragStartPos = {
-                                    x, y,
-                                    origP1: { time: fibPoint1.time, price: fibPoint1.price },
-                                    origP2: { time: fibPoint2.time, price: fibPoint2.price }
-                                };
-                                isPointerDown = true;
-                                try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
-                                chart.applyOptions({ handleScroll: false, handleScale: false });
-                            }
-                            showFibToolbar();
-                            renderFib();
-                            return;
                         }
                     }
 
@@ -6834,10 +6947,10 @@
                         const newHLine = normalizeHorizontalLine({
                             id: 'hl_' + Date.now(),
                             price: price,
-                            color: '#00E5FF',
-                            width: 2,
-                            style: 'solid',
-                            opacity: 1.0,
+                            color: lastHLineStyle.color || '#00E5FF',
+                            width: lastHLineStyle.width || 2,
+                            style: lastHLineStyle.style || 'solid',
+                            opacity: lastHLineStyle.opacity !== undefined ? lastHLineStyle.opacity : 1.0,
                             text: '',
                             textColor: '#FFFFFF',
                             textSize: 14,
@@ -6934,10 +7047,10 @@
                                     id: 'tl_' + Date.now(),
                                     p1: tempTrendlineP1,
                                     p2: { time: finalTime, price: finalPrice },
-                                    color: '#7C4DFF',
-                                    width: 2,
-                                    style: 'solid',
-                                    opacity: 1.0,
+                                    color: lastTrendlineStyle.color || '#7C4DFF',
+                                    width: lastTrendlineStyle.width || 2,
+                                    style: lastTrendlineStyle.style || 'solid',
+                                    opacity: lastTrendlineStyle.opacity !== undefined ? lastTrendlineStyle.opacity : 1.0,
                                     textColor: '#FFFFFF',
                                     lockAngle: false
                                 };
@@ -7273,8 +7386,8 @@
                     const time = getTimeAtX(clampedX);
                     const price = getPriceAtY(y);
                     if (time && price !== null) {
-                        fibPoint1 = { time, price };
-                        fibPoint2 = { time, price };
+                        tempFibP1 = { time, price };
+                        tempFibP2 = { time, price };
                         fibDrawState = 2; // Now waiting for click 2 (Anchor 2)
                         isPointerDown = true;
                         canvas.setPointerCapture?.(e.pointerId);
@@ -7288,17 +7401,32 @@
                 if (fibDrawState === 2) {
                     const time = getTimeAtX(clampedX);
                     const price = getPriceAtY(y);
-                    if (time && price !== null) {
-                        fibPoint2 = { time, price };
+                    if (time && price !== null && tempFibP1) {
+                        const newFib = {
+                            id: 'fib_' + Date.now(),
+                            p1: tempFibP1,
+                            p2: { time, price },
+                            settings: JSON.parse(JSON.stringify(fibSettings)),
+                            isLocked: false,
+                            hidden: false,
+                            customColor: fibCustomColor || null,
+                            lineWidth: fibLineWidth || 2
+                        };
+                        fibonaccis.push(newFib);
+                        selectedFibIndex = fibonaccis.length - 1;
+                        syncActiveFibFromIndex();
+                        tempFibP1 = null;
+                        tempFibP2 = null;
                         fibDrawState = 0;
                         isDrawingFib = false;
-                        isFibSelected = true;
                         isPointerDown = false;
+                        try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
                         if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
                         canvas.style.cursor = 'default';
                         canvas.style.pointerEvents = 'none';
                         showFibToolbar();
                         renderFib();
+                        refreshObjectTree();
 
                         if (window.flutter_inappwebview?.callHandler) {
                             window.flutter_inappwebview.callHandler('onFibDrawn', true);
@@ -7635,6 +7763,7 @@
                     const price = getPriceAtY(y);
                     if (time && price !== null) {
                         fibPoint1 = { time, price };
+                        syncActiveFibToIndex();
                         renderFib();
                     }
                     return;
@@ -7644,6 +7773,7 @@
                     const price = getPriceAtY(y);
                     if (time && price !== null) {
                         fibPoint2 = { time, price };
+                        syncActiveFibToIndex();
                         renderFib();
                     }
                     return;
@@ -7673,6 +7803,7 @@
                         if (newTime1 && newPrice1 !== null && newTime2 && newPrice2 !== null) {
                             fibPoint1 = { time: newTime1, price: newPrice1 };
                             fibPoint2 = { time: newTime2, price: newPrice2 };
+                            syncActiveFibToIndex();
                             renderFib();
                         }
                     }
@@ -7684,7 +7815,7 @@
                     const time = getTimeAtX(clampedX);
                     const price = getPriceAtY(y);
                     if (time && price !== null) {
-                        fibPoint2 = { time, price };
+                        tempFibP2 = { time, price };
                         renderFib();
                     }
                 }
@@ -7779,10 +7910,10 @@
                             id: 'tl_' + Date.now(),
                             p1: tempTrendlineP1,
                             p2: tempTrendlineP2,
-                            color: '#7C4DFF',
-                            width: 2,
-                            style: 'solid',
-                            opacity: 1.0,
+                            color: lastTrendlineStyle.color || '#7C4DFF',
+                            width: lastTrendlineStyle.width || 2,
+                            style: lastTrendlineStyle.style || 'solid',
+                            opacity: lastTrendlineStyle.opacity !== undefined ? lastTrendlineStyle.opacity : 1.0,
                             textColor: '#FFFFFF',
                             lockAngle: false
                         };
@@ -7878,10 +8009,24 @@
 
                 if (fibDrawState === 2) {
                     // If user dragged and released with distance >= 20px, finalize immediately (Drag gesture fallback)
-                    if (dist >= 20 && fibPoint1 && fibPoint2 && Math.abs(fibPoint2.price - fibPoint1.price) > 0.001) {
+                    if (dist >= 20 && tempFibP1 && tempFibP2 && Math.abs(tempFibP2.price - tempFibP1.price) > 0.001) {
+                        const newFib = {
+                            id: 'fib_' + Date.now(),
+                            p1: tempFibP1,
+                            p2: tempFibP2,
+                            settings: JSON.parse(JSON.stringify(fibSettings)),
+                            isLocked: false,
+                            hidden: false,
+                            customColor: fibCustomColor || null,
+                            lineWidth: fibLineWidth || 2
+                        };
+                        fibonaccis.push(newFib);
+                        selectedFibIndex = fibonaccis.length - 1;
+                        syncActiveFibFromIndex();
+                        tempFibP1 = null;
+                        tempFibP2 = null;
                         fibDrawState = 0;
                         isDrawingFib = false;
-                        isFibSelected = true;
                         isPointerDown = false;
                         try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
                         try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
@@ -7890,6 +8035,7 @@
                         canvas.style.pointerEvents = 'none';
                         showFibToolbar();
                         renderFib();
+                        refreshObjectTree();
 
                         if (window.flutter_inappwebview?.callHandler) {
                             window.flutter_inappwebview.callHandler('onFibDrawn', true);
@@ -7955,7 +8101,7 @@
                 const price = getPriceAtY(hy);
 
                 ctx.save();
-                ctx.strokeStyle = isDrawingTrendline ? 'rgba(124, 77, 255, 0.85)' : (isDrawingRectangle ? 'rgba(171, 71, 188, 0.85)' : (currentCrosshairColor || 'rgba(255, 255, 255, 0.85)'));
+                ctx.strokeStyle = isDrawingTrendline ? hexToRgba(lastTrendlineStyle.color || '#7C4DFF', 0.85) : (isDrawingRectangle ? 'rgba(171, 71, 188, 0.85)' : (currentCrosshairColor || 'rgba(255, 255, 255, 0.85)'));
                 ctx.lineWidth = 1;
                 ctx.setLineDash([6, 6]);
 
@@ -8280,30 +8426,43 @@
                 const y2 = activeSeries.priceToCoordinate(tempTrendlineP2.price);
                 if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
                     ctx.save();
-                    // Live rubber band line
+                    const tlColor = lastTrendlineStyle.color || '#7C4DFF';
+                    const tlWidth = lastTrendlineStyle.width || 2.0;
+                    const tlOpacity = lastTrendlineStyle.opacity !== undefined ? lastTrendlineStyle.opacity : 1.0;
+                    const tlStyle = lastTrendlineStyle.style || 'solid';
+
+                    // Live rubber band line matching lastTrendlineStyle
                     ctx.beginPath();
-                    ctx.strokeStyle = '#7C4DFF';
-                    ctx.lineWidth = 2.0;
+                    ctx.strokeStyle = hexToRgba(tlColor, tlOpacity);
+                    ctx.lineWidth = tlWidth;
+                    if (tlStyle === 'dashed') {
+                        ctx.setLineDash([Math.max(6, tlWidth * 3), Math.max(4, tlWidth * 2)]);
+                    } else if (tlStyle === 'dotted') {
+                        ctx.lineCap = 'round';
+                        ctx.setLineDash([0, Math.max(5, tlWidth * 2.5)]);
+                    } else {
+                        ctx.setLineDash([]);
+                    }
                     ctx.moveTo(x1, y1);
                     ctx.lineTo(x2, y2);
                     ctx.stroke();
 
-                    // Anchor 1
-                    ctx.fillStyle = '#7C4DFF';
+                    // Neutral Anchor 1
+                    ctx.fillStyle = '#FFFFFF';
                     ctx.beginPath();
                     ctx.arc(x1, y1, 6, 0, Math.PI * 2);
                     ctx.fill();
-                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillStyle = '#1E1E1E';
                     ctx.beginPath();
                     ctx.arc(x1, y1, 3, 0, Math.PI * 2);
                     ctx.fill();
 
-                    // Live cursor Anchor 2
-                    ctx.fillStyle = '#7C4DFF';
+                    // Neutral Live cursor Anchor 2
+                    ctx.fillStyle = '#FFFFFF';
                     ctx.beginPath();
                     ctx.arc(x2, y2, 6, 0, Math.PI * 2);
                     ctx.fill();
-                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillStyle = '#1E1E1E';
                     ctx.beginPath();
                     ctx.arc(x2, y2, 3, 0, Math.PI * 2);
                     ctx.fill();
@@ -8482,271 +8641,311 @@
                 }
             }
 
-            // 2. Render Fibonacci Retracement
-            if (currentShowFib) {
-                if (isDrawingFib && fibPoint1 && fibDrawState === 2 && (!fibPoint2 || Math.abs(fibPoint2.price - fibPoint1.price) < 0.001)) {
-                    // If Anchor 1 is set and waiting for Anchor 2, render Anchor 1 handle
-                    const x1 = chart.timeScale().timeToCoordinate(fibPoint1.time);
-                    const y1 = candleSeries.priceToCoordinate(fibPoint1.price);
-                    if (x1 !== null && y1 !== null) {
-                        ctx.fillStyle = '#FFB300';
-                        ctx.beginPath();
-                        ctx.arc(x1, y1, 7, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.fillStyle = '#FFFFFF';
-                        ctx.beginPath();
-                        ctx.arc(x1, y1, 3.5, 0, Math.PI * 2);
-                        ctx.fill();
+            // 2. Render Fibonacci Retracement(s) with Neutral Anchors
+            const fibItemsToRender = [];
+
+            if (currentShowFib && fibonaccis && fibonaccis.length > 0) {
+                fibonaccis.forEach((fib, fIdx) => {
+                    if (fib.hidden) return;
+                    const isThisFibSelected = (isFibSelected && selectedFibIndex === fIdx);
+                    fibItemsToRender.push({
+                        fib: fib,
+                        fIdx: fIdx,
+                        p1: fib.p1,
+                        p2: fib.p2,
+                        settings: isThisFibSelected ? fibSettings : (fib.settings || fibSettings),
+                        customColor: isThisFibSelected ? fibCustomColor : (fib.customColor !== undefined ? fib.customColor : null),
+                        lineWidth: isThisFibSelected ? (fibLineWidth || 2) : (fib.lineWidth || (fib.settings && fib.settings.levelsLineWidth) || 2),
+                        isThisFibSelected: isThisFibSelected,
+                        isDraft: false
+                    });
+                });
+            }
+
+            // Draft preview while actively drawing/dragging (NO LONGER INVISIBLE!)
+            if (isDrawingFib && tempFibP1 && tempFibP2 && fibDrawState === 2 && Math.abs(tempFibP2.price - tempFibP1.price) >= 0.001) {
+                fibItemsToRender.push({
+                    fib: null,
+                    fIdx: -1,
+                    p1: tempFibP1,
+                    p2: tempFibP2,
+                    settings: fibSettings,
+                    customColor: fibCustomColor,
+                    lineWidth: fibLineWidth || 2,
+                    isThisFibSelected: true,
+                    isDraft: true
+                });
+            } else if (isDrawingFib && tempFibP1 && fibDrawState === 2) {
+                // Pending Anchor 1 handle while waiting for Anchor 2 (Neutral Colors)
+                const x1 = chart.timeScale().timeToCoordinate(tempFibP1.time);
+                const y1 = candleSeries.priceToCoordinate(tempFibP1.price);
+                if (x1 !== null && y1 !== null) {
+                    ctx.save();
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath();
+                    ctx.arc(x1, y1, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#1E1E1E';
+                    ctx.beginPath();
+                    ctx.arc(x1, y1, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            fibItemsToRender.forEach((itemObj) => {
+                const p1 = itemObj.p1;
+                const p2 = itemObj.p2;
+                if (!p1 || !p2) return;
+
+                const priceDiff = p1.price - p2.price;
+                if (Math.abs(priceDiff) < 0.001) return;
+
+                const x1 = chart.timeScale().timeToCoordinate(p1.time);
+                const y1 = candleSeries.priceToCoordinate(p1.price);
+                const x2 = chart.timeScale().timeToCoordinate(p2.time);
+                const y2 = candleSeries.priceToCoordinate(p2.price);
+
+                if (x1 === null || y1 === null || x2 === null || y2 === null) return;
+
+                const fSettings = itemObj.settings || fibSettings;
+                const fCustomColor = itemObj.customColor;
+                const isThisFibSelected = itemObj.isThisFibSelected;
+
+                const minX = Math.min(x1, x2);
+                const maxX = Math.max(x1, x2);
+                let lineStartX = Math.max(0, Math.min(minX, maxContentX));
+                let lineEndX = Math.min(maxContentX, Math.max(minX + 40, maxX));
+                const ext = fSettings.extend || 'none';
+                if (ext === 'left' || ext === 'both') lineStartX = 0;
+                if (ext === 'right' || ext === 'both') lineEndX = maxContentX;
+                const lineWidth = Math.max(0, lineEndX - lineStartX);
+
+                const isReverse = !!fSettings.reverse;
+                const isLog = !!fSettings.logScale;
+                const logP1 = (isLog && p1.price > 0) ? Math.log(p1.price) : 0;
+                const logP2 = (isLog && p2.price > 0) ? Math.log(p2.price) : 0;
+                const logDiff = logP1 - logP2;
+
+                const levelsConfig = fSettings.levels || DEFAULT_FIB_LEVELS_CONFIG;
+                const levelYs = [];
+
+                for (let i = 0; i < levelsConfig.length; i++) {
+                    const item = levelsConfig[i];
+                    if (!item.enabled) continue;
+                    const lvlVal = item.level;
+                    let price;
+                    if (isLog && p1.price > 0 && p2.price > 0) {
+                        if (isReverse) {
+                            price = Math.exp(logP1 - (logDiff * lvlVal));
+                        } else {
+                            price = Math.exp(logP2 + (logDiff * lvlVal));
+                        }
+                    } else {
+                        if (isReverse) {
+                            price = p1.price - (priceDiff * lvlVal);
+                        } else {
+                            price = p2.price + (priceDiff * lvlVal);
+                        }
                     }
-                } else if (fibPoint1 && fibPoint2) {
-                    const priceDiff = fibPoint1.price - fibPoint2.price;
-                    if (Math.abs(priceDiff) >= 0.001) {
-                        const x1 = chart.timeScale().timeToCoordinate(fibPoint1.time);
-                        const y1 = candleSeries.priceToCoordinate(fibPoint1.price);
-                        const x2 = chart.timeScale().timeToCoordinate(fibPoint2.time);
-                        const y2 = candleSeries.priceToCoordinate(fibPoint2.price);
+                    const y = candleSeries.priceToCoordinate(price);
+                    let color = item.color || '#AB47BC';
+                    if (fSettings.useOneColor) {
+                        color = fSettings.singleColor || '#AB47BC';
+                    }
+                    levelYs.push({ ...item, price, y, color });
+                }
 
-                        if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
-                            // In TradingView: Horizontal lines span between the X coordinates of the anchors (or extended)
-                            const minX = Math.min(x1, x2);
-                            const maxX = Math.max(x1, x2);
-                            let lineStartX = Math.max(0, Math.min(minX, maxContentX));
-                            let lineEndX = Math.min(maxContentX, Math.max(minX + 40, maxX));
-                            const ext = fibSettings.extend || 'none';
-                            if (ext === 'left' || ext === 'both') lineStartX = 0;
-                            if (ext === 'right' || ext === 'both') lineEndX = maxContentX;
-                            const lineWidth = Math.max(0, lineEndX - lineStartX);
-
-                            // Calculate prices for enabled levels
-                            const isReverse = !!fibSettings.reverse;
-                            const isLog = !!fibSettings.logScale;
-                            const logP1 = (isLog && fibPoint1.price > 0) ? Math.log(fibPoint1.price) : 0;
-                            const logP2 = (isLog && fibPoint2.price > 0) ? Math.log(fibPoint2.price) : 0;
-                            const logDiff = logP1 - logP2;
-
-                            const levelsConfig = fibSettings.levels || DEFAULT_FIB_LEVELS_CONFIG;
-                            const levelYs = [];
-
-                            for (let i = 0; i < levelsConfig.length; i++) {
-                                const item = levelsConfig[i];
-                                if (!item.enabled) continue;
-                                const lvlVal = item.level;
-                                let price;
-                                if (isLog && fibPoint1.price > 0 && fibPoint2.price > 0) {
-                                    if (isReverse) {
-                                        price = Math.exp(logP1 - (logDiff * lvlVal));
-                                    } else {
-                                        price = Math.exp(logP2 + (logDiff * lvlVal));
-                                    }
-                                } else {
-                                    if (isReverse) {
-                                        price = fibPoint1.price - (priceDiff * lvlVal);
-                                    } else {
-                                        price = fibPoint2.price + (priceDiff * lvlVal);
-                                    }
-                                }
-                                const y = candleSeries.priceToCoordinate(price);
-                                const color = fibSettings.useOneColor
-                                    ? (fibSettings.singleColor || '#AB47BC')
-                                    : (fibCustomColor || item.color || '#AB47BC');
-                                levelYs.push({ ...item, price, y, color });
-                            }
-
-                            // Draw filled zones between levels if background is enabled
-                            if (fibSettings.showBackground && fibSettings.backgroundOpacity > 0 && levelYs.length > 1) {
-                                const sortedLevels = [...levelYs].sort((a, b) => b.level - a.level);
-                                for (let i = 0; i < sortedLevels.length - 1; i++) {
-                                    const curr = sortedLevels[i];
-                                    const next = sortedLevels[i + 1];
-                                    if (curr.y !== null && next.y !== null) {
-                                        ctx.fillStyle = hexToRgba(curr.color, fibSettings.backgroundOpacity);
-                                        const topY = Math.min(curr.y, next.y);
-                                        const bandHeight = Math.abs(curr.y - next.y);
-                                        ctx.fillRect(lineStartX, topY, lineWidth, bandHeight);
-                                    }
-                                }
-                            }
-
-                            // Draw level lines and TradingView-style clean text labels
-                            const lvlLineW = fibSettings.levelsLineWidth || fibLineWidth || 1.0;
-                            const lvlLineStyle = fibSettings.levelsLineStyle || 'solid';
-
-                            for (let i = 0; i < levelYs.length; i++) {
-                                const item = levelYs[i];
-                                if (item.y === null || item.y < 0 || item.y > height) continue;
-
-                                ctx.save();
-                                ctx.beginPath();
-                                ctx.strokeStyle = item.color;
-                                ctx.lineWidth = lvlLineW;
-                                if (lvlLineStyle === 'dashed') {
-                                    ctx.setLineDash([Math.max(6, lvlLineW * 3), Math.max(4, lvlLineW * 2)]);
-                                } else if (lvlLineStyle === 'dotted') {
-                                    ctx.lineCap = 'round';
-                                    ctx.setLineDash([0, Math.max(6, lvlLineW * 2.5)]);
-                                } else {
-                                    ctx.setLineDash([]);
-                                }
-                                ctx.moveTo(lineStartX, item.y);
-                                ctx.lineTo(lineEndX, item.y);
-                                ctx.stroke();
-                                ctx.restore();
-
-                                // Render label text if enabled
-                                const showLvl = fibSettings.showLevels !== false;
-                                const showPrc = fibSettings.showPrices !== false;
-                                if (showLvl || showPrc) {
-                                    ctx.save();
-                                    const fontSize = fibSettings.fontSize || 12;
-                                    ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-
-                                    let levelStr = '';
-                                    if (showLvl) {
-                                        if (fibSettings.levelsFormat === 'values') {
-                                            levelStr = String(item.level);
-                                        } else {
-                                            const pct = parseFloat((item.level * 100).toFixed(4));
-                                            levelStr = `${pct}%`;
-                                        }
-                                    }
-                                    const priceFormatted = item.price >= 1000
-                                        ? Math.round(item.price).toLocaleString('en-US')
-                                        : item.price.toFixed(2);
-
-                                    let labelText = '';
-                                    if (showLvl && showPrc) {
-                                        labelText = `${levelStr} (${priceFormatted})`;
-                                    } else if (showLvl) {
-                                        labelText = levelStr;
-                                    } else if (showPrc) {
-                                        labelText = `(${priceFormatted})`;
-                                    }
-
-                                    if (labelText) {
-                                        // Horizontal alignment
-                                        const hAlign = fibSettings.labelsHAlign || 'left';
-                                        let tx = lineStartX + 6;
-                                        if (hAlign === 'center') {
-                                            tx = (lineStartX + lineEndX) / 2;
-                                            ctx.textAlign = 'center';
-                                        } else if (hAlign === 'right') {
-                                            tx = lineEndX - 6;
-                                            ctx.textAlign = 'right';
-                                        } else {
-                                            ctx.textAlign = 'left';
-                                        }
-
-                                        // Vertical alignment
-                                        const vAlign = fibSettings.labelsVAlign || 'top';
-                                        let ty = item.y - 3;
-                                        if (vAlign === 'middle') {
-                                            ty = item.y;
-                                            ctx.textBaseline = 'middle';
-                                        } else if (vAlign === 'bottom') {
-                                            ty = item.y + 4;
-                                            ctx.textBaseline = 'top';
-                                        } else {
-                                            ctx.textBaseline = 'bottom';
-                                        }
-
-                                        ctx.fillStyle = item.color;
-                                        ctx.fillText(labelText, tx, ty);
-                                    }
-                                    ctx.restore();
-                                }
-                            }
-
-                            // Trendline connecting anchor 1 and anchor 2
-                            if (fibSettings.showTrendline) {
-                                ctx.save();
-                                ctx.beginPath();
-                                const tColor = fibCustomColor || fibSettings.trendlineColor || '#AB47BC';
-                                const tOpacity = fibSettings.trendlineOpacity !== undefined ? fibSettings.trendlineOpacity : 1.0;
-                                ctx.strokeStyle = hexToRgba(tColor, tOpacity);
-                                const tWidth = fibSettings.trendlineWidth || 1;
-                                ctx.lineWidth = tWidth;
-                                const tStyle = fibSettings.trendlineStyle || 'dashed';
-                                if (tStyle === 'solid') {
-                                    ctx.lineCap = 'round';
-                                    ctx.setLineDash([]);
-                                } else if (tStyle === 'dotted') {
-                                    ctx.lineCap = 'round';
-                                    ctx.setLineDash([0, Math.max(5, tWidth * 2.5)]);
-                                } else {
-                                    ctx.lineCap = 'butt';
-                                    ctx.setLineDash([Math.max(5, tWidth * 3), Math.max(4, tWidth * 2)]);
-                                }
-                                ctx.moveTo(x1, y1);
-                                ctx.lineTo(x2, y2);
-                                ctx.stroke();
-                                ctx.restore();
-                            }
-
-                            // Handles
-                            if (isFibSelected) {
-
-                                const isA1Active = (dragMode === 1);
-                                ctx.save();
-                                ctx.beginPath();
-                                ctx.arc(x1, y1, isA1Active ? 12 : 9, 0, Math.PI * 2);
-                                ctx.fillStyle = isA1Active ? 'rgba(255, 179, 0, 0.45)' : 'rgba(255, 179, 0, 0.25)';
-                                ctx.fill();
-                                ctx.strokeStyle = '#FFB300';
-                                ctx.lineWidth = isA1Active ? 2 : 1.5;
-                                ctx.stroke();
-
-                                ctx.beginPath();
-                                ctx.arc(x1, y1, 4.5, 0, Math.PI * 2);
-                                ctx.fillStyle = '#FFFFFF';
-                                ctx.fill();
-                                ctx.beginPath();
-                                ctx.arc(x1, y1, 2.5, 0, Math.PI * 2);
-                                ctx.fillStyle = '#FFB300';
-                                ctx.fill();
-                                ctx.restore();
-
-                                const isA2Active = (dragMode === 2);
-                                ctx.save();
-                                ctx.beginPath();
-                                ctx.arc(x2, y2, isA2Active ? 12 : 9, 0, Math.PI * 2);
-                                ctx.fillStyle = isA2Active ? 'rgba(255, 179, 0, 0.45)' : 'rgba(255, 179, 0, 0.25)';
-                                ctx.fill();
-                                ctx.strokeStyle = '#FFB300';
-                                ctx.lineWidth = isA2Active ? 2 : 1.5;
-                                ctx.stroke();
-
-                                ctx.beginPath();
-                                ctx.arc(x2, y2, 4.5, 0, Math.PI * 2);
-                                ctx.fillStyle = '#FFFFFF';
-                                ctx.fill();
-                                ctx.beginPath();
-                                ctx.arc(x2, y2, 2.5, 0, Math.PI * 2);
-                                ctx.fillStyle = '#FFB300';
-                                ctx.fill();
-                                ctx.restore();
-                            } else {
-                                ctx.save();
-                                ctx.beginPath();
-                                ctx.arc(x1, y1, 3.5, 0, Math.PI * 2);
-                                ctx.fillStyle = '#FFB300';
-                                ctx.fill();
-                                ctx.strokeStyle = '#FFFFFF';
-                                ctx.lineWidth = 1.0;
-                                ctx.stroke();
-
-                                ctx.beginPath();
-                                ctx.arc(x2, y2, 3.5, 0, Math.PI * 2);
-                                ctx.fillStyle = '#FFB300';
-                                ctx.fill();
-                                ctx.strokeStyle = '#FFFFFF';
-                                ctx.lineWidth = 1.0;
-                                ctx.stroke();
-                                ctx.restore();
-                            }
+                // Background fill between levels
+                if (fSettings.showBackground && fSettings.backgroundOpacity > 0 && levelYs.length > 1) {
+                    const sortedLevels = [...levelYs].sort((a, b) => b.level - a.level);
+                    for (let i = 0; i < sortedLevels.length - 1; i++) {
+                        const curr = sortedLevels[i];
+                        const next = sortedLevels[i + 1];
+                        if (curr.y !== null && next.y !== null) {
+                            ctx.fillStyle = hexToRgba(curr.color, fSettings.backgroundOpacity);
+                            const topY = Math.min(curr.y, next.y);
+                            const bandHeight = Math.abs(curr.y - next.y);
+                            ctx.fillRect(lineStartX, topY, lineWidth, bandHeight);
                         }
                     }
                 }
-            }
+
+                // Level lines
+                const lvlLineW = fSettings.levelsLineWidth || itemObj.lineWidth || 1.0;
+                const lvlLineStyle = fSettings.levelsLineStyle || 'solid';
+
+                for (let i = 0; i < levelYs.length; i++) {
+                    const item = levelYs[i];
+                    if (item.y === null || item.y < 0 || item.y > height) continue;
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.strokeStyle = item.color;
+                    ctx.lineWidth = lvlLineW;
+                    if (lvlLineStyle === 'dashed') {
+                        ctx.setLineDash([Math.max(6, lvlLineW * 3), Math.max(4, lvlLineW * 2)]);
+                    } else if (lvlLineStyle === 'dotted') {
+                        ctx.lineCap = 'round';
+                        ctx.setLineDash([0, Math.max(6, lvlLineW * 2.5)]);
+                    } else {
+                        ctx.setLineDash([]);
+                    }
+                    ctx.moveTo(lineStartX, item.y);
+                    ctx.lineTo(lineEndX, item.y);
+                    ctx.stroke();
+                    ctx.restore();
+
+                    // Labels
+                    const showLvl = fSettings.showLevels !== false;
+                    const showPrc = fSettings.showPrices !== false;
+                    if (showLvl || showPrc) {
+                        ctx.save();
+                        const fontSize = fSettings.fontSize || 12;
+                        ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+
+                        let levelStr = '';
+                        if (showLvl) {
+                            if (fSettings.levelsFormat === 'values') {
+                                levelStr = String(item.level);
+                            } else {
+                                const pct = parseFloat((item.level * 100).toFixed(4));
+                                levelStr = `${pct}%`;
+                            }
+                        }
+                        const priceFormatted = item.price >= 1000
+                            ? Math.round(item.price).toLocaleString('en-US')
+                            : item.price.toFixed(2);
+
+                        let labelText = '';
+                        if (showLvl && showPrc) {
+                            labelText = `${levelStr} (${priceFormatted})`;
+                        } else if (showLvl) {
+                            labelText = levelStr;
+                        } else if (showPrc) {
+                            labelText = `(${priceFormatted})`;
+                        }
+
+                        if (labelText) {
+                            const hAlign = fSettings.labelsHAlign || 'left';
+                            let tx = lineStartX + 6;
+                            if (hAlign === 'center') {
+                                tx = (lineStartX + lineEndX) / 2;
+                                ctx.textAlign = 'center';
+                            } else if (hAlign === 'right') {
+                                tx = lineEndX - 6;
+                                ctx.textAlign = 'right';
+                            } else {
+                                ctx.textAlign = 'left';
+                            }
+
+                            const vAlign = fSettings.labelsVAlign || 'top';
+                            let ty = item.y - 3;
+                            if (vAlign === 'middle') {
+                                ty = item.y;
+                                ctx.textBaseline = 'middle';
+                            } else if (vAlign === 'bottom') {
+                                ty = item.y + 4;
+                                ctx.textBaseline = 'top';
+                            } else {
+                                ctx.textBaseline = 'bottom';
+                            }
+
+                            ctx.fillStyle = item.color;
+                            ctx.fillText(labelText, tx, ty);
+                        }
+                        ctx.restore();
+                    }
+                }
+
+                // Trendline connecting anchor 1 and anchor 2
+                if (fSettings.showTrendline) {
+                    ctx.save();
+                    ctx.beginPath();
+                    const tColor = fSettings.trendlineColor || fCustomColor || '#AB47BC';
+                    const tOpacity = fSettings.trendlineOpacity !== undefined ? fSettings.trendlineOpacity : 1.0;
+                    ctx.strokeStyle = hexToRgba(tColor, tOpacity);
+                    const tWidth = fSettings.trendlineWidth || 1;
+                    ctx.lineWidth = tWidth;
+                    const tStyle = fSettings.trendlineStyle || 'dashed';
+                    if (tStyle === 'solid') {
+                        ctx.lineCap = 'round';
+                        ctx.setLineDash([]);
+                    } else if (tStyle === 'dotted') {
+                        ctx.lineCap = 'round';
+                        ctx.setLineDash([0, Math.max(5, tWidth * 2.5)]);
+                    } else {
+                        ctx.lineCap = 'butt';
+                        ctx.setLineDash([Math.max(5, tWidth * 3), Math.max(4, tWidth * 2)]);
+                    }
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                // Neutral Anchors
+                if (isThisFibSelected) {
+                    const isA1Active = (dragMode === 1);
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(x1, y1, isA1Active ? 12 : 9, 0, Math.PI * 2);
+                    ctx.fillStyle = isA1Active ? 'rgba(255, 255, 255, 0.35)' : 'rgba(255, 255, 255, 0.18)';
+                    ctx.fill();
+                    ctx.strokeStyle = isA1Active ? '#FFFFFF' : '#D1D4DC';
+                    ctx.lineWidth = isA1Active ? 2 : 1.5;
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.arc(x1, y1, 4.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(x1, y1, 2.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#1E1E1E';
+                    ctx.fill();
+                    ctx.restore();
+
+                    const isA2Active = (dragMode === 2);
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(x2, y2, isA2Active ? 12 : 9, 0, Math.PI * 2);
+                    ctx.fillStyle = isA2Active ? 'rgba(255, 255, 255, 0.35)' : 'rgba(255, 255, 255, 0.18)';
+                    ctx.fill();
+                    ctx.strokeStyle = isA2Active ? '#FFFFFF' : '#D1D4DC';
+                    ctx.lineWidth = isA2Active ? 2 : 1.5;
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.arc(x2, y2, 4.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(x2, y2, 2.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#1E1E1E';
+                    ctx.fill();
+                    ctx.restore();
+                } else {
+                    // Subtle neutral dots when not selected
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(x1, y1, 3.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#D1D4DC';
+                    ctx.fill();
+                    ctx.strokeStyle = '#1E1E1E';
+                    ctx.lineWidth = 1.0;
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.arc(x2, y2, 3.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#D1D4DC';
+                    ctx.fill();
+                    ctx.strokeStyle = '#1E1E1E';
+                    ctx.lineWidth = 1.0;
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            });
 
             } finally {
                 // Restore clipping state
@@ -8816,7 +9015,7 @@
                         const badgeX = Math.min(maxContentX, Math.round(width - 2 - neededW));
                         const badgeWidth = Math.round(width - 2 - badgeX);
 
-                        ctx.fillStyle = isDrawingTrendline ? '#7C4DFF' : (isDrawingRectangle ? '#AB47BC' : (isDrawingHorizontalLine ? '#00E5FF' : '#2962FF'));
+                        ctx.fillStyle = isDrawingTrendline ? (lastTrendlineStyle.color || '#7C4DFF') : (isDrawingRectangle ? '#AB47BC' : (isDrawingHorizontalLine ? (lastHLineStyle.color || '#00E5FF') : '#2962FF'));
                         ctx.beginPath();
                         if (ctx.roundRect) {
                             ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, [0, 4, 4, 0]);
@@ -8852,7 +9051,7 @@
             currentShowFib = Boolean(showFib);
             const canvas = document.getElementById('fib-canvas');
             if (currentShowFib) {
-                if (!fibPoint1 || !fibPoint2) {
+                if (fibonaccis.length === 0) {
                     startFibDrawing();
                 } else {
                     renderFib();
@@ -8860,9 +9059,11 @@
             } else {
                 isDrawingFib = false;
                 fibDrawState = 0;
-                fibPoint1 = null;
-                fibPoint2 = null;
-                isFibSelected = false;
+                tempFibP1 = null;
+                tempFibP2 = null;
+                fibonaccis = [];
+                selectedFibIndex = -1;
+                syncActiveFibFromIndex();
                 hideTrendlineToolbar();
                 if (canvas) {
                     canvas.style.pointerEvents = 'none';
@@ -8874,21 +9075,25 @@
         }
 
         function clearFibonacci() {
-            setFibonacci(false);
-            isFibSelected = false;
-            fibCustomColor = null;
-            fibLineWidth = 2;
-            fibIsLocked = false;
-            fibDragStartPos = null;
+            if (selectedFibIndex >= 0 && selectedFibIndex < fibonaccis.length) {
+                fibonaccis.splice(selectedFibIndex, 1);
+            } else if (fibonaccis.length > 0) {
+                fibonaccis.pop();
+            }
+            selectedFibIndex = -1;
+            syncActiveFibFromIndex();
             hideTrendlineToolbar();
+            if (fibonaccis.length === 0) {
+                currentShowFib = false;
+                if (window.flutter_inappwebview?.callHandler) {
+                    window.flutter_inappwebview.callHandler('onFibDeleted');
+                    window.flutter_inappwebview.callHandler('onFibDrawn', false);
+                }
+                window.parent?.postMessage(JSON.stringify({ type: 'onFibDeleted' }), '*');
+                window.parent?.postMessage(JSON.stringify({ type: 'onFibDrawn', payload: false }), '*');
+            }
             renderFib();
             refreshObjectTree();
-            if (window.flutter_inappwebview?.callHandler) {
-                window.flutter_inappwebview.callHandler('onFibDeleted');
-                window.flutter_inappwebview.callHandler('onFibDrawn', false);
-            }
-            window.parent?.postMessage(JSON.stringify({ type: 'onFibDeleted' }), '*');
-            window.parent?.postMessage(JSON.stringify({ type: 'onFibDrawn', payload: false }), '*');
         }
 
         function resetFibonacci() {
@@ -8898,16 +9103,18 @@
         function cancelFibDrawing() {
             isDrawingFib = false;
             fibDrawState = 0;
+            tempFibP1 = null;
+            tempFibP2 = null;
             const canvas = document.getElementById('fib-canvas');
             if (canvas && !isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
             }
-            if (!fibPoint1 || !fibPoint2) {
-                clearFibonacci();
-            } else {
-                renderFib();
+            if (selectedFibIndex >= 0 && selectedFibIndex < fibonaccis.length) {
+                syncActiveFibFromIndex();
+                showFibToolbar();
             }
+            renderFib();
         }
 
         function startFibDrawing() {
@@ -8917,8 +9124,8 @@
             cancelRectangleDrawing();
             isDrawingFib = true;
             currentShowFib = true;
-            fibPoint1 = null;
-            fibPoint2 = null;
+            tempFibP1 = null;
+            tempFibP2 = null;
             fibDrawState = 1; // Waiting for Anchor 1 click
             dragMode = 0;
             const canvas = document.getElementById('fib-canvas');
@@ -8948,12 +9155,14 @@
 
         function cancelHorizontalLineDrawing() {
             isDrawingHorizontalLine = false;
-            selectedHorizontalLineIndex = -1;
             crosshairPos = null;
             const canvas = document.getElementById('fib-canvas');
             if (canvas && !isDrawingFib && !isDrawingTrendline && !isDrawingRectangle) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
+            }
+            if (selectedHorizontalLineIndex >= 0 && selectedHorizontalLineIndex < horizontalLines.length) {
+                showHorizontalLineToolbar(selectedHorizontalLineIndex);
             }
             renderFib();
         }
@@ -9015,15 +9224,16 @@
             tempTrendlineP1 = null;
             tempTrendlineP2 = null;
             crosshairPos = null;
-            selectedTrendlineIndex = -1;
             globalAngleLock = false;
-            hideTrendlineToolbar();
             const canvas = document.getElementById('fib-canvas');
             if (canvas && !isDrawingFib && !isDrawingHorizontalLine && !isDrawingRectangle) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
             }
             if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
+            if (selectedTrendlineIndex >= 0 && selectedTrendlineIndex < trendlines.length) {
+                showTrendlineToolbar(selectedTrendlineIndex);
+            }
             renderFib();
         }
 
@@ -9076,14 +9286,15 @@
             tempRectangleP1 = null;
             tempRectangleP2 = null;
             crosshairPos = null;
-            selectedRectangleIndex = -1;
-            hideTrendlineToolbar();
             const canvas = document.getElementById('fib-canvas');
             if (canvas && !isDrawingFib && !isDrawingHorizontalLine && !isDrawingTrendline) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
             }
             if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
+            if (selectedRectangleIndex >= 0 && selectedRectangleIndex < rectangles.length) {
+                showRectangleToolbar(selectedRectangleIndex);
+            }
             renderFib();
         }
 

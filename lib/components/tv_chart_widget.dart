@@ -662,6 +662,12 @@ class _TvChartWidgetState extends State<TvChartWidget> {
     );
   }
 
+  void openObjectTree() {
+    _ctrl?.evaluateJavascript(
+      source: 'if (typeof openObjectTreeModal === "function") openObjectTreeModal();',
+    );
+  }
+
   Future<void> _debugReloadChart() async {
     try {
       rootBundle.evict('assets/charts/tv_chart.html');
