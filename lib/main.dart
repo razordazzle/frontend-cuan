@@ -22,6 +22,7 @@ import 'package:cuan_app/providers/vbl_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:provider/provider.dart';
+import 'package:cuan_app/components/tv_chart_widget.dart';
 import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/styles/app_theme.dart';
 import 'package:cuan_app/styles/theme_controller.dart';
@@ -30,9 +31,7 @@ void main() async {
   // ⬅️ pertahankan native splash sampai kita lepas manual di halaman animasi
   final binding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: binding);
-  // WidgetsFlutterBinding.ensureInitialized();
-  // final controller = await ThemeController.load();
-  // runApp(ChangeNotifierProvider.value(value: controller, child: const MyApp()));
+  TvChartWidget.preload();
   final theme = await ThemeController.load();
   final storage = TokenStorage();
 

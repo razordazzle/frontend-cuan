@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 /// Definisi data untuk setiap indikator teknikal
@@ -25,23 +26,25 @@ class IndicatorsModalSheet extends StatefulWidget {
   final bool showFibonacci;
   final Set<String> favoriteIndicators;
   final ValueChanged<String> onToggleFavorite;
-  final ValueChanged<bool> onToggleSma;
-  final ValueChanged<bool> onToggleRsi;
-  final ValueChanged<bool> onToggleVolume;
-  final ValueChanged<bool> onToggleFibonacci;
+  final ValueChanged<String>? onAddIndicator;
+  final ValueChanged<bool>? onToggleSma;
+  final ValueChanged<bool>? onToggleRsi;
+  final ValueChanged<bool>? onToggleVolume;
+  final ValueChanged<bool>? onToggleFibonacci;
 
   const IndicatorsModalSheet({
     super.key,
-    required this.showSma,
-    required this.showRsi,
-    required this.showVolume,
-    required this.showFibonacci,
+    this.showSma = false,
+    this.showRsi = false,
+    this.showVolume = false,
+    this.showFibonacci = false,
     required this.favoriteIndicators,
     required this.onToggleFavorite,
-    required this.onToggleSma,
-    required this.onToggleRsi,
-    required this.onToggleVolume,
-    required this.onToggleFibonacci,
+    this.onAddIndicator,
+    this.onToggleSma,
+    this.onToggleRsi,
+    this.onToggleVolume,
+    this.onToggleFibonacci,
   });
 
   @override
@@ -115,6 +118,9 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
   late bool _fibActive;
   late Set<String> _favs;
 
+  Timer? _toastTimer;
+  bool _isToastVisible = false;
+
   @override
   void initState() {
     super.initState();
@@ -125,19 +131,27 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
     _favs = Set<String>.from(widget.favoriteIndicators);
   }
 
-  bool _isIndicatorActive(String id) {
-    switch (id) {
-      case 'sma':
-        return _smaActive;
-      case 'rsi':
-        return _rsiActive;
-      case 'vol':
-        return _volumeActive;
-      case 'fib':
-        return _fibActive;
-      default:
-        return false;
-    }
+  @override
+  void dispose() {
+    _toastTimer?.cancel();
+    _rootSearchCtrl.dispose();
+    _techSearchCtrl.dispose();
+    _favSearchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _showToast() {
+    _toastTimer?.cancel();
+    setState(() {
+      _isToastVisible = true;
+    });
+    _toastTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _isToastVisible = false;
+        });
+      }
+    });
   }
 
   void _toggleIndicator(IndicatorItem item) {
@@ -152,26 +166,32 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
       return;
     }
 
-    setState(() {
-      switch (item.id) {
-        case 'sma':
-          _smaActive = !_smaActive;
-          widget.onToggleSma(_smaActive);
-          break;
-        case 'rsi':
-          _rsiActive = !_rsiActive;
-          widget.onToggleRsi(_rsiActive);
-          break;
-        case 'vol':
-          _volumeActive = !_volumeActive;
-          widget.onToggleVolume(_volumeActive);
-          break;
-        case 'fib':
-          _fibActive = !_fibActive;
-          widget.onToggleFibonacci(_fibActive);
-          break;
-      }
-    });
+    if (widget.onAddIndicator != null) {
+      widget.onAddIndicator!(item.id);
+    } else {
+      setState(() {
+        switch (item.id) {
+          case 'sma':
+            _smaActive = !_smaActive;
+            widget.onToggleSma?.call(_smaActive);
+            break;
+          case 'rsi':
+            _rsiActive = !_rsiActive;
+            widget.onToggleRsi?.call(_rsiActive);
+            break;
+          case 'vol':
+            _volumeActive = !_volumeActive;
+            widget.onToggleVolume?.call(_volumeActive);
+            break;
+          case 'fib':
+            _fibActive = !_fibActive;
+            widget.onToggleFibonacci?.call(_fibActive);
+            break;
+        }
+      });
+    }
+
+    _showToast();
   }
 
   void _toggleFav(String name) {
@@ -266,33 +286,89 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
       ),
       child: SafeArea(
         top: false,
-        child: Column(
+        child: Stack(
           children: <Widget>[
-            // Grab handle indicator
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 8, bottom: 4),
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: handleColor,
-                  borderRadius: BorderRadius.circular(2),
+            Column(
+              children: <Widget>[
+                // Grab handle indicator
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 8, bottom: 4),
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: handleColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                 ),
-              ),
+                // Screen content
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    transitionBuilder: (Widget child, Animation<double> animation) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+                    child: _buildCurrentScreen(
+                      isDark: isDark,
+                      textColor: textColor,
+                      subtextColor: subtextColor,
+                      searchBg: searchBg,
+                      searchBorder: searchBorder,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            // Screen content
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                transitionBuilder: (Widget child, Animation<double> animation) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-                child: _buildCurrentScreen(
-                  isDark: isDark,
-                  textColor: textColor,
-                  subtextColor: subtextColor,
-                  searchBg: searchBg,
-                  searchBorder: searchBorder,
+
+            // Top Floating Notification Toast (Indicator added to chart)
+            IgnorePointer(
+              ignoring: !_isToastVisible,
+              child: AnimatedPositioned(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                top: _isToastVisible ? 14 : -60,
+                left: 0,
+                right: 0,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  opacity: _isToastVisible ? 1.0 : 0.0,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF383838),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: const <BoxShadow>[
+                          BoxShadow(
+                            color: Colors.black45,
+                            blurRadius: 16,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Icon(
+                            Icons.check,
+                            color: Color(0xFF36B59A),
+                            size: 22,
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'Indicator added to chart',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              decoration: TextDecoration.none,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -674,7 +750,6 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
                   itemCount: favItems.length,
                   itemBuilder: (BuildContext ctx, int i) {
                     final IndicatorItem item = favItems[i];
-                    final bool isActive = _isIndicatorActive(item.id);
 
                     return InkWell(
                       onTap: () => _toggleIndicator(item),
@@ -695,41 +770,17 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
                                 ),
                               ),
                             ),
-                            // Indicator Title (WITHOUT LuxAlgo / author name)
+                            // Indicator Title
                             Expanded(
-                              child: Row(
-                                children: <Widget>[
-                                  Flexible(
-                                    child: Text(
-                                      item.name,
-                                      style: TextStyle(
-                                        color: isActive ? const Color(0xFF00A3A8) : textColor,
-                                        fontSize: 15,
-                                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  if (isActive) ...<Widget>[
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF00A3A8).withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: const Text(
-                                        'Aktif',
-                                        style: TextStyle(
-                                          color: Color(0xFF00A3A8),
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
+                              child: Text(
+                                item.name,
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -858,7 +909,6 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
     required bool isDark,
   }) {
     final bool isFav = _favs.contains(item.name);
-    final bool isActive = _isIndicatorActive(item.id);
 
     return InkWell(
       onTap: () => _toggleIndicator(item),
@@ -881,39 +931,15 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
             ),
             // Title
             Expanded(
-              child: Row(
-                children: <Widget>[
-                  Flexible(
-                    child: Text(
-                      item.name,
-                      style: TextStyle(
-                        color: isActive ? const Color(0xFF00A3A8) : textColor,
-                        fontSize: 15,
-                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (isActive) ...<Widget>[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF00A3A8).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'Aktif',
-                        style: TextStyle(
-                          color: Color(0xFF00A3A8),
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+              child: Text(
+                item.name,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             // Info Icon (?)

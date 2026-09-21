@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../data/model/active_chart_indicator.dart';
 
 /// Painter untuk menggambar icon baut/mur segi-enam (Nut Icon)
 /// persis seperti icon setting indikator TradingView mobile
@@ -230,6 +231,9 @@ class _VolumeIconPainter extends CustomPainter {
 class ChartIndicatorsLegend extends StatefulWidget {
   final String symbol;
   final String timeframe;
+  final List<ActiveChartIndicator>? activeIndicators;
+  final ValueChanged<String>? onToggleIndicatorVisibility;
+  final ValueChanged<String>? onDeleteIndicator;
   final bool showSma;
   final bool showRsi;
   final bool showVolume;
@@ -238,32 +242,35 @@ class ChartIndicatorsLegend extends StatefulWidget {
   final bool visibleVolume;
   final String? selectedId;
   final ValueChanged<String?>? onSelectionChanged;
-  final ValueChanged<bool> onToggleVisibilitySma;
-  final ValueChanged<bool> onToggleVisibilityRsi;
-  final ValueChanged<bool> onToggleVisibilityVolume;
-  final VoidCallback onDeleteSma;
-  final VoidCallback onDeleteRsi;
-  final VoidCallback onDeleteVolume;
+  final ValueChanged<bool>? onToggleVisibilitySma;
+  final ValueChanged<bool>? onToggleVisibilityRsi;
+  final ValueChanged<bool>? onToggleVisibilityVolume;
+  final VoidCallback? onDeleteSma;
+  final VoidCallback? onDeleteRsi;
+  final VoidCallback? onDeleteVolume;
   final ValueChanged<String>? onOpenSettings;
 
   const ChartIndicatorsLegend({
     super.key,
     this.symbol = 'IHSG',
     this.timeframe = '1D',
-    required this.showSma,
-    required this.showRsi,
-    required this.showVolume,
+    this.activeIndicators,
+    this.onToggleIndicatorVisibility,
+    this.onDeleteIndicator,
+    this.showSma = false,
+    this.showRsi = false,
+    this.showVolume = false,
     this.visibleSma = true,
     this.visibleRsi = true,
     this.visibleVolume = true,
     this.selectedId,
     this.onSelectionChanged,
-    required this.onToggleVisibilitySma,
-    required this.onToggleVisibilityRsi,
-    required this.onToggleVisibilityVolume,
-    required this.onDeleteSma,
-    required this.onDeleteRsi,
-    required this.onDeleteVolume,
+    this.onToggleVisibilitySma,
+    this.onToggleVisibilityRsi,
+    this.onToggleVisibilityVolume,
+    this.onDeleteSma,
+    this.onDeleteRsi,
+    this.onDeleteVolume,
     this.onOpenSettings,
   });
 
@@ -289,46 +296,66 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
     // Kumpulkan indikator yang sedang aktif
     final List<Map<String, dynamic>> activeItems = <Map<String, dynamic>>[];
 
-    if (widget.showSma) {
-      activeItems.add(<String, dynamic>{
-        'id': 'sma',
-        'title': 'SMA 20 close',
-        'isHidden': !widget.visibleSma,
-        'onToggleEye': () => widget.onToggleVisibilitySma(!widget.visibleSma),
-        'onDelete': () {
-          _setSelectedId(null);
-          widget.onDeleteSma();
-        },
-        'onSettings': () => widget.onOpenSettings?.call('sma'),
-      });
-    }
+    if (widget.activeIndicators != null) {
+      for (final ActiveChartIndicator ind in widget.activeIndicators!) {
+        activeItems.add(<String, dynamic>{
+          'id': ind.id,
+          'type': ind.type,
+          'title': ind.title,
+          'isHidden': !ind.isVisible,
+          'onToggleEye': () => widget.onToggleIndicatorVisibility?.call(ind.id),
+          'onDelete': () {
+            _setSelectedId(null);
+            widget.onDeleteIndicator?.call(ind.id);
+          },
+          'onSettings': () => widget.onOpenSettings?.call(ind.id),
+        });
+      }
+    } else {
+      if (widget.showSma) {
+        activeItems.add(<String, dynamic>{
+          'id': 'sma',
+          'type': 'sma',
+          'title': 'SMA 20 close',
+          'isHidden': !widget.visibleSma,
+          'onToggleEye': () => widget.onToggleVisibilitySma?.call(!widget.visibleSma),
+          'onDelete': () {
+            _setSelectedId(null);
+            widget.onDeleteSma?.call();
+          },
+          'onSettings': () => widget.onOpenSettings?.call('sma'),
+        });
+      }
 
-    if (widget.showRsi) {
-      activeItems.add(<String, dynamic>{
-        'id': 'rsi',
-        'title': 'RSI 14 close',
-        'isHidden': !widget.visibleRsi,
-        'onToggleEye': () => widget.onToggleVisibilityRsi(!widget.visibleRsi),
-        'onDelete': () {
-          _setSelectedId(null);
-          widget.onDeleteRsi();
-        },
-        'onSettings': () => widget.onOpenSettings?.call('rsi'),
-      });
-    }
+      if (widget.showRsi) {
+        activeItems.add(<String, dynamic>{
+          'id': 'rsi',
+          'type': 'rsi',
+          'title': 'RSI 14 close',
+          'isHidden': !widget.visibleRsi,
+          'onToggleEye': () => widget.onToggleVisibilityRsi?.call(!widget.visibleRsi),
+          'onDelete': () {
+            _setSelectedId(null);
+            widget.onDeleteRsi?.call();
+          },
+          'onSettings': () => widget.onOpenSettings?.call('rsi'),
+        });
+      }
 
-    if (widget.showVolume) {
-      activeItems.add(<String, dynamic>{
-        'id': 'vol',
-        'title': 'Vol',
-        'isHidden': !widget.visibleVolume,
-        'onToggleEye': () => widget.onToggleVisibilityVolume(!widget.visibleVolume),
-        'onDelete': () {
-          _setSelectedId(null);
-          widget.onDeleteVolume();
-        },
-        'onSettings': () => widget.onOpenSettings?.call('vol'),
-      });
+      if (widget.showVolume) {
+        activeItems.add(<String, dynamic>{
+          'id': 'vol',
+          'type': 'vol',
+          'title': 'Vol',
+          'isHidden': !widget.visibleVolume,
+          'onToggleEye': () => widget.onToggleVisibilityVolume?.call(!widget.visibleVolume),
+          'onDelete': () {
+            _setSelectedId(null);
+            widget.onDeleteVolume?.call();
+          },
+          'onSettings': () => widget.onOpenSettings?.call('vol'),
+        });
+      }
     }
 
     // Jika tidak ada indikator yang aktif sama sekali
@@ -768,64 +795,95 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
           builder: (BuildContext bCtx, void Function(void Function()) setModalState) {
             final List<Map<String, dynamic>> items = <Map<String, dynamic>>[];
 
-            if (widget.showSma) {
-              items.add(<String, dynamic>{
-                'id': 'sma',
-                'title': 'SMA 20 close',
-                'isHidden': !widget.visibleSma,
-                'icon': CustomPaint(
-                  size: const Size(18, 18),
-                  painter: _SmaIconPainter(neutralIconColor),
-                ),
-                'onToggleEye': () {
-                  widget.onToggleVisibilitySma(!widget.visibleSma);
-                  setModalState(() {});
-                },
-                'onDelete': () {
-                  widget.onDeleteSma();
-                  setModalState(() {});
-                },
-              });
-            }
+            if (widget.activeIndicators != null) {
+              for (final ActiveChartIndicator ind in widget.activeIndicators!) {
+                CustomPainter painter;
+                if (ind.type == 'sma') {
+                  painter = _SmaIconPainter(neutralIconColor);
+                } else if (ind.type == 'rsi') {
+                  painter = _RsiIconPainter(neutralIconColor);
+                } else {
+                  painter = _VolumeIconPainter(neutralIconColor);
+                }
 
-            if (widget.showRsi) {
-              items.add(<String, dynamic>{
-                'id': 'rsi',
-                'title': 'RSI 14 close',
-                'isHidden': !widget.visibleRsi,
-                'icon': CustomPaint(
-                  size: const Size(18, 18),
-                  painter: _RsiIconPainter(neutralIconColor),
-                ),
-                'onToggleEye': () {
-                  widget.onToggleVisibilityRsi(!widget.visibleRsi);
-                  setModalState(() {});
-                },
-                'onDelete': () {
-                  widget.onDeleteRsi();
-                  setModalState(() {});
-                },
-              });
-            }
+                items.add(<String, dynamic>{
+                  'id': ind.id,
+                  'title': ind.title,
+                  'isHidden': !ind.isVisible,
+                  'icon': CustomPaint(
+                    size: const Size(18, 18),
+                    painter: painter,
+                  ),
+                  'onToggleEye': () {
+                    widget.onToggleIndicatorVisibility?.call(ind.id);
+                    setModalState(() {});
+                  },
+                  'onDelete': () {
+                    widget.onDeleteIndicator?.call(ind.id);
+                    setModalState(() {});
+                  },
+                });
+              }
+            } else {
+              if (widget.showSma) {
+                items.add(<String, dynamic>{
+                  'id': 'sma',
+                  'title': 'SMA 20 close',
+                  'isHidden': !widget.visibleSma,
+                  'icon': CustomPaint(
+                    size: const Size(18, 18),
+                    painter: _SmaIconPainter(neutralIconColor),
+                  ),
+                  'onToggleEye': () {
+                    widget.onToggleVisibilitySma?.call(!widget.visibleSma);
+                    setModalState(() {});
+                  },
+                  'onDelete': () {
+                    widget.onDeleteSma?.call();
+                    setModalState(() {});
+                  },
+                });
+              }
 
-            if (widget.showVolume) {
-              items.add(<String, dynamic>{
-                'id': 'vol',
-                'title': 'Vol',
-                'isHidden': !widget.visibleVolume,
-                'icon': CustomPaint(
-                  size: const Size(18, 18),
-                  painter: _VolumeIconPainter(neutralIconColor),
-                ),
-                'onToggleEye': () {
-                  widget.onToggleVisibilityVolume(!widget.visibleVolume);
-                  setModalState(() {});
-                },
-                'onDelete': () {
-                  widget.onDeleteVolume();
-                  setModalState(() {});
-                },
-              });
+              if (widget.showRsi) {
+                items.add(<String, dynamic>{
+                  'id': 'rsi',
+                  'title': 'RSI 14 close',
+                  'isHidden': !widget.visibleRsi,
+                  'icon': CustomPaint(
+                    size: const Size(18, 18),
+                    painter: _RsiIconPainter(neutralIconColor),
+                  ),
+                  'onToggleEye': () {
+                    widget.onToggleVisibilityRsi?.call(!widget.visibleRsi);
+                    setModalState(() {});
+                  },
+                  'onDelete': () {
+                    widget.onDeleteRsi?.call();
+                    setModalState(() {});
+                  },
+                });
+              }
+
+              if (widget.showVolume) {
+                items.add(<String, dynamic>{
+                  'id': 'vol',
+                  'title': 'Vol',
+                  'isHidden': !widget.visibleVolume,
+                  'icon': CustomPaint(
+                    size: const Size(18, 18),
+                    painter: _VolumeIconPainter(neutralIconColor),
+                  ),
+                  'onToggleEye': () {
+                    widget.onToggleVisibilityVolume?.call(!widget.visibleVolume);
+                    setModalState(() {});
+                  },
+                  'onDelete': () {
+                    widget.onDeleteVolume?.call();
+                    setModalState(() {});
+                  },
+                });
+              }
             }
 
             return Container(

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:cuan_app/components/chart_indicators_legend.dart';
 import 'package:cuan_app/components/indicators_modal_sheet.dart';
 import 'package:cuan_app/components/tv_chart_widget.dart';
+import 'package:cuan_app/data/model/active_chart_indicator.dart';
 import 'package:cuan_app/data/model/candle_item.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +19,7 @@ class IhsgTradingViewPage extends StatefulWidget {
 class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
   final GlobalKey _chartKey = GlobalKey();
   bool _isCandle = true;
+  final List<ActiveChartIndicator> _activeIndicators = <ActiveChartIndicator>[];
   bool _showSma = false;
   bool _showRsi = false;
   bool _showVolume = false;
@@ -41,8 +43,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
     'Volume',
   };
 
-  int get _activeIndicatorsCount =>
-      (_showSma ? 1 : 0) + (_showRsi ? 1 : 0) + (_showVolume ? 1 : 0);
+  int get _activeIndicatorsCount => _activeIndicators.length;
 
   void _startDrawingFibonacci() {
     setState(() {
@@ -141,6 +142,76 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
     );
   }
 
+  void _syncLegacyIndicators() {
+    final List<ActiveChartIndicator> activeSmas =
+        _activeIndicators.where((ActiveChartIndicator i) => i.type == 'sma').toList();
+    final List<ActiveChartIndicator> activeRsis =
+        _activeIndicators.where((ActiveChartIndicator i) => i.type == 'rsi').toList();
+    final List<ActiveChartIndicator> activeVols =
+        _activeIndicators.where((ActiveChartIndicator i) => i.type == 'vol').toList();
+
+    _showSma = activeSmas.isNotEmpty;
+    _visibleSma = activeSmas.any((ActiveChartIndicator i) => i.isVisible);
+
+    _showRsi = activeRsis.isNotEmpty;
+    _visibleRsi = activeRsis.any((ActiveChartIndicator i) => i.isVisible);
+
+    _showVolume = activeVols.isNotEmpty;
+    _visibleVolume = activeVols.any((ActiveChartIndicator i) => i.isVisible);
+  }
+
+  void _addIndicator(String id) {
+    setState(() {
+      final int count = _activeIndicators.where((ActiveChartIndicator i) => i.type == id).length;
+      final String suffix = count > 0 ? ' ${count + 1}' : '';
+      if (id == 'sma') {
+        const int period = 20;
+        _activeIndicators.add(ActiveChartIndicator(
+          id: 'sma_${DateTime.now().microsecondsSinceEpoch}',
+          type: 'sma',
+          title: 'SMA $period close$suffix',
+          period: period,
+        ));
+      } else if (id == 'rsi') {
+        const int period = 14;
+        _activeIndicators.add(ActiveChartIndicator(
+          id: 'rsi_${DateTime.now().microsecondsSinceEpoch}',
+          type: 'rsi',
+          title: 'RSI $period close$suffix',
+          period: period,
+        ));
+      } else if (id == 'vol') {
+        _activeIndicators.add(ActiveChartIndicator(
+          id: 'vol_${DateTime.now().microsecondsSinceEpoch}',
+          type: 'vol',
+          title: 'Vol$suffix',
+        ));
+      }
+      _syncLegacyIndicators();
+    });
+  }
+
+  void _toggleIndicatorVisibility(String id) {
+    setState(() {
+      final int idx = _activeIndicators.indexWhere((ActiveChartIndicator i) => i.id == id);
+      if (idx != -1) {
+        final ActiveChartIndicator item = _activeIndicators[idx];
+        _activeIndicators[idx] = item.copyWith(isVisible: !item.isVisible);
+      }
+      _syncLegacyIndicators();
+    });
+  }
+
+  void _deleteIndicator(String id) {
+    setState(() {
+      _activeIndicators.removeWhere((ActiveChartIndicator i) => i.id == id);
+      if (_selectedLegendIndicatorId == id) {
+        _selectedLegendIndicatorId = null;
+      }
+      _syncLegacyIndicators();
+    });
+  }
+
   void _showIndicatorsBottomSheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
@@ -154,6 +225,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
           showVolume: _showVolume,
           showFibonacci: _showFibonacci,
           favoriteIndicators: _favoriteIndicators,
+          onAddIndicator: (String id) => _addIndicator(id),
           onToggleFavorite: (String name) {
             setState(() {
               if (_favoriteIndicators.contains(name)) {
@@ -402,6 +474,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                       candles: candles,
                       payload: p.ihsgChartPayload,
                       isCandle: _isCandle,
+                      activeIndicators: List<ActiveChartIndicator>.from(_activeIndicators),
                       showSma: _showSma && _visibleSma,
                       showRsi: _showRsi && _visibleRsi,
                       showVolume: _showVolume && _visibleVolume,
@@ -504,6 +577,9 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                         selectedId: _selectedLegendIndicatorId,
                         onSelectionChanged: (String? id) =>
                             setState(() => _selectedLegendIndicatorId = id),
+                        activeIndicators: _activeIndicators,
+                        onToggleIndicatorVisibility: _toggleIndicatorVisibility,
+                        onDeleteIndicator: _deleteIndicator,
                         showSma: _showSma,
                         showRsi: _showRsi,
                         showVolume: _showVolume,

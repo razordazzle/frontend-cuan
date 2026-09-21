@@ -7,6 +7,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../pages/screen/home_page.dart' show Ohlc, makeDummyCandles; 
 import '../data/model/chart_payload.dart';
+import '../data/model/active_chart_indicator.dart';
 import 'web_message_listener.dart';
 
 const bool _kShowDebugReloadButton = true;
@@ -15,6 +16,7 @@ class TvChartWidget extends StatefulWidget {
   final List<Ohlc> candles;
   final ChartPayload? payload;
   final bool isCandle;
+  final List<ActiveChartIndicator>? activeIndicators;
   final bool showSma;
   final bool showRsi;
   final bool showVolume;
@@ -51,6 +53,7 @@ class TvChartWidget extends StatefulWidget {
     required this.candles,
     this.payload,
     required this.isCandle,
+    this.activeIndicators,
     this.showSma = false,
     this.showRsi = false,
     this.showVolume = false,
@@ -79,6 +82,16 @@ class TvChartWidget extends StatefulWidget {
     this.onCrosshairMove,
   });
 
+  static String? _cachedHtml;
+  static Future<void> preload({bool force = false}) async {
+    try {
+      if (force) {
+        rootBundle.evict('assets/charts/tv_chart.html');
+      }
+      _cachedHtml = await rootBundle.loadString('assets/charts/tv_chart.html');
+    } catch (_) {}
+  }
+
   @override
   State<TvChartWidget> createState() => _TvChartWidgetState();
 }
@@ -92,6 +105,11 @@ class _TvChartWidgetState extends State<TvChartWidget> {
   @override
   void initState() {
     super.initState();
+    if (kDebugMode) {
+      TvChartWidget.preload(force: true);
+    } else if (TvChartWidget._cachedHtml == null) {
+      TvChartWidget.preload();
+    }
     listenToWebMessages((String type, dynamic payload) {
       if (!mounted) return;
       if (type == 'onHorizontalLineAdded') {
@@ -250,10 +268,19 @@ class _TvChartWidgetState extends State<TvChartWidget> {
       source: "setSeriesType('${widget.isCandle ? 'candle' : 'area'}');",
     );
 
-    await _ctrl!.evaluateJavascript(
-      source:
-          "setIndicators(${widget.showSma}, ${widget.showRsi}, ${widget.showVolume});",
-    );
+    if (widget.activeIndicators != null) {
+      final String indJson = jsonEncode(
+        widget.activeIndicators!.map((ActiveChartIndicator e) => e.toJson()).toList(),
+      );
+      await _ctrl!.evaluateJavascript(
+        source: "if (typeof setActiveIndicators === 'function') setActiveIndicators($indJson);",
+      );
+    } else {
+      await _ctrl!.evaluateJavascript(
+        source:
+            "setIndicators(${widget.showSma}, ${widget.showRsi}, ${widget.showVolume});",
+      );
+    }
 
     await _ctrl!.evaluateJavascript(
       source: "setFibonacci(${widget.showFibonacci});",
@@ -306,6 +333,14 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         old.isCandle != widget.isCandle ||
         old.payload != widget.payload;
 
+    final String oldIndJson = old.activeIndicators == null
+        ? ''
+        : jsonEncode(old.activeIndicators!.map((ActiveChartIndicator e) => e.toJson()).toList());
+    final String newIndJson = widget.activeIndicators == null
+        ? ''
+        : jsonEncode(widget.activeIndicators!.map((ActiveChartIndicator e) => e.toJson()).toList());
+    final bool activeIndicatorsChanged = oldIndJson != newIndJson;
+
     final bool indicatorsChanged = old.showSma != widget.showSma ||
         old.showRsi != widget.showRsi ||
         old.showVolume != widget.showVolume;
@@ -341,7 +376,14 @@ class _TvChartWidgetState extends State<TvChartWidget> {
               "if (typeof setChartInfo === 'function') setChartInfo('${widget.symbol}', '${widget.timeframe}');",
         );
       }
-      if (indicatorsChanged) {
+      if (widget.activeIndicators != null) {
+        if (activeIndicatorsChanged) {
+          _ctrl?.evaluateJavascript(
+            source:
+                "if (typeof setActiveIndicators === 'function') setActiveIndicators($newIndJson);",
+          );
+        }
+      } else if (indicatorsChanged) {
         _ctrl?.evaluateJavascript(
           source:
               "setIndicators(${widget.showSma}, ${widget.showRsi}, ${widget.showVolume});",
@@ -444,7 +486,17 @@ class _TvChartWidgetState extends State<TvChartWidget> {
   @override
   Widget build(BuildContext context) {
     final InAppWebView webview = InAppWebView(
-      initialFile: 'assets/charts/tv_chart.html',
+      initialData: TvChartWidget._cachedHtml != null
+          ? InAppWebViewInitialData(
+              data: TvChartWidget._cachedHtml!,
+              mimeType: 'text/html',
+              encoding: 'utf-8',
+              baseUrl: !kIsWeb && Platform.isAndroid
+                  ? WebUri('file:///android_asset/flutter_assets/assets/charts/')
+                  : null,
+            )
+          : null,
+      initialFile: TvChartWidget._cachedHtml == null ? 'assets/charts/tv_chart.html' : null,
       initialSettings: InAppWebViewSettings(
         transparentBackground: true,
         disableVerticalScroll: false,
@@ -453,6 +505,8 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         builtInZoomControls: false,
         displayZoomControls: false,
         useWideViewPort: false,
+        cacheMode: CacheMode.LOAD_NO_CACHE,
+        clearCache: true,
       ),
       gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
         Factory<OneSequenceGestureRecognizer>(
@@ -672,6 +726,7 @@ class _TvChartWidgetState extends State<TvChartWidget> {
     try {
       rootBundle.evict('assets/charts/tv_chart.html');
       final String htmlData = await rootBundle.loadString('assets/charts/tv_chart.html');
+      TvChartWidget._cachedHtml = htmlData;
       await InAppWebViewController.clearAllCache();
       WebUri? baseUri;
       if (!kIsWeb && Platform.isAndroid) {
