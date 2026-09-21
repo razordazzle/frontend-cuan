@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:cuan_app/components/chart_indicators_legend.dart';
 import 'package:cuan_app/components/indicators_modal_sheet.dart';
+import 'package:cuan_app/components/sma_settings_modal.dart';
 import 'package:cuan_app/components/tv_chart_widget.dart';
 import 'package:cuan_app/data/model/active_chart_indicator.dart';
 import 'package:cuan_app/data/model/candle_item.dart';
@@ -17,7 +18,6 @@ class IhsgTradingViewPage extends StatefulWidget {
 }
 
 class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
-  final GlobalKey _chartKey = GlobalKey();
   bool _isCandle = true;
   final List<ActiveChartIndicator> _activeIndicators = <ActiveChartIndicator>[];
   bool _showSma = false;
@@ -34,6 +34,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
   bool _isDrawingTrendline = false;
   List<Map<String, dynamic>> _rectangles = <Map<String, dynamic>>[];
   bool _isDrawingRectangle = false;
+  bool _isChartModalOpen = false;
   bool _showDrawingToolbar = false;
   Map<String, dynamic>? _crosshair;
   String? _selectedLegendIndicatorId;
@@ -254,6 +255,44 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
   }
 
   void _openIndicatorSettings(String id) {
+    ActiveChartIndicator? indicator;
+    final int idx = _activeIndicators.indexWhere((ActiveChartIndicator i) => i.id == id);
+    if (idx != -1) {
+      indicator = _activeIndicators[idx];
+    } else if (id == 'sma' || id.startsWith('sma')) {
+      final int smaIdx = _activeIndicators.indexWhere((ActiveChartIndicator i) => i.type == 'sma');
+      if (smaIdx != -1) {
+        indicator = _activeIndicators[smaIdx];
+      } else {
+        indicator = ActiveChartIndicator(
+          id: 'sma_${DateTime.now().microsecondsSinceEpoch}',
+          type: 'sma',
+          title: 'SMA 20 close',
+          period: 20,
+        );
+      }
+    }
+
+    if (indicator != null && indicator.type == 'sma') {
+      SmaSettingsModal.show(
+        context: context,
+        indicator: indicator,
+        onSave: (ActiveChartIndicator updated) {
+          setState(() {
+            final int targetIdx =
+                _activeIndicators.indexWhere((ActiveChartIndicator i) => i.id == updated.id);
+            if (targetIdx != -1) {
+              _activeIndicators[targetIdx] = updated;
+            } else {
+              _activeIndicators.add(updated);
+            }
+            _syncLegacyIndicators();
+          });
+        },
+      );
+      return;
+    }
+
     final String title = id == 'sma'
         ? 'Moving Average (SMA)'
         : id == 'rsi'
@@ -468,7 +507,6 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                 child: Stack(
                   children: [
                     TvChartWidget(
-                      key: _chartKey,
                       symbol: 'IHSG',
                       timeframe: p.indexInterval,
                       candles: candles,
@@ -554,10 +592,12 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                       interactive: true,
                       onCrosshairMove: (Map<String, dynamic>? v) =>
                           setState(() => _crosshair = v),
+                      onChartModalStateChanged: (bool isOpen) =>
+                          setState(() => _isChartModalOpen = isOpen),
                     ),
 
                     // Tap-outside detector saat ada indikator legend yang sedang terseleksi
-                    if (_selectedLegendIndicatorId != null)
+                    if (!_isChartModalOpen && _selectedLegendIndicatorId != null)
                       Positioned.fill(
                         child: GestureDetector(
                           behavior: HitTestBehavior.translucent,
@@ -570,10 +610,11 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                       ),
 
                     // Active Indicators Legend di Pojok Kiri Atas Chart (ala TradingView)
-                    Positioned(
-                      top: 10,
-                      left: 10,
-                      child: ChartIndicatorsLegend(
+                    if (!_isChartModalOpen)
+                      Positioned(
+                        top: 10,
+                        left: 10,
+                        child: ChartIndicatorsLegend(
                         selectedId: _selectedLegendIndicatorId,
                         onSelectionChanged: (String? id) =>
                             setState(() => _selectedLegendIndicatorId = id),

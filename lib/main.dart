@@ -28,7 +28,7 @@ import 'package:cuan_app/styles/app_theme.dart';
 import 'package:cuan_app/styles/theme_controller.dart';
 
 void main() async {
-  // ⬅️ pertahankan native splash sampai kita lepas manual di halaman animasi
+  // pertahankan native splash sampai kita lepas manual di halaman animasi
   final binding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: binding);
   TvChartWidget.preload();

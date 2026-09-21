@@ -45,6 +45,7 @@ class TvChartWidget extends StatefulWidget {
   final Ohlc? liveBar; // bar terakhir yg lagi jalan (dari WS)
   final bool interactive; // false di home (preview doang)
   final ValueChanged<Map<String, dynamic>?>? onCrosshairMove;
+  final ValueChanged<bool>? onChartModalStateChanged;
 
   const TvChartWidget({
     super.key,
@@ -80,6 +81,7 @@ class TvChartWidget extends StatefulWidget {
     this.liveBar,
     this.interactive = true,
     this.onCrosshairMove,
+    this.onChartModalStateChanged,
   });
 
   static String? _cachedHtml;
@@ -166,6 +168,10 @@ class _TvChartWidgetState extends State<TvChartWidget> {
           widget.onCrosshairMove?.call(Map<String, dynamic>.from(payload));
         } else if (payload == null) {
           widget.onCrosshairMove?.call(null);
+        }
+      } else if (type == 'onChartModalStateChanged') {
+        if (payload is bool) {
+          widget.onChartModalStateChanged?.call(payload);
         }
       }
     });
@@ -614,6 +620,15 @@ class _TvChartWidgetState extends State<TvChartWidget> {
                   .map((Map e) => Map<String, dynamic>.from(e))
                   .toList();
               widget.onRectanglesChanged?.call(updated);
+            }
+            return null;
+          },
+        );
+        c.addJavaScriptHandler(
+          handlerName: 'onChartModalStateChanged',
+          callback: (List<dynamic> args) {
+            if (args.isNotEmpty && args[0] is bool) {
+              widget.onChartModalStateChanged?.call(args[0] as bool);
             }
             return null;
           },

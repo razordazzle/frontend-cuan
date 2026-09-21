@@ -3432,7 +3432,17 @@
             closeHalignDropdown();
         }
 
+        function notifyChartModalState(isOpen) {
+            if (window.flutter_inappwebview?.callHandler) {
+                window.flutter_inappwebview.callHandler('onChartModalStateChanged', isOpen);
+            }
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage(JSON.stringify({ type: 'onChartModalStateChanged', payload: isOpen }), '*');
+            }
+        }
+
         function openTrendlineSettingsModal() {
+            notifyChartModalState(true);
             isFibSettingsModalOpen = false;
             const modal = document.getElementById('tv-settings-modal');
             if (modal) modal.classList.remove('fullscreen');
@@ -3505,6 +3515,7 @@
         }
 
         function closeTrendlineSettingsModal() {
+            notifyChartModalState(false);
             const backdrop = document.getElementById('tv-settings-backdrop');
             const modal = document.getElementById('tv-settings-modal');
             hideAllPopovers();
@@ -4166,6 +4177,7 @@
         }
 
         function openFibSettingsModal() {
+            notifyChartModalState(true);
             isFibSettingsModalOpen = true;
             if (selectedFibIndex >= 0 && selectedFibIndex < fibonaccis.length) {
                 const curFib = fibonaccis[selectedFibIndex];
@@ -4661,6 +4673,7 @@
         }
 
         function openObjectTreeModal() {
+            notifyChartModalState(true);
             const backdrop = document.getElementById('tv-object-tree-backdrop');
             const modal = document.getElementById('tv-object-tree-modal');
             if (!backdrop || !modal) return;
@@ -4678,6 +4691,7 @@
         }
 
         function closeObjectTreeModal() {
+            notifyChartModalState(false);
             const backdrop = document.getElementById('tv-object-tree-backdrop');
             const modal = document.getElementById('tv-object-tree-modal');
             if (!backdrop || !modal) return;
@@ -9704,17 +9718,32 @@
         let currentPayloadIndicators = null;
         let activeIndicatorSeriesMap = {}; // id -> { series, type, period, color, paneIndex }
 
-        function calculateSMAData(candles, period = 20) {
+        function getCandleSourceValue(c, src = 'close') {
+            const s = (src || 'close').toLowerCase().trim();
+            if (s === 'open') return c.open;
+            if (s === 'high') return c.high;
+            if (s === 'low') return c.low;
+            if (s === 'hl2' || s.includes('(h + l)/2') || s.includes('h + l')) return (c.high + c.low) / 2;
+            if (s === 'hlc3' || s.includes('(h + l + c)/3') || s.includes('h + l + c')) return (c.high + c.low + c.close) / 3;
+            if (s === 'ohlc4' || s.includes('(o + h + l + c)/4') || s.includes('o + h + l + c')) return (c.open + c.high + c.low + c.close) / 4;
+            return c.close;
+        }
+
+        function calculateSMAData(candles, period = 20, source = 'close', offset = 0) {
             if (!candles || candles.length < period) return [];
             const res = [];
             let sum = 0;
+            const vals = candles.map(c => getCandleSourceValue(c, source));
             for (let i = 0; i < candles.length; i++) {
-                sum += candles[i].close;
+                sum += vals[i];
                 if (i >= period) {
-                    sum -= candles[i - period].close;
+                    sum -= vals[i - period];
                 }
                 if (i >= period - 1) {
-                    res.push({ time: candles[i].time, value: sum / period });
+                    const targetIdx = i + (offset || 0);
+                    if (targetIdx >= 0 && targetIdx < candles.length) {
+                        res.push({ time: candles[targetIdx].time, value: sum / period });
+                    }
                 }
             }
             return res;
@@ -9751,10 +9780,11 @@
                 const entry = activeIndicatorSeriesMap[id];
                 if (entry.type === 'sma') {
                     let sData = [];
-                    if ((!entry.period || entry.period === 20) && currentPayloadIndicators && currentPayloadIndicators.sma20 && currentPayloadIndicators.sma20.length > 0) {
+                    const isDefaultCalc = (!entry.period || entry.period === 20) && (!entry.source || entry.source.toLowerCase() === 'close') && (!entry.offset || entry.offset === 0);
+                    if (isDefaultCalc && currentPayloadIndicators && currentPayloadIndicators.sma20 && currentPayloadIndicators.sma20.length > 0) {
                         sData = currentPayloadIndicators.sma20;
                     } else {
-                        sData = calculateSMAData(rawCandlesData, entry.period || 20);
+                        sData = calculateSMAData(rawCandlesData, entry.period || 20, entry.source || 'close', entry.offset || 0);
                     }
                     if (sData && sData.length > 0) entry.series.setData(sData);
                 } else if (entry.type === 'rsi') {
@@ -9808,22 +9838,44 @@
                     if (item.type === 'sma') {
                         const color = item.color || SMA_COLORS[smaCount % SMA_COLORS.length];
                         smaCount++;
+                        let lineStyle = LightweightCharts.LineStyle.Solid;
+                        if (item.lineStyle === 1) lineStyle = LightweightCharts.LineStyle.Dashed;
+                        else if (item.lineStyle === 2) lineStyle = LightweightCharts.LineStyle.Dotted;
+
+                        let lineType = 0;
+                        if (item.plotType && (item.plotType.toLowerCase().indexOf('step') !== -1)) {
+                            lineType = (typeof LightweightCharts.LineType !== 'undefined' && LightweightCharts.LineType.WithSteps !== undefined) ? LightweightCharts.LineType.WithSteps : 1;
+                        }
+
                         const s = chart.addSeries(LightweightCharts.LineSeries, {
                             color: color,
-                            lineWidth: 2,
+                            lineWidth: item.lineWidth || 2,
+                            lineStyle: lineStyle,
+                            lineType: lineType,
                             title: '',
-                            priceLineVisible: false,
-                            lastValueVisible: false,
+                            priceLineVisible: Boolean(item.priceLine),
+                            lastValueVisible: Boolean(item.labelsOnPriceScale),
                             visible: item.isVisible !== false,
                         }, 0);
                         let sData = [];
-                        if ((!item.period || item.period === 20) && currentPayloadIndicators && currentPayloadIndicators.sma20 && currentPayloadIndicators.sma20.length > 0) {
+                        const isDefaultCalc = (!item.period || item.period === 20) && (!item.source || item.source.toLowerCase() === 'close') && (!item.offset || item.offset === 0);
+                        if (isDefaultCalc && currentPayloadIndicators && currentPayloadIndicators.sma20 && currentPayloadIndicators.sma20.length > 0) {
                             sData = currentPayloadIndicators.sma20;
                         } else {
-                            sData = calculateSMAData(rawCandlesData, item.period || 20);
+                            sData = calculateSMAData(rawCandlesData, item.period || 20, item.source || 'close', item.offset || 0);
                         }
                         if (sData && sData.length > 0) s.setData(sData);
-                        activeIndicatorSeriesMap[item.id] = { series: s, type: 'sma', period: item.period || 20, color: color };
+                        activeIndicatorSeriesMap[item.id] = {
+                            series: s,
+                            type: 'sma',
+                            period: item.period || 20,
+                            source: item.source || 'close',
+                            offset: item.offset || 0,
+                            color: color,
+                            lineWidth: item.lineWidth || 2,
+                            lineStyle: item.lineStyle || 0,
+                            labelsOnPriceScale: Boolean(item.labelsOnPriceScale)
+                        };
                     } else if (item.type === 'rsi') {
                         const isVis = item.isVisible !== false;
                         const targetPane = isVis ? nextPane++ : 1;
@@ -9893,8 +9945,47 @@
                     };
                     if (item.type === 'sma') {
                         opt.title = '';
-                        opt.priceLineVisible = false;
-                        opt.lastValueVisible = false;
+                        opt.priceLineVisible = Boolean(item.priceLine);
+                        opt.lastValueVisible = Boolean(item.labelsOnPriceScale);
+                        if (item.plotType !== undefined) {
+                            let lineType = 0;
+                            if (item.plotType && (item.plotType.toLowerCase().indexOf('step') !== -1)) {
+                                lineType = (typeof LightweightCharts.LineType !== 'undefined' && LightweightCharts.LineType.WithSteps !== undefined) ? LightweightCharts.LineType.WithSteps : 1;
+                            }
+                            opt.lineType = lineType;
+                        }
+                        if (item.color) {
+                            opt.color = item.color;
+                            entry.color = item.color;
+                        }
+                        if (item.lineWidth) {
+                            opt.lineWidth = item.lineWidth;
+                            entry.lineWidth = item.lineWidth;
+                        }
+                        if (item.lineStyle !== undefined) {
+                            let lineStyle = LightweightCharts.LineStyle.Solid;
+                            if (item.lineStyle === 1) lineStyle = LightweightCharts.LineStyle.Dashed;
+                            else if (item.lineStyle === 2) lineStyle = LightweightCharts.LineStyle.Dotted;
+                            opt.lineStyle = lineStyle;
+                            entry.lineStyle = item.lineStyle;
+                        }
+                        const curP = item.period || 20;
+                        const curSrc = item.source || 'close';
+                        const curOff = item.offset || 0;
+                        const needRecalc = entry.period !== curP || entry.source !== curSrc || entry.offset !== curOff;
+                        if (needRecalc) {
+                            entry.period = curP;
+                            entry.source = curSrc;
+                            entry.offset = curOff;
+                            const isDefaultCalc = (curP === 20) && (curSrc.toLowerCase() === 'close') && (curOff === 0);
+                            let sData = [];
+                            if (isDefaultCalc && currentPayloadIndicators && currentPayloadIndicators.sma20 && currentPayloadIndicators.sma20.length > 0) {
+                                sData = currentPayloadIndicators.sma20;
+                            } else {
+                                sData = calculateSMAData(rawCandlesData, curP, curSrc, curOff);
+                            }
+                            if (sData && sData.length > 0) entry.series.setData(sData);
+                        }
                     }
                     entry.series.applyOptions(opt);
 
