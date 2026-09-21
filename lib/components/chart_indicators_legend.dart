@@ -54,11 +54,17 @@ class ChartIndicatorsLegend extends StatefulWidget {
   final bool showSma;
   final bool showRsi;
   final bool showVolume;
+  final bool visibleSma;
+  final bool visibleRsi;
+  final bool visibleVolume;
   final String? selectedId;
   final ValueChanged<String?>? onSelectionChanged;
-  final ValueChanged<bool> onToggleSma;
-  final ValueChanged<bool> onToggleRsi;
-  final ValueChanged<bool> onToggleVolume;
+  final ValueChanged<bool> onToggleVisibilitySma;
+  final ValueChanged<bool> onToggleVisibilityRsi;
+  final ValueChanged<bool> onToggleVisibilityVolume;
+  final VoidCallback onDeleteSma;
+  final VoidCallback onDeleteRsi;
+  final VoidCallback onDeleteVolume;
   final ValueChanged<String>? onOpenSettings;
 
   const ChartIndicatorsLegend({
@@ -66,11 +72,17 @@ class ChartIndicatorsLegend extends StatefulWidget {
     required this.showSma,
     required this.showRsi,
     required this.showVolume,
+    this.visibleSma = true,
+    this.visibleRsi = true,
+    this.visibleVolume = true,
     this.selectedId,
     this.onSelectionChanged,
-    required this.onToggleSma,
-    required this.onToggleRsi,
-    required this.onToggleVolume,
+    required this.onToggleVisibilitySma,
+    required this.onToggleVisibilityRsi,
+    required this.onToggleVisibilityVolume,
+    required this.onDeleteSma,
+    required this.onDeleteRsi,
+    required this.onDeleteVolume,
     this.onOpenSettings,
   });
 
@@ -91,11 +103,6 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
 
   bool _isCollapsed = false;
 
-  // Track state hide sementara (via eye icon)
-  bool _smaHidden = false;
-  bool _rsiHidden = false;
-  bool _volumeHidden = false;
-
   @override
   Widget build(BuildContext context) {
     // Kumpulkan indikator yang sedang aktif
@@ -105,19 +112,11 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
       activeItems.add(<String, dynamic>{
         'id': 'sma',
         'title': 'SMA 20 close',
-        'isHidden': _smaHidden,
-        'onToggleEye': () {
-          setState(() {
-            _smaHidden = !_smaHidden;
-            widget.onToggleSma(!_smaHidden);
-          });
-        },
+        'isHidden': !widget.visibleSma,
+        'onToggleEye': () => widget.onToggleVisibilitySma(!widget.visibleSma),
         'onDelete': () {
           _setSelectedId(null);
-          setState(() {
-            _smaHidden = false;
-            widget.onToggleSma(false);
-          });
+          widget.onDeleteSma();
         },
         'onSettings': () => widget.onOpenSettings?.call('sma'),
       });
@@ -127,19 +126,11 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
       activeItems.add(<String, dynamic>{
         'id': 'rsi',
         'title': 'RSI 14 close',
-        'isHidden': _rsiHidden,
-        'onToggleEye': () {
-          setState(() {
-            _rsiHidden = !_rsiHidden;
-            widget.onToggleRsi(!_rsiHidden);
-          });
-        },
+        'isHidden': !widget.visibleRsi,
+        'onToggleEye': () => widget.onToggleVisibilityRsi(!widget.visibleRsi),
         'onDelete': () {
           _setSelectedId(null);
-          setState(() {
-            _rsiHidden = false;
-            widget.onToggleRsi(false);
-          });
+          widget.onDeleteRsi();
         },
         'onSettings': () => widget.onOpenSettings?.call('rsi'),
       });
@@ -149,19 +140,11 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
       activeItems.add(<String, dynamic>{
         'id': 'vol',
         'title': 'Vol',
-        'isHidden': _volumeHidden,
-        'onToggleEye': () {
-          setState(() {
-            _volumeHidden = !_volumeHidden;
-            widget.onToggleVolume(!_volumeHidden);
-          });
-        },
+        'isHidden': !widget.visibleVolume,
+        'onToggleEye': () => widget.onToggleVisibilityVolume(!widget.visibleVolume),
         'onDelete': () {
           _setSelectedId(null);
-          setState(() {
-            _volumeHidden = false;
-            widget.onToggleVolume(false);
-          });
+          widget.onDeleteVolume();
         },
         'onSettings': () => widget.onOpenSettings?.call('vol'),
       });
@@ -280,22 +263,25 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                 color: isHidden ? mutedColor : textColor,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w500,
-                decoration: isHidden ? TextDecoration.lineThrough : TextDecoration.none,
+                decoration: TextDecoration.none,
               ),
             ),
             const SizedBox(width: 6),
             // Purple sync/refresh icon badge ala TradingView (Gambar 1)
-            Container(
-              width: 16,
-              height: 16,
-              decoration: const BoxDecoration(
-                color: Color(0xFF332042),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.sync_rounded,
-                size: 11,
-                color: Color(0xFFB07FE8),
+            Opacity(
+              opacity: isHidden ? 0.35 : 1.0,
+              child: Container(
+                width: 16,
+                height: 16,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF332042),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.sync_rounded,
+                  size: 11,
+                  color: Color(0xFFB07FE8),
+                ),
               ),
             ),
           ],
@@ -348,7 +334,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                 color: isHidden ? mutedColor : textColor,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                decoration: isHidden ? TextDecoration.lineThrough : TextDecoration.none,
+                decoration: TextDecoration.none,
               ),
             ),
             const SizedBox(width: 14),

@@ -187,15 +187,23 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
 
   void _showInfoDialog(IndicatorItem item) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color dialogBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final Color borderColor = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE0E3EB);
+    final Color titleColor = isDark ? Colors.white : const Color(0xFF131722);
+    final Color contentColor = isDark ? const Color(0xFF8E8E93) : const Color(0xFF4A4E5A);
+
     showDialog<void>(
       context: context,
       builder: (BuildContext ctx) {
         return AlertDialog(
-          backgroundColor: isDark ? const Color(0xFF1E222D) : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          backgroundColor: dialogBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: borderColor, width: 1),
+          ),
           title: Row(
             children: <Widget>[
-              const Icon(Icons.help_outline, color: Color(0xFF2962FF), size: 22),
+              const Icon(Icons.help_outline_rounded, color: Color(0xFF00A3A8), size: 22),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -203,7 +211,7 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black87,
+                    color: titleColor,
                   ),
                 ),
               ),
@@ -214,7 +222,7 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
             style: TextStyle(
               fontSize: 14,
               height: 1.4,
-              color: isDark ? const Color(0xFFD1D4DC) : const Color(0xFF4A4E5A),
+              color: contentColor,
             ),
           ),
           actions: <Widget>[
@@ -222,7 +230,7 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
               onPressed: () => Navigator.of(ctx).pop(),
               child: const Text(
                 'Tutup',
-                style: TextStyle(color: Color(0xFF2962FF), fontWeight: FontWeight.bold),
+                style: TextStyle(color: Color(0xFF00A3A8), fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -236,17 +244,22 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
     final ThemeData theme = Theme.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
 
-    final Color sheetBg = isDark ? const Color(0xFF000000) : Colors.white;
+    // Palette harmonis dengan menu drawing tools (#121212 di dark mode)
+    final Color sheetBg = isDark ? const Color(0xFF121212) : Colors.white;
     final Color textColor = isDark ? Colors.white : const Color(0xFF131722);
-    final Color subtextColor = isDark ? const Color(0xFF848E9C) : const Color(0xFF787B86);
-    final Color searchBg = isDark ? const Color(0xFF161A25) : const Color(0xFFF0F3FA);
-    final Color searchBorder = isDark ? const Color(0xFF2A2E39) : const Color(0xFFE0E3EB);
+    final Color subtextColor = isDark ? const Color(0xFF8E8E93) : const Color(0xFF9598A1);
+    final Color searchBg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F3FA);
+    final Color searchBorder = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE0E3EB);
+    final Color handleColor = isDark ? const Color(0xFF3E3E42) : const Color(0xFFD1D1D6);
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.90,
       decoration: BoxDecoration(
         color: sheetBg,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+        border: Border(
+          top: BorderSide(color: searchBorder, width: 1),
+        ),
         boxShadow: const <BoxShadow>[
           BoxShadow(color: Colors.black45, blurRadius: 24, offset: Offset(0, -6)),
         ],
@@ -262,7 +275,7 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF2A2E39) : const Color(0xFFD1D4DC),
+                  color: handleColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -707,15 +720,6 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
                                     ),
                                   ],
                                 ],
-                              ),
-                            ),
-                            // Document / Note Icon on Right (Gambar 3)
-                            GestureDetector(
-                              onTap: () => _showInfoDialog(item),
-                              child: Icon(
-                                Icons.article_outlined,
-                                color: subtextColor,
-                                size: 19,
                               ),
                             ),
                           ],

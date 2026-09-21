@@ -20,6 +20,9 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
   bool _showSma = false;
   bool _showRsi = false;
   bool _showVolume = false;
+  bool _visibleSma = true;
+  bool _visibleRsi = true;
+  bool _visibleVolume = true;
   bool _showFibonacci = false;
   bool _isDrawingFib = false;
   List<Map<String, dynamic>> _horizontalLines = <Map<String, dynamic>>[];
@@ -167,9 +170,18 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
               }
             });
           },
-          onToggleSma: (bool val) => setState(() => _showSma = val),
-          onToggleRsi: (bool val) => setState(() => _showRsi = val),
-          onToggleVolume: (bool val) => setState(() => _showVolume = val),
+          onToggleSma: (bool val) => setState(() {
+            _showSma = val;
+            if (val) _visibleSma = true;
+          }),
+          onToggleRsi: (bool val) => setState(() {
+            _showRsi = val;
+            if (val) _visibleRsi = true;
+          }),
+          onToggleVolume: (bool val) => setState(() {
+            _showVolume = val;
+            if (val) _visibleVolume = true;
+          }),
           onToggleFibonacci: (bool val) => setState(() => _showFibonacci = val),
         );
       },
@@ -396,9 +408,9 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                       candles: candles,
                       payload: p.ihsgChartPayload,
                       isCandle: _isCandle,
-                      showSma: _showSma,
-                      showRsi: _showRsi,
-                      showVolume: _showVolume,
+                      showSma: _showSma && _visibleSma,
+                      showRsi: _showRsi && _visibleRsi,
+                      showVolume: _showVolume && _visibleVolume,
                       showFibonacci: _showFibonacci,
                       isDrawingFib: _isDrawingFib,
                       onFibDrawn: () {
@@ -501,9 +513,24 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                         showSma: _showSma,
                         showRsi: _showRsi,
                         showVolume: _showVolume,
-                        onToggleSma: (bool val) => setState(() => _showSma = val),
-                        onToggleRsi: (bool val) => setState(() => _showRsi = val),
-                        onToggleVolume: (bool val) => setState(() => _showVolume = val),
+                        visibleSma: _visibleSma,
+                        visibleRsi: _visibleRsi,
+                        visibleVolume: _visibleVolume,
+                        onToggleVisibilitySma: (bool val) => setState(() => _visibleSma = val),
+                        onToggleVisibilityRsi: (bool val) => setState(() => _visibleRsi = val),
+                        onToggleVisibilityVolume: (bool val) => setState(() => _visibleVolume = val),
+                        onDeleteSma: () => setState(() {
+                          _showSma = false;
+                          _visibleSma = true;
+                        }),
+                        onDeleteRsi: () => setState(() {
+                          _showRsi = false;
+                          _visibleRsi = true;
+                        }),
+                        onDeleteVolume: () => setState(() {
+                          _showVolume = false;
+                          _visibleVolume = true;
+                        }),
                         onOpenSettings: (String id) => _openIndicatorSettings(id),
                       ),
                     ),
