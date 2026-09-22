@@ -10,7 +10,7 @@ import '../data/model/chart_payload.dart';
 import '../data/model/active_chart_indicator.dart';
 import 'web_message_listener.dart';
 
-const bool _kShowDebugReloadButton = true;
+const bool _kShowDebugReloadButton = false;
 
 class TvChartWidget extends StatefulWidget {
   final List<Ohlc> candles;
