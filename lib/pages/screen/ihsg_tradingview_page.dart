@@ -8,7 +8,8 @@ import 'package:cuan_app/data/model/candle_item.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/stocks_provider.dart';
-import 'home_page.dart' show Ohlc, makeDummyCandles; // reuse model & helper yg udah ada
+import 'home_page.dart'
+    show Ohlc, makeDummyCandles; // reuse model & helper yg udah ada
 
 class IhsgTradingViewPage extends StatefulWidget {
   const IhsgTradingViewPage({super.key});
@@ -43,6 +44,13 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
     'Relative Strength Index',
     'Volume',
   };
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<StocksProvider>().fetchTvCandles();
+    });
+  }
 
   int get _activeIndicatorsCount => _activeIndicators.length;
 
@@ -102,7 +110,8 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext sheetContext) {
-        final bool hasDrawings = _showFibonacci ||
+        final bool hasDrawings =
+            _showFibonacci ||
             _horizontalLines.isNotEmpty ||
             _trendlines.isNotEmpty ||
             _rectangles.isNotEmpty;
@@ -144,12 +153,15 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
   }
 
   void _syncLegacyIndicators() {
-    final List<ActiveChartIndicator> activeSmas =
-        _activeIndicators.where((ActiveChartIndicator i) => i.type == 'sma').toList();
-    final List<ActiveChartIndicator> activeRsis =
-        _activeIndicators.where((ActiveChartIndicator i) => i.type == 'rsi').toList();
-    final List<ActiveChartIndicator> activeVols =
-        _activeIndicators.where((ActiveChartIndicator i) => i.type == 'vol').toList();
+    final List<ActiveChartIndicator> activeSmas = _activeIndicators
+        .where((ActiveChartIndicator i) => i.type == 'sma')
+        .toList();
+    final List<ActiveChartIndicator> activeRsis = _activeIndicators
+        .where((ActiveChartIndicator i) => i.type == 'rsi')
+        .toList();
+    final List<ActiveChartIndicator> activeVols = _activeIndicators
+        .where((ActiveChartIndicator i) => i.type == 'vol')
+        .toList();
 
     _showSma = activeSmas.isNotEmpty;
     _visibleSma = activeSmas.any((ActiveChartIndicator i) => i.isVisible);
@@ -163,30 +175,38 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
 
   void _addIndicator(String id) {
     setState(() {
-      final int count = _activeIndicators.where((ActiveChartIndicator i) => i.type == id).length;
+      final int count = _activeIndicators
+          .where((ActiveChartIndicator i) => i.type == id)
+          .length;
       final String suffix = count > 0 ? ' ${count + 1}' : '';
       if (id == 'sma') {
         const int period = 20;
-        _activeIndicators.add(ActiveChartIndicator(
-          id: 'sma_${DateTime.now().microsecondsSinceEpoch}',
-          type: 'sma',
-          title: 'SMA $period close$suffix',
-          period: period,
-        ));
+        _activeIndicators.add(
+          ActiveChartIndicator(
+            id: 'sma_${DateTime.now().microsecondsSinceEpoch}',
+            type: 'sma',
+            title: 'SMA $period close$suffix',
+            period: period,
+          ),
+        );
       } else if (id == 'rsi') {
         const int period = 14;
-        _activeIndicators.add(ActiveChartIndicator(
-          id: 'rsi_${DateTime.now().microsecondsSinceEpoch}',
-          type: 'rsi',
-          title: 'RSI $period close$suffix',
-          period: period,
-        ));
+        _activeIndicators.add(
+          ActiveChartIndicator(
+            id: 'rsi_${DateTime.now().microsecondsSinceEpoch}',
+            type: 'rsi',
+            title: 'RSI $period close$suffix',
+            period: period,
+          ),
+        );
       } else if (id == 'vol') {
-        _activeIndicators.add(ActiveChartIndicator(
-          id: 'vol_${DateTime.now().microsecondsSinceEpoch}',
-          type: 'vol',
-          title: 'Vol$suffix',
-        ));
+        _activeIndicators.add(
+          ActiveChartIndicator(
+            id: 'vol_${DateTime.now().microsecondsSinceEpoch}',
+            type: 'vol',
+            title: 'Vol$suffix',
+          ),
+        );
       }
       _syncLegacyIndicators();
     });
@@ -194,7 +214,9 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
 
   void _toggleIndicatorVisibility(String id) {
     setState(() {
-      final int idx = _activeIndicators.indexWhere((ActiveChartIndicator i) => i.id == id);
+      final int idx = _activeIndicators.indexWhere(
+        (ActiveChartIndicator i) => i.id == id,
+      );
       if (idx != -1) {
         final ActiveChartIndicator item = _activeIndicators[idx];
         _activeIndicators[idx] = item.copyWith(isVisible: !item.isVisible);
@@ -256,11 +278,15 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
 
   void _openIndicatorSettings(String id) {
     ActiveChartIndicator? indicator;
-    final int idx = _activeIndicators.indexWhere((ActiveChartIndicator i) => i.id == id);
+    final int idx = _activeIndicators.indexWhere(
+      (ActiveChartIndicator i) => i.id == id,
+    );
     if (idx != -1) {
       indicator = _activeIndicators[idx];
     } else if (id == 'sma' || id.startsWith('sma')) {
-      final int smaIdx = _activeIndicators.indexWhere((ActiveChartIndicator i) => i.type == 'sma');
+      final int smaIdx = _activeIndicators.indexWhere(
+        (ActiveChartIndicator i) => i.type == 'sma',
+      );
       if (smaIdx != -1) {
         indicator = _activeIndicators[smaIdx];
       } else {
@@ -279,8 +305,9 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
         indicator: indicator,
         onSave: (ActiveChartIndicator updated) {
           setState(() {
-            final int targetIdx =
-                _activeIndicators.indexWhere((ActiveChartIndicator i) => i.id == updated.id);
+            final int targetIdx = _activeIndicators.indexWhere(
+              (ActiveChartIndicator i) => i.id == updated.id,
+            );
             if (targetIdx != -1) {
               _activeIndicators[targetIdx] = updated;
             } else {
@@ -296,8 +323,8 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
     final String title = id == 'sma'
         ? 'Moving Average (SMA)'
         : id == 'rsi'
-            ? 'Relative Strength Index (RSI)'
-            : 'Volume';
+        ? 'Relative Strength Index (RSI)'
+        : 'Volume';
 
     showModalBottomSheet<void>(
       context: context,
@@ -338,7 +365,9 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                   'Customization untuk $title akan dikonfigurasi di langkah berikutnya.',
                   style: TextStyle(
                     fontSize: 14,
-                    color: isDark ? const Color(0xFFD1D4DC) : const Color(0xFF4A4E5A),
+                    color: isDark
+                        ? const Color(0xFFD1D4DC)
+                        : const Color(0xFF4A4E5A),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -364,25 +393,44 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
         actions: [
           IconButton(
             icon: Icon(_isCandle ? Icons.show_chart : Icons.candlestick_chart),
-            tooltip: _isCandle ? 'Ganti ke Area Chart' : 'Ganti ke Candle Chart',
+            tooltip: _isCandle
+                ? 'Ganti ke Area Chart'
+                : 'Ganti ke Candle Chart',
             onPressed: () => setState(() => _isCandle = !_isCandle),
           ),
         ],
       ),
       body: Consumer<StocksProvider>(
         builder: (BuildContext context, StocksProvider p, _) {
-          final List<Ohlc> rawCandles = (p.ihsgChartPayload?.candles.isNotEmpty == true)
-              ? p.ihsgChartPayload!.candles
-              : p.ihsgCandles
-                  .map((CandleItem c) => Ohlc(
+          final List<Ohlc> rawCandles =
+              (p.tvChartPayload?.candles.isNotEmpty == true)
+              ? p.tvChartPayload!.candles
+              : p.tvCandles
+                    .map(
+                      (CandleItem c) => Ohlc(
                         time: c.ts,
                         open: c.open ?? c.close ?? 0,
                         high: c.high ?? c.close ?? 0,
                         low: c.low ?? c.close ?? 0,
                         close: c.close ?? 0,
                         volume: (c.volume ?? 0).toDouble(),
-                      ))
-                  .toList();
+                      ),
+                    )
+                    .toList();
+          // (p.ihsgChartPayload?.candles.isNotEmpty == true)
+          // ? p.ihsgChartPayload!.candles
+          // : p.ihsgCandles
+          //       .map(
+          //         (CandleItem c) => Ohlc(
+          //           time: c.ts,
+          //           open: c.open ?? c.close ?? 0,
+          //           high: c.high ?? c.close ?? 0,
+          //           low: c.low ?? c.close ?? 0,
+          //           close: c.close ?? 0,
+          //           volume: (c.volume ?? 0).toDouble(),
+          //         ),
+          //       )
+          //       .toList();
           final List<Ohlc> candles = rawCandles.isNotEmpty
               ? rawCandles
               : makeDummyCandles(60);
@@ -402,8 +450,15 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
             children: [
               // Legend OHLCV live, update pas jari geser di chart
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: _Legend(crosshair: _crosshair, fallback: liveBar ?? (candles.isNotEmpty ? candles.last : null)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: _Legend(
+                  crosshair: _crosshair,
+                  fallback:
+                      liveBar ?? (candles.isNotEmpty ? candles.last : null),
+                ),
               ),
               // Clean Top Bar: Timeframe (Kiri) + Action Buttons [fx] & [✏️] (Kanan)
               Padding(
@@ -415,15 +470,17 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
-                          children: ['1D', '1W', '1M', '3M', 'YTD', '1Y']
-                              .map((String r) => Padding(
-                                    padding: const EdgeInsets.only(right: 6),
-                                    child: ChoiceChip(
-                                      label: Text(r),
-                                      selected: p.indexInterval == r,
-                                      onSelected: (_) => p.setIndexInterval(r),
-                                    ),
-                                  ))
+                          children: ['1D', '1W', '1M']
+                              .map(
+                                (String r) => Padding(
+                                  padding: const EdgeInsets.only(right: 6),
+                                  child: ChoiceChip(
+                                    label: Text(r),
+                                    selected: p.tvResolution == r,
+                                    onSelected: (_) => p.setTvResolution(r),
+                                  ),
+                                ),
+                              )
                               .toList(),
                         ),
                       ),
@@ -452,13 +509,18 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                               fontSize: 14,
                               color: _activeIndicatorsCount > 0
                                   ? const Color(0xFF00A3A8)
-                                  : (isDark ? const Color(0xFFD8D8D8) : const Color(0xFF373737)),
+                                  : (isDark
+                                        ? const Color(0xFFD8D8D8)
+                                        : const Color(0xFF373737)),
                             ),
                           ),
                           if (_activeIndicatorsCount > 0) ...[
                             const SizedBox(width: 5),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1,
+                              ),
                               decoration: const BoxDecoration(
                                 color: Color(0xFF00A3A8),
                                 shape: BoxShape.circle,
@@ -481,7 +543,8 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                     _ActionButton(
                       tooltip: 'Alat Gambar (Drawings)',
                       onTap: () => _showDrawingsBottomSheet(context),
-                      isActive: _showDrawingToolbar ||
+                      isActive:
+                          _showDrawingToolbar ||
                           _isDrawingHorizontalLine ||
                           _isDrawingTrendline ||
                           _isDrawingRectangle ||
@@ -490,13 +553,16 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                       child: Icon(
                         Icons.edit_outlined,
                         size: 17,
-                        color: (_showDrawingToolbar ||
+                        color:
+                            (_showDrawingToolbar ||
                                 _isDrawingHorizontalLine ||
                                 _isDrawingTrendline ||
                                 _isDrawingRectangle ||
                                 _isDrawingFib)
                             ? const Color(0xFF00A3A8)
-                            : (isDark ? const Color(0xFFD8D8D8) : const Color(0xFF373737)),
+                            : (isDark
+                                  ? const Color(0xFFD8D8D8)
+                                  : const Color(0xFF373737)),
                       ),
                     ),
                   ],
@@ -508,11 +574,13 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                   children: [
                     TvChartWidget(
                       symbol: 'IHSG',
-                      timeframe: p.indexInterval,
+                      timeframe: p.tvResolution,
                       candles: candles,
-                      payload: p.ihsgChartPayload,
+                      payload: p.tvChartPayload,
                       isCandle: _isCandle,
-                      activeIndicators: List<ActiveChartIndicator>.from(_activeIndicators),
+                      activeIndicators: List<ActiveChartIndicator>.from(
+                        _activeIndicators,
+                      ),
                       showSma: _showSma && _visibleSma,
                       showRsi: _showRsi && _visibleRsi,
                       showVolume: _showVolume && _visibleVolume,
@@ -540,14 +608,16 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                           });
                         }
                       },
-                      onHorizontalLinesChanged: (List<Map<String, dynamic>> updated) {
-                        if (mounted) {
-                          setState(() {
-                            _horizontalLines = List<Map<String, dynamic>>.from(updated);
-                            _isDrawingHorizontalLine = false;
-                          });
-                        }
-                      },
+                      onHorizontalLinesChanged:
+                          (List<Map<String, dynamic>> updated) {
+                            if (mounted) {
+                              setState(() {
+                                _horizontalLines =
+                                    List<Map<String, dynamic>>.from(updated);
+                                _isDrawingHorizontalLine = false;
+                              });
+                            }
+                          },
                       trendlines: _trendlines,
                       isDrawingTrendline: _isDrawingTrendline,
                       onTrendlineAdded: (Map<String, dynamic> line) {
@@ -557,14 +627,17 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                           });
                         }
                       },
-                      onTrendlinesChanged: (List<Map<String, dynamic>> updated) {
-                        if (mounted) {
-                          setState(() {
-                            _trendlines = List<Map<String, dynamic>>.from(updated);
-                            _isDrawingTrendline = false;
-                          });
-                        }
-                      },
+                      onTrendlinesChanged:
+                          (List<Map<String, dynamic>> updated) {
+                            if (mounted) {
+                              setState(() {
+                                _trendlines = List<Map<String, dynamic>>.from(
+                                  updated,
+                                );
+                                _isDrawingTrendline = false;
+                              });
+                            }
+                          },
                       rectangles: _rectangles,
                       isDrawingRectangle: _isDrawingRectangle,
                       onRectangleAdded: (Map<String, dynamic> rect) {
@@ -574,14 +647,17 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                           });
                         }
                       },
-                      onRectanglesChanged: (List<Map<String, dynamic>> updated) {
-                        if (mounted) {
-                          setState(() {
-                            _rectangles = List<Map<String, dynamic>>.from(updated);
-                            _isDrawingRectangle = false;
-                          });
-                        }
-                      },
+                      onRectanglesChanged:
+                          (List<Map<String, dynamic>> updated) {
+                            if (mounted) {
+                              setState(() {
+                                _rectangles = List<Map<String, dynamic>>.from(
+                                  updated,
+                                );
+                                _isDrawingRectangle = false;
+                              });
+                            }
+                          },
                       upColor: upColor,
                       downColor: downColor,
                       gridColor: cs.outline.withValues(alpha: .15),
@@ -597,7 +673,8 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                     ),
 
                     // Tap-outside detector saat ada indikator legend yang sedang terseleksi
-                    if (!_isChartModalOpen && _selectedLegendIndicatorId != null)
+                    if (!_isChartModalOpen &&
+                        _selectedLegendIndicatorId != null)
                       Positioned.fill(
                         child: GestureDetector(
                           behavior: HitTestBehavior.translucent,
@@ -615,57 +692,74 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                         top: 10,
                         left: 10,
                         child: ChartIndicatorsLegend(
-                        selectedId: _selectedLegendIndicatorId,
-                        onSelectionChanged: (String? id) =>
-                            setState(() => _selectedLegendIndicatorId = id),
-                        activeIndicators: _activeIndicators,
-                        onToggleIndicatorVisibility: _toggleIndicatorVisibility,
-                        onDeleteIndicator: _deleteIndicator,
-                        showSma: _showSma,
-                        showRsi: _showRsi,
-                        showVolume: _showVolume,
-                        visibleSma: _visibleSma,
-                        visibleRsi: _visibleRsi,
-                        visibleVolume: _visibleVolume,
-                        onToggleVisibilitySma: (bool val) => setState(() => _visibleSma = val),
-                        onToggleVisibilityRsi: (bool val) => setState(() => _visibleRsi = val),
-                        onToggleVisibilityVolume: (bool val) => setState(() => _visibleVolume = val),
-                        onDeleteSma: () => setState(() {
-                          _showSma = false;
-                          _visibleSma = true;
-                        }),
-                        onDeleteRsi: () => setState(() {
-                          _showRsi = false;
-                          _visibleRsi = true;
-                        }),
-                        onDeleteVolume: () => setState(() {
-                          _showVolume = false;
-                          _visibleVolume = true;
-                        }),
-                        symbol: 'IHSG',
-                        timeframe: p.indexInterval,
-                        onOpenSettings: (String id) => _openIndicatorSettings(id),
+                          selectedId: _selectedLegendIndicatorId,
+                          onSelectionChanged: (String? id) =>
+                              setState(() => _selectedLegendIndicatorId = id),
+                          activeIndicators: _activeIndicators,
+                          onToggleIndicatorVisibility:
+                              _toggleIndicatorVisibility,
+                          onDeleteIndicator: _deleteIndicator,
+                          showSma: _showSma,
+                          showRsi: _showRsi,
+                          showVolume: _showVolume,
+                          visibleSma: _visibleSma,
+                          visibleRsi: _visibleRsi,
+                          visibleVolume: _visibleVolume,
+                          onToggleVisibilitySma: (bool val) =>
+                              setState(() => _visibleSma = val),
+                          onToggleVisibilityRsi: (bool val) =>
+                              setState(() => _visibleRsi = val),
+                          onToggleVisibilityVolume: (bool val) =>
+                              setState(() => _visibleVolume = val),
+                          onDeleteSma: () => setState(() {
+                            _showSma = false;
+                            _visibleSma = true;
+                          }),
+                          onDeleteRsi: () => setState(() {
+                            _showRsi = false;
+                            _visibleRsi = true;
+                          }),
+                          onDeleteVolume: () => setState(() {
+                            _showVolume = false;
+                            _visibleVolume = true;
+                          }),
+                          symbol: 'IHSG',
+                          timeframe: p.tvResolution,
+                          onOpenSettings: (String id) =>
+                              _openIndicatorSettings(id),
+                        ),
                       ),
-                    ),
 
                     // Active Drawing Prompt Banner (Memberikan instruksi saat user sedang menggambar)
-                    if (_isDrawingHorizontalLine || _isDrawingTrendline || _isDrawingRectangle || _isDrawingFib)
+                    if (_isDrawingHorizontalLine ||
+                        _isDrawingTrendline ||
+                        _isDrawingRectangle ||
+                        _isDrawingFib)
                       Positioned(
                         top: 10,
                         left: 16,
                         right: 16,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                            color: isDark
+                                ? const Color(0xFF1E1E1E)
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE0E3EB),
+                              color: isDark
+                                  ? const Color(0xFF2C2C2E)
+                                  : const Color(0xFFE0E3EB),
                               width: 1.0,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+                                color: Colors.black.withValues(
+                                  alpha: isDark ? 0.35 : 0.08,
+                                ),
                                 blurRadius: 10,
                                 offset: const Offset(0, 3),
                               ),
@@ -676,7 +770,9 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                               Icon(
                                 Icons.touch_app_outlined,
                                 size: 16,
-                                color: isDark ? const Color(0xFFD8D8D8) : const Color(0xFF373737),
+                                color: isDark
+                                    ? const Color(0xFFD8D8D8)
+                                    : const Color(0xFF373737),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -684,14 +780,16 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                                   _isDrawingHorizontalLine
                                       ? 'Ketuk chart untuk menaruh garis Support/Resistance'
                                       : _isDrawingTrendline
-                                          ? 'Ketuk titik 1 lalu titik 2 untuk menarik Trendline'
-                                          : _isDrawingRectangle
-                                              ? 'Ketuk sudut 1 lalu sudut 2 untuk membuat Box Area'
-                                              : 'Tarik dari titik asal ke puncak untuk Fibonacci',
+                                      ? 'Ketuk titik 1 lalu titik 2 untuk menarik Trendline'
+                                      : _isDrawingRectangle
+                                      ? 'Ketuk sudut 1 lalu sudut 2 untuk membuat Box Area'
+                                      : 'Tarik dari titik asal ke puncak untuk Fibonacci',
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w600,
-                                    color: isDark ? const Color(0xFFD8D8D8) : const Color(0xFF373737),
+                                    color: isDark
+                                        ? const Color(0xFFD8D8D8)
+                                        : const Color(0xFF373737),
                                   ),
                                 ),
                               ),
@@ -709,7 +807,9 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                                   child: Icon(
                                     Icons.close,
                                     size: 16,
-                                    color: isDark ? const Color(0xFF868993) : const Color(0xFF787B86),
+                                    color: isDark
+                                        ? const Color(0xFF868993)
+                                        : const Color(0xFF787B86),
                                   ),
                                 ),
                               ),
@@ -738,7 +838,9 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                             isDrawingHLine: _isDrawingHorizontalLine,
                             onToggleHLine: () {
                               if (_isDrawingHorizontalLine) {
-                                setState(() => _isDrawingHorizontalLine = false);
+                                setState(
+                                  () => _isDrawingHorizontalLine = false,
+                                );
                               } else {
                                 _startDrawingHorizontalLine();
                               }
@@ -759,7 +861,8 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                                 _startDrawingRectangle();
                               }
                             },
-                            hasDrawings: _showFibonacci ||
+                            hasDrawings:
+                                _showFibonacci ||
                                 _horizontalLines.isNotEmpty ||
                                 _trendlines.isNotEmpty ||
                                 _rectangles.isNotEmpty,
@@ -806,8 +909,12 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
-    final Color inactiveBg = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF2F2F4);
-    final Color inactiveBorder = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA);
+    final Color inactiveBg = isDark
+        ? const Color(0xFF1C1C1E)
+        : const Color(0xFFF2F2F4);
+    final Color inactiveBorder = isDark
+        ? const Color(0xFF2C2C2E)
+        : const Color(0xFFE5E5EA);
 
     Widget btn = Material(
       color: Colors.transparent,
@@ -856,13 +963,19 @@ class _DragHandleWidget extends StatelessWidget {
                 Container(
                   width: 2.8,
                   height: 2.8,
-                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 const SizedBox(width: 2.8),
                 Container(
                   width: 2.8,
                   height: 2.8,
-                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ],
             ),
@@ -890,7 +1003,9 @@ class _FavoriteToolButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
-    final Color selectedBg = isDark ? const Color(0xFF2A2E39) : const Color(0xFFE0E3EB);
+    final Color selectedBg = isDark
+        ? const Color(0xFF2A2E39)
+        : const Color(0xFFE0E3EB);
     final Color selectedBorder = const Color(0xFF2962FF);
 
     return Tooltip(
@@ -957,9 +1072,15 @@ class _DrawingToolbar extends StatelessWidget {
 
     // Neutral Charcoal/Black background matching chart: #1E1E1E in dark mode, pure white in light mode
     final Color toolbarBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final Color toolbarBorder = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE0E3EB);
-    final Color dividerColor = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE0E3EB);
-    final Color defaultIconColor = isDark ? const Color(0xFFD8D8D8) : const Color(0xFF50535E);
+    final Color toolbarBorder = isDark
+        ? const Color(0xFF2C2C2E)
+        : const Color(0xFFE0E3EB);
+    final Color dividerColor = isDark
+        ? const Color(0xFF2C2C2E)
+        : const Color(0xFFE0E3EB);
+    final Color defaultIconColor = isDark
+        ? const Color(0xFFD8D8D8)
+        : const Color(0xFF50535E);
     final Color activeIconColor = const Color(0xFF2962FF);
 
     return Container(
@@ -967,10 +1088,7 @@ class _DrawingToolbar extends StatelessWidget {
       decoration: BoxDecoration(
         color: toolbarBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: toolbarBorder,
-          width: 1.0,
-        ),
+        border: Border.all(color: toolbarBorder, width: 1.0),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.65 : 0.18),
@@ -1037,11 +1155,7 @@ class _DrawingToolbar extends StatelessWidget {
             const SizedBox(width: 4),
 
             // Divider
-            Container(
-              width: 1,
-              height: 20,
-              color: dividerColor,
-            ),
+            Container(width: 1, height: 20, color: dividerColor),
             const SizedBox(width: 2),
 
             // Clear all annotations
@@ -1055,7 +1169,9 @@ class _DrawingToolbar extends StatelessWidget {
                 size: 19,
                 color: hasDrawings
                     ? Colors.red.shade400
-                    : (isDark ? const Color(0xFF636670) : const Color(0xFFBDBDBD)),
+                    : (isDark
+                          ? const Color(0xFF636670)
+                          : const Color(0xFFBDBDBD)),
               ),
               onPressed: hasDrawings ? onClearAll : null,
             ),
@@ -1069,7 +1185,9 @@ class _DrawingToolbar extends StatelessWidget {
               icon: Icon(
                 Icons.close,
                 size: 17,
-                color: isDark ? const Color(0xFFB2B5BE) : const Color(0xFF616161),
+                color: isDark
+                    ? const Color(0xFFB2B5BE)
+                    : const Color(0xFF616161),
               ),
               onPressed: onClose,
             ),
@@ -1094,10 +1212,12 @@ class _Legend extends StatelessWidget {
     if (o == null) return const SizedBox.shrink();
 
     Widget kv(String k, num? v) => Padding(
-          padding: const EdgeInsets.only(right: 12),
-          child: Text('$k ${v != null ? v.toStringAsFixed(0) : '-'}',
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
-        );
+      padding: const EdgeInsets.only(right: 12),
+      child: Text(
+        '$k ${v != null ? v.toStringAsFixed(0) : '-'}',
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+      ),
+    );
 
     return Row(children: [kv('O', o), kv('H', h), kv('L', l), kv('C', c)]);
   }
@@ -1168,7 +1288,8 @@ class _TrendlinePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _TrendlinePainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _TrendlinePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _HLineVectorIcon extends StatelessWidget {
@@ -1177,10 +1298,7 @@ class _HLineVectorIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(24, 24),
-      painter: _HLinePainter(color),
-    );
+    return CustomPaint(size: const Size(24, 24), painter: _HLinePainter(color));
   }
 }
 
@@ -1206,13 +1324,18 @@ class _HLinePainter extends CustomPainter {
     // Left line up to ring perimeter
     canvas.drawLine(const Offset(3.0, 12.0), Offset(12.0 - r, 12.0), linePaint);
     // Right line from ring perimeter
-    canvas.drawLine(Offset(12.0 + r, 12.0), const Offset(21.0, 12.0), linePaint);
+    canvas.drawLine(
+      Offset(12.0 + r, 12.0),
+      const Offset(21.0, 12.0),
+      linePaint,
+    );
     // Center hollow anchor ring
     canvas.drawCircle(center, r, ringPaint);
   }
 
   @override
-  bool shouldRepaint(covariant _HLinePainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _HLinePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _FibVectorIcon extends StatelessWidget {
@@ -1221,10 +1344,7 @@ class _FibVectorIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(24, 24),
-      painter: _FibPainter(color),
-    );
+    return CustomPaint(size: const Size(24, 24), painter: _FibPainter(color));
   }
 }
 
@@ -1251,24 +1371,41 @@ class _FibPainter extends CustomPainter {
 
     // 4 horizontal parallel levels
     // Line 1: plain top line
-    canvas.drawLine(const Offset(xLeft, 4.5), const Offset(xRight, 4.5), linePaint);
+    canvas.drawLine(
+      const Offset(xLeft, 4.5),
+      const Offset(xRight, 4.5),
+      linePaint,
+    );
 
     // Line 2: line with hollow anchor ring on the right
     const double circle2CenterX = xRight - r; // 18.3
-    canvas.drawLine(const Offset(xLeft, 9.5), const Offset(circle2CenterX - r, 9.5), linePaint);
+    canvas.drawLine(
+      const Offset(xLeft, 9.5),
+      const Offset(circle2CenterX - r, 9.5),
+      linePaint,
+    );
     canvas.drawCircle(const Offset(circle2CenterX, 9.5), r, ringPaint);
 
     // Line 3: plain middle line
-    canvas.drawLine(const Offset(xLeft, 14.5), const Offset(xRight, 14.5), linePaint);
+    canvas.drawLine(
+      const Offset(xLeft, 14.5),
+      const Offset(xRight, 14.5),
+      linePaint,
+    );
 
     // Line 4: line with hollow anchor ring on the left
     const double circle4CenterX = xLeft + r; // 5.7
     canvas.drawCircle(const Offset(circle4CenterX, 19.5), r, ringPaint);
-    canvas.drawLine(const Offset(circle4CenterX + r, 19.5), const Offset(xRight, 19.5), linePaint);
+    canvas.drawLine(
+      const Offset(circle4CenterX + r, 19.5),
+      const Offset(xRight, 19.5),
+      linePaint,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _FibPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _FibPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _RectVectorIcon extends StatelessWidget {
@@ -1277,10 +1414,7 @@ class _RectVectorIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(24, 24),
-      painter: _RectPainter(color),
-    );
+    return CustomPaint(size: const Size(24, 24), painter: _RectPainter(color));
   }
 }
 
@@ -1307,10 +1441,26 @@ class _RectPainter extends CustomPainter {
     const double y2 = 19.0;
 
     // 4 edges connecting the corner rings (without bleeding into ring holes)
-    canvas.drawLine(const Offset(x1 + r, y1), const Offset(x2 - r, y1), strokePaint); // Top
-    canvas.drawLine(const Offset(x1 + r, y2), const Offset(x2 - r, y2), strokePaint); // Bottom
-    canvas.drawLine(const Offset(x1, y1 + r), const Offset(x1, y2 - r), strokePaint); // Left
-    canvas.drawLine(const Offset(x2, y1 + r), const Offset(x2, y2 - r), strokePaint); // Right
+    canvas.drawLine(
+      const Offset(x1 + r, y1),
+      const Offset(x2 - r, y1),
+      strokePaint,
+    ); // Top
+    canvas.drawLine(
+      const Offset(x1 + r, y2),
+      const Offset(x2 - r, y2),
+      strokePaint,
+    ); // Bottom
+    canvas.drawLine(
+      const Offset(x1, y1 + r),
+      const Offset(x1, y2 - r),
+      strokePaint,
+    ); // Left
+    canvas.drawLine(
+      const Offset(x2, y1 + r),
+      const Offset(x2, y2 - r),
+      strokePaint,
+    ); // Right
 
     // 4 corner hollow anchor rings
     canvas.drawCircle(const Offset(x1, y1), r, ringPaint); // Top-Left
@@ -1320,7 +1470,8 @@ class _RectPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RectPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _RectPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _DrawingsBottomSheetWidget extends StatefulWidget {
@@ -1355,10 +1506,12 @@ class _DrawingsBottomSheetWidget extends StatefulWidget {
   });
 
   @override
-  State<_DrawingsBottomSheetWidget> createState() => _DrawingsBottomSheetWidgetState();
+  State<_DrawingsBottomSheetWidget> createState() =>
+      _DrawingsBottomSheetWidgetState();
 }
 
-class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> {
+class _DrawingsBottomSheetWidgetState
+    extends State<_DrawingsBottomSheetWidget> {
   late final TextEditingController _searchController;
   late final FocusNode _focusNode;
   String _searchQuery = '';
@@ -1403,12 +1556,22 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
 
     // Theme palette harmonized with chart background (#121212 in dark mode)
     final Color sheetBg = isDark ? const Color(0xFF121212) : Colors.white;
-    final Color cardBg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F3FA);
-    final Color cardBorder = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE0E3EB);
-    final Color searchBg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F3FA);
+    final Color cardBg = isDark
+        ? const Color(0xFF1E1E1E)
+        : const Color(0xFFF0F3FA);
+    final Color cardBorder = isDark
+        ? const Color(0xFF2C2C2E)
+        : const Color(0xFFE0E3EB);
+    final Color searchBg = isDark
+        ? const Color(0xFF1E1E1E)
+        : const Color(0xFFF0F3FA);
     final Color textColor = isDark ? Colors.white : const Color(0xFF131722);
-    final Color subtitleColor = isDark ? const Color(0xFF8E8E93) : const Color(0xFF9598A1);
-    final Color closeBtnBg = isDark ? const Color(0xFF242426) : const Color(0xFFF0F3FA);
+    final Color subtitleColor = isDark
+        ? const Color(0xFF8E8E93)
+        : const Color(0xFF9598A1);
+    final Color closeBtnBg = isDark
+        ? const Color(0xFF242426)
+        : const Color(0xFFF0F3FA);
     final Color iconColor = isDark ? Colors.white : const Color(0xFF131722);
     const Color starColor = Color(0xFFF7A600); // TradingView Amber Star
 
@@ -1454,18 +1617,24 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
     List<_DrawingToolItem> filtered = allTools;
     if (_searchQuery.isNotEmpty) {
       filtered = allTools
-          .where((t) =>
-              t.title.toLowerCase().contains(_searchQuery) ||
-              t.category.toLowerCase().contains(_searchQuery))
+          .where(
+            (t) =>
+                t.title.toLowerCase().contains(_searchQuery) ||
+                t.category.toLowerCase().contains(_searchQuery),
+          )
           .toList();
     } else if (_selectedFilter == 'Favorites') {
       filtered = allTools.where((t) => t.isFavorite).toList();
     } else if (_selectedFilter == 'Trend tools') {
       filtered = allTools.where((t) => t.category == 'TREND TOOLS').toList();
     } else if (_selectedFilter == 'Gann and...') {
-      filtered = allTools.where((t) => t.category == 'GANN AND FIBONACCI').toList();
+      filtered = allTools
+          .where((t) => t.category == 'GANN AND FIBONACCI')
+          .toList();
     } else if (_selectedFilter == 'Shapes') {
-      filtered = allTools.where((t) => t.category == 'GEOMETRIC SHAPES').toList();
+      filtered = allTools
+          .where((t) => t.category == 'GEOMETRIC SHAPES')
+          .toList();
     }
 
     final Map<String, List<_DrawingToolItem>> grouped = {};
@@ -1518,7 +1687,9 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
                       width: 38,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF3E3E42) : const Color(0xFFD1D4DC),
+                        color: isDark
+                            ? const Color(0xFF3E3E42)
+                            : const Color(0xFFD1D4DC),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -1529,12 +1700,17 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
 
               // Title & Close/Back Button
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 6,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _isSearching || _searchQuery.isNotEmpty ? 'Search drawings' : 'Drawings',
+                      _isSearching || _searchQuery.isNotEmpty
+                          ? 'Search drawings'
+                          : 'Drawings',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -1559,7 +1735,9 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          _isSearching || _searchQuery.isNotEmpty ? Icons.arrow_back : Icons.close,
+                          _isSearching || _searchQuery.isNotEmpty
+                              ? Icons.arrow_back
+                              : Icons.close,
                           size: 18,
                           color: iconColor,
                         ),
@@ -1571,7 +1749,10 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
 
               // Search Bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 6,
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -1582,7 +1763,11 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
                           color: searchBg,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: _focusNode.hasFocus ? (isDark ? Colors.white : const Color(0xFF131722)) : cardBorder,
+                            color: _focusNode.hasFocus
+                                ? (isDark
+                                      ? Colors.white
+                                      : const Color(0xFF131722))
+                                : cardBorder,
                             width: _focusNode.hasFocus ? 1.5 : 1,
                           ),
                         ),
@@ -1594,7 +1779,9 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
                               child: TextField(
                                 controller: _searchController,
                                 focusNode: _focusNode,
-                                cursorColor: isDark ? Colors.white : const Color(0xFF131722),
+                                cursorColor: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF131722),
                                 onTap: () {
                                   if (!_isSearching) {
                                     setState(() => _isSearching = true);
@@ -1606,16 +1793,24 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
                                     _isSearching = true;
                                   });
                                 },
-                                style: TextStyle(fontSize: 13.5, color: textColor),
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  color: textColor,
+                                ),
                                 decoration: InputDecoration(
                                   hintText: 'Search',
-                                  hintStyle: TextStyle(fontSize: 13.5, color: subtitleColor),
+                                  hintStyle: TextStyle(
+                                    fontSize: 13.5,
+                                    color: subtitleColor,
+                                  ),
                                   border: InputBorder.none,
                                   enabledBorder: InputBorder.none,
                                   focusedBorder: InputBorder.none,
                                   filled: true,
                                   fillColor: Colors.transparent,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
                                   isDense: true,
                                 ),
                               ),
@@ -1626,7 +1821,11 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
                                   _searchController.clear();
                                   setState(() => _searchQuery = '');
                                 },
-                                child: Icon(Icons.clear, size: 16, color: subtitleColor),
+                                child: Icon(
+                                  Icons.clear,
+                                  size: 16,
+                                  color: subtitleColor,
+                                ),
                               ),
                           ],
                         ),
@@ -1643,7 +1842,9 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
                         child: Text(
                           'Batal',
                           style: TextStyle(
-                            color: isDark ? Colors.white : const Color(0xFF131722),
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF131722),
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
@@ -1658,43 +1859,56 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
               if (_searchQuery.isEmpty) ...[
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Row(
-                    children: [
-                      'Favorites',
-                      'Tools',
-                      'Trend tools',
-                      'Gann and...',
-                      'Shapes',
-                    ].map((filter) {
-                      final bool isSelected = _selectedFilter == filter;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: InkWell(
-                          onTap: () {
-                            setState(() => _selectedFilter = filter);
-                          },
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? (isDark ? const Color(0xFF2B2B2B) : const Color(0xFFE0E3EB))
-                                  : Colors.transparent,
+                    children:
+                        [
+                          'Favorites',
+                          'Tools',
+                          'Trend tools',
+                          'Gann and...',
+                          'Shapes',
+                        ].map((filter) {
+                          final bool isSelected = _selectedFilter == filter;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: InkWell(
+                              onTap: () {
+                                setState(() => _selectedFilter = filter);
+                              },
                               borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              filter,
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                color: isSelected ? textColor : subtitleColor,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? (isDark
+                                            ? const Color(0xFF2B2B2B)
+                                            : const Color(0xFFE0E3EB))
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  filter,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                    color: isSelected
+                                        ? textColor
+                                        : subtitleColor,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                          );
+                        }).toList(),
                   ),
                 ),
                 Divider(height: 1, color: cardBorder),
@@ -1704,7 +1918,10 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
               // Using Expanded guarantees the view fills all vertical space and never shrinks!
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1714,12 +1931,19 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
                           child: Center(
                             child: Column(
                               children: [
-                                Icon(Icons.search_off, size: 36, color: subtitleColor),
+                                Icon(
+                                  Icons.search_off,
+                                  size: 36,
+                                  color: subtitleColor,
+                                ),
                                 const SizedBox(height: 8),
                                 Text(
                                   'Tidak ada drawing tool yang cocok dengan "$_searchQuery"',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: subtitleColor, fontSize: 13),
+                                  style: TextStyle(
+                                    color: subtitleColor,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ],
                             ),
@@ -1769,7 +1993,10 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
               if (!_isSearching && _searchQuery.isEmpty) ...[
                 Divider(height: 1, color: cardBorder),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 8,
+                  ),
                   child: Row(
                     children: [
                       Icon(Icons.edit_outlined, size: 18, color: subtitleColor),
@@ -1787,7 +2014,11 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
                       if (widget.hasDrawings) ...[
                         TextButton.icon(
                           onPressed: widget.onClearAllDrawings,
-                          icon: Icon(Icons.delete_sweep_outlined, size: 16, color: Colors.red.shade400),
+                          icon: Icon(
+                            Icons.delete_sweep_outlined,
+                            size: 16,
+                            color: Colors.red.shade400,
+                          ),
                           label: Text(
                             'Hapus Garis',
                             style: TextStyle(
@@ -1797,7 +2028,10 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
                             ),
                           ),
                           style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             visualDensity: VisualDensity.compact,
                           ),
                         ),
@@ -1805,10 +2039,16 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
                       ],
                       Switch(
                         value: _showDrawingToolbar,
-                        activeThumbColor: const Color(0xFF2962FF),
-                        activeTrackColor: const Color(0xFF2962FF).withValues(alpha: 0.35),
-                        inactiveThumbColor: isDark ? const Color(0xFF8E8E93) : const Color(0xFFD1D4DC),
-                        inactiveTrackColor: isDark ? const Color(0xFF2B2B2B) : const Color(0xFFE0E3EB),
+                        activeColor: const Color(0xFF2962FF),
+                        activeTrackColor: const Color(
+                          0xFF2962FF,
+                        ).withValues(alpha: 0.35),
+                        inactiveThumbColor: isDark
+                            ? const Color(0xFF8E8E93)
+                            : const Color(0xFFD1D4DC),
+                        inactiveTrackColor: isDark
+                            ? const Color(0xFF2B2B2B)
+                            : const Color(0xFFE0E3EB),
                         onChanged: (val) {
                           setState(() => _showDrawingToolbar = val);
                           widget.onToggleDrawingToolbar(val);
@@ -1865,7 +2105,9 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
                 ],
               ),
               // Vector Tool Icon
-              tool.iconBuilder(tool.isSelected ? const Color(0xFF2962FF) : iconColor),
+              tool.iconBuilder(
+                tool.isSelected ? const Color(0xFF2962FF) : iconColor,
+              ),
               // Tool Name
               Text(
                 tool.title,
@@ -1874,7 +2116,9 @@ class _DrawingsBottomSheetWidgetState extends State<_DrawingsBottomSheetWidget> 
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 10.5,
-                  fontWeight: tool.isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: tool.isSelected
+                      ? FontWeight.w700
+                      : FontWeight.w500,
                   color: tool.isSelected ? const Color(0xFF2962FF) : textColor,
                 ),
               ),

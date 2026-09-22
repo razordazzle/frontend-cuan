@@ -52,6 +52,14 @@ class StocksProvider extends ChangeNotifier {
   List<CandleItem> ihsgCandles = [];
   ChartPayload? ihsgChartPayload;
 
+  // ====== IHSG UNTUK HALAMAN TRADING VIEW (terpisah dari home_page) ======
+  bool loadingTv = false;
+  String? errTv;
+  List<CandleItem> tvCandles = [];
+  ChartPayload? tvChartPayload;
+  String tvResolution =
+      '1D'; // '1D' | '1W' | '1M' — resolusi candle, BUKAN window waktu
+
   // ========== HELPER: overlay harga live dari GOAPI ==========
   // Future<List<StockListItem>> _applyLivePrices(List<StockListItem> list) async {
   //   if (list.isEmpty) return list;
@@ -371,20 +379,91 @@ class StocksProvider extends ChangeNotifier {
         interval: apiInterval,
         limit: apiLimit,
       );
-      
+
       // Tetap isi ihsgCandles agar widget lama tidak rusak
-      ihsgCandles = ihsgChartPayload!.candles.map((Ohlc e) => CandleItem(
-        ts: e.time,
-        open: e.open,
-        high: e.high,
-        low: e.low,
-        close: e.close,
-        volume: e.volume.toInt(),
-      )).toList();
+      ihsgCandles = ihsgChartPayload!.candles
+          .map(
+            (Ohlc e) => CandleItem(
+              ts: e.time,
+              open: e.open,
+              high: e.high,
+              low: e.low,
+              close: e.close,
+              volume: e.volume.toInt(),
+            ),
+          )
+          .toList();
     } catch (e) {
       errIndex = 'Gagal memuat chart IHSG: $e';
     } finally {
       loadingIndex = false;
+      notifyListeners();
+    }
+  }
+
+  /// Ganti resolusi candle di halaman TradingView (Model B: resolusi, bukan window).
+  /// TERPISAH dari setIndexInterval() yang dipakai home_page, biar ga saling ganggu.
+  Future<void> setTvResolution(String v) async {
+    if (tvResolution == v) return;
+    tvResolution = v;
+    await fetchTvCandles(force: true);
+    notifyListeners();
+  }
+
+  /// Candles IHSG untuk halaman IhsgTradingViewPage.
+  /// interval yang dikirim ke backend = resolusi asli (1d/1w/1M), BUKAN mapping
+  /// window kayak di fetchIndexCandles() — biar konsisten sama SOP trading chart:
+  /// tiap candle merepresentasikan 1 resolusi tsb, history-nya panjang (bukan dipotong per-chip).
+  Future<void> fetchTvCandles({bool force = false}) async {
+    if (tvCandles.isNotEmpty && !force) return;
+
+    loadingTv = true;
+    errTv = null;
+    notifyListeners();
+
+    try {
+      String apiInterval;
+      int apiLimit;
+
+      switch (tvResolution) {
+        case '1D':
+          apiInterval = '1d';
+          apiLimit = 480; // ~2 tahun candle harian
+          break;
+        case '1W':
+          apiInterval = '1w';
+          apiLimit = 100; // ~5 tahun candle mingguan
+          break;
+        case '1M':
+          apiInterval = '1M';
+          apiLimit = 24; // 20 tahun candle bulanan
+          break;
+        default:
+          apiInterval = '1d';
+          apiLimit = 500;
+      }
+
+      tvChartPayload = await _svc.getIhsgChartWithIndicators(
+        interval: apiInterval,
+        limit: apiLimit,
+      );
+
+      tvCandles = tvChartPayload!.candles
+          .map(
+            (Ohlc e) => CandleItem(
+              ts: e.time,
+              open: e.open,
+              high: e.high,
+              low: e.low,
+              close: e.close,
+              volume: e.volume.toInt(),
+            ),
+          )
+          .toList();
+    } catch (e) {
+      errTv = 'Gagal memuat chart TradingView: $e';
+    } finally {
+      loadingTv = false;
       notifyListeners();
     }
   }
