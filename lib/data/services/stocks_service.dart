@@ -159,7 +159,9 @@ class StocksService {
       final qp = <String, dynamic>{
         'limit': limit,
         if (investor.isNotEmpty && investor != 'all') 'investor': investor,
-        if (net) 'net': true, // 👈 BARU — cukup kirim kalau true, biar query string bersih
+        if (net)
+          'net':
+              true, // 👈 BARU — cukup kirim kalau true, biar query string bersih
         if (tradeDate != null)
           // 'trade_date': DateFormat('yyyy-MM-dd').format(tradeDate),
           'tradeDate': DateFormat('yyyy-MM-dd').format(tradeDate),
@@ -275,4 +277,15 @@ class StocksService {
   //   final rawData = _extractData(res);
   //   return YahooFundamentals.fromJson(rawData as Map<String, dynamic>);
   // }
+  Future<ChartPayload> getStockChartWithIndicators({
+    required String ticker,
+    required String interval,
+    required int limit,
+  }) async {
+    final res = await _dio.get(
+      '/stocks/$ticker/chart-with-indicators',
+      queryParameters: {'interval': interval, 'limit': limit},
+    );
+    return ChartPayload.fromJson(res.data);
+  }
 }

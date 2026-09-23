@@ -5,6 +5,7 @@ import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/data/model/broker_summary_row.dart';
 import 'package:cuan_app/data/model/candle_item.dart';
 import 'package:cuan_app/data/services/stocks_service.dart';
+import 'package:cuan_app/pages/screen/stock_tradingview_page.dart';
 import 'package:cuan_app/providers/stock_detail_provider.dart';
 import 'package:cuan_app/providers/stocks_provider.dart';
 import 'package:flutter/material.dart';
@@ -277,6 +278,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                                 builder: (context) {
                                   if (p.candles.isNotEmpty) {
                                     return _CandleChartCard(
+                                      ticker: widget.ticker,
                                       candles: p.candles,
                                       isUp: isUp,
                                       isCandle: _isCandle,
@@ -1285,6 +1287,7 @@ class _TabBarHeader extends SliverPersistentHeaderDelegate {
 }
 
 class _CandleChartCard extends StatefulWidget {
+  final String ticker;
   final List<CandleItem> candles;
   final bool isUp;
   final bool isCandle;
@@ -1298,6 +1301,7 @@ class _CandleChartCard extends StatefulWidget {
   final String currentRange;
 
   const _CandleChartCard({
+    required this.ticker,
     required this.candles,
     required this.isUp,
     required this.isCandle,
@@ -1605,16 +1609,35 @@ class _CandleChartCardState extends State<_CandleChartCard> {
               children: [
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    visualDensity: VisualDensity.compact,
-                    icon: Icon(
-                      widget.isCandle
-                          ? Icons.show_chart
-                          : Icons.candlestick_chart,
-                      color: cs.onSurface.withOpacity(.6),
-                      size: 20,
-                    ),
-                    onPressed: widget.onToggleChartType,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: Icon(
+                          widget.isCandle
+                              ? Icons.show_chart
+                              : Icons.candlestick_chart,
+                          color: cs.onSurface.withOpacity(.6),
+                          size: 20,
+                        ),
+                        onPressed: widget.onToggleChartType,
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: Icon(
+                          Icons.open_in_full,
+                          color: cs.onSurface.withOpacity(.6),
+                          size: 18,
+                        ),
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                StockTradingViewPage(ticker: widget.ticker),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 // === CHART UTAMA ===
