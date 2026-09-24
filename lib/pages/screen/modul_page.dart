@@ -158,7 +158,7 @@ class _ModulPageState extends State<ModulPage> {
 
     final hero = filtered.first;
     final rest = filtered.skip(1).toList();
-    final crypto = items.where((e) => e.category == 'Crypto').toList();
+    final fundamental = items.where((e) => e.category == 'Fundamental').toList();
 
     final double cardHeight = 280; // tinggi kartu
     final double cardWidth = cardHeight * 9 / 16; // 9:16 portrait
@@ -241,10 +241,10 @@ class _ModulPageState extends State<ModulPage> {
                     label: 'Kategori',
                     value: _kategori,
                     items: const [
-                      'Dasar Saham',
+                      'Dasar',
                       'Teknikal',
                       'Fundamental',
-                      'Makroekonomi',
+                      'Makro',
                     ],
                     onSelected: (v) => setState(() => _kategori = v),
                   ),
@@ -318,7 +318,7 @@ class _ModulPageState extends State<ModulPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             sliver: SliverToBoxAdapter(
               child: Text(
-                'Crypto Trading',
+                'Fundamental',
                 style: t.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: cs.onSurface,
@@ -337,11 +337,11 @@ class _ModulPageState extends State<ModulPage> {
                 primary: false,
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: crypto.length,
+                itemCount: fundamental.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 12),
                 itemBuilder: (_, i) => SizedBox(
                   width: cardWidth,
-                  child: _VblCard(item: crypto[i]),
+                  child: _VblCard(item: fundamental[i]),
                 ),
               ),
             ),
