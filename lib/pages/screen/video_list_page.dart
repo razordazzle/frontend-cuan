@@ -85,7 +85,7 @@ class _VideoListPageState extends State<VideoListPage> {
                       'videoId': v.videoId,              // ← penting
                       // opsional: progress kalau kamu punya
                       // 'position': Duration(seconds: ...),
-                      // 'duration': Duration(seconds: v.duration),
+                      'duration': Duration(seconds: v.duration),
                     },
                   );
                 },

@@ -50,6 +50,7 @@ dependencies:
   qr_flutter: ^4.1.0
   # syncfusion_flutter_charts: ^31.1.22
   flutter_inappwebview: ^6.1.5
+  youtube_player_flutter: ^9.1.1
 
 
 dev_dependencies:

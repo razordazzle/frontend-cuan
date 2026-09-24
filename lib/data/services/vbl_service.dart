@@ -75,4 +75,21 @@ class VblService {
     );
     return VblHistoryListResponse.fromJson(res.data);
   }
+
+  Future<VblProgressLatestResponse> progressForVideo(String videoId) async {
+    try {
+      final res = await _dio.get('${ApiPaths.vblProgress}/video/$videoId');
+      return VblProgressLatestResponse.fromJson(res.data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        rethrow; // biarin provider yang handle "belum ada progress"
+      }
+      rethrow;
+    }
+  }
+
+  Future<VblPlaylistProgress> playlistProgress(String playlistId) async {
+    final res = await _dio.get('${ApiPaths.vblPlaylists}/$playlistId/progress');
+    return VblPlaylistProgress.fromJson(res.data);
+  }
 }

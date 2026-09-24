@@ -14,6 +14,8 @@ class VblProvider extends ChangeNotifier {
   List<VblPlaylistItem>?
   playlists; // nullable biar gampang cek "belum pernah load"
   String? nextCursor;
+  VblProgressLatestResponse? videoProgress;
+  VblPlaylistProgress? playlistProgressData;
 
   Future<void> fetchPlaylists({
     String? category,
@@ -147,5 +149,26 @@ class VblProvider extends ChangeNotifier {
   Future<void> loadMoreHistory({int limit = 50}) async {
     if (historyExhausted || loadingHistory) return;
     await fetchHistory(limit: limit);
+  }
+
+  Future<VblProgressLatestResponse?> fetchProgressForVideo(
+    String videoId,
+  ) async {
+    try {
+      videoProgress = await _svc.progressForVideo(videoId);
+      return videoProgress;
+    } catch (_) {
+      videoProgress = null;
+      return null; // belum pernah ditonton, itu normal
+    }
+  }
+
+  Future<void> fetchPlaylistProgress(String playlistId) async {
+    try {
+      playlistProgressData = await _svc.playlistProgress(playlistId);
+      notifyListeners();
+    } catch (_) {
+      playlistProgressData = null;
+    }
   }
 }

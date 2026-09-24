@@ -26,7 +26,7 @@ class _VideoDetailPageState extends State<VideoDetailPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vbl = context.read<VblProvider>();
       vbl.fetchDetail(widget.playlistId);
-      vbl.fetchLatestProgress(); // <-- ambil progres terbaru dari API
+      vbl.fetchPlaylistProgress(widget.playlistId);
     });
   }
 
@@ -41,16 +41,18 @@ class _VideoDetailPageState extends State<VideoDetailPage> {
     final error = vbl.errDetail;
 
     // Progress demo – nanti bisa ambil dari /vbl/progress/latest (opsional)
-    final latest = vbl.latest;
+
+    final playlistProgress = vbl.playlistProgressData;
     double progress = 0.0;
     bool completed = false;
 
-    if (latest != null && latest.playlistId == widget.playlistId) {
-      // latest.progressPct di API adalah 0..100
-      progress = (latest.progressPct / 100.0).clamp(0.0, 1.0);
-      completed = latest.isCompleted == true || progress >= 1.0;
+    if (playlistProgress != null &&
+        playlistProgress.playlistId == widget.playlistId) {
+      progress = (playlistProgress.overallPct / 100.0).clamp(0.0, 1.0);
+      completed =
+          playlistProgress.totalVideos > 0 &&
+          playlistProgress.completedVideos == playlistProgress.totalVideos;
     }
-
     if (loading && d == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -77,7 +79,7 @@ class _VideoDetailPageState extends State<VideoDetailPage> {
     final title = d?.title ?? widget.lesson.title;
     final desc = d?.description ?? '';
     final parts = d?.videos ?? const <VblPlaylistVideoItem>[];
-    
+
     return Scaffold(
       body: ListView(
         padding: EdgeInsets.zero,
@@ -282,7 +284,7 @@ class _VideoDetailPageState extends State<VideoDetailPage> {
                       'playlistId': widget.playlistId, // penting
                       'videoId': parts[i].videoId, // penting
                       // kalau punya durasi/progress, bisa ikutkan:
-                      // 'duration': Duration(seconds: parts[i].duration),
+                      'duration': Duration(seconds: parts[i].duration),
                       // 'position': Duration(seconds: ...from progress...),
                     },
                   );
