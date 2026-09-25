@@ -101,7 +101,7 @@ class _VideoListPageState extends State<VideoListPage> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            Image.network(widget.lesson.cover, fit: BoxFit.cover),
+                            Image.network(v.thumbnail ?? widget.lesson.cover, fit: BoxFit.cover),
                             Container(color: Colors.black.withOpacity(.25)),
                             const Center(
                               child: Icon(Icons.play_arrow_rounded,

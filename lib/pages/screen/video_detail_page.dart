@@ -272,7 +272,7 @@ class _VideoDetailPageState extends State<VideoDetailPage> {
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (_, i) => _PartCard(
                 v: parts[i],
-                cover: widget.lesson.cover,
+                cover: parts[i].thumbnail ?? widget.lesson.cover,
                 tag: widget.lesson.tag,
                 onTap: () {
                   Navigator.pushNamed(

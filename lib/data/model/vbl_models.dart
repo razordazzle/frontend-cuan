@@ -42,11 +42,13 @@ class VblPlaylistListResponse {
 class VblPlaylistVideoItem {
   final String videoId, title;
   final int duration, sequence;
+  final String? thumbnail;
   VblPlaylistVideoItem({
     required this.videoId,
     required this.title,
     required this.duration,
     required this.sequence,
+    this.thumbnail, 
   });
   factory VblPlaylistVideoItem.fromJson(Map<String, dynamic> j) =>
       VblPlaylistVideoItem(
@@ -54,6 +56,7 @@ class VblPlaylistVideoItem {
         title: j['title'] ?? '',
         duration: (j['duration'] as num?)?.toInt() ?? 0,
         sequence: (j['sequence'] as num?)?.toInt() ?? 0,
+        thumbnail: j['thumbnail'] as String?,
       );
 }
 
