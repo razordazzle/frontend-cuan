@@ -10,6 +10,7 @@ class VblProvider extends ChangeNotifier {
   // VblService get svc => _svc;
   /* ========= PLAYLIST LIST ========= */
   bool loadingList = false;
+  bool loadingMoreList = false;
   String? errList;
   List<VblPlaylistItem>?
   playlists; // nullable biar gampang cek "belum pernah load"
@@ -41,6 +42,72 @@ class VblProvider extends ChangeNotifier {
       loadingList = false;
       notifyListeners();
     }
+  }
+
+  //load lebih banyak, nambahin ke list yang udah ada (bukan replace)
+  Future<void> loadMorePlaylists({int limit = 20}) async {
+    if (nextCursor == null || loadingMoreList) return;
+    loadingMoreList = true;
+    notifyListeners();
+    try {
+      final r = await _svc.listPlaylists(limit: limit, cursor: nextCursor);
+      playlists = [...?playlists, ...r.items];
+      nextCursor = r.nextCursor;
+    } catch (_) {
+      // diamkan; load-more gagal bukan error fatal, data lama tetap tampil
+    } finally {
+      loadingMoreList = false;
+      notifyListeners();
+    }
+  }
+
+  /* ========= SEARCH (terpisah dari listing utama) ========= */
+  bool loadingSearch = false;
+  String? errSearch;
+  List<VblPlaylistItem>? searchResults;
+  String? searchNextCursor;
+  bool loadingMoreSearch = false;
+
+  Future<void> searchPlaylists(String query, {int limit = 20}) async {
+    loadingSearch = true;
+    errSearch = null;
+    notifyListeners();
+    try {
+      final r = await _svc.listPlaylists(search: query, limit: limit);
+      searchResults = r.items;
+      searchNextCursor = r.nextCursor;
+    } catch (e) {
+      errSearch = 'Gagal mencari playlist';
+    } finally {
+      loadingSearch = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadMoreSearchResults(String query, {int limit = 20}) async {
+    if (searchNextCursor == null || loadingMoreSearch) return;
+    loadingMoreSearch = true;
+    notifyListeners();
+    try {
+      final r = await _svc.listPlaylists(
+        search: query,
+        limit: limit,
+        cursor: searchNextCursor,
+      );
+      searchResults = [...?searchResults, ...r.items];
+      searchNextCursor = r.nextCursor;
+    } catch (_) {
+    } finally {
+      loadingMoreSearch = false;
+      notifyListeners();
+    }
+  }
+
+  void clearSearch() {
+    searchResults = null;
+    searchNextCursor = null;
+    errSearch = null;
+    notifyListeners();
   }
 
   /* ========= PLAYLIST DETAIL (DAFTAR VIDEO) ========= */

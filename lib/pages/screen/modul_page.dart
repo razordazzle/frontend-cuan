@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/data/model/lesson.dart';
 import 'package:cuan_app/data/model/vbl_models.dart';
@@ -22,35 +24,14 @@ String _coverOrPlaceholder(String url, String placeholder) {
 }
 
 class _ModulPageState extends State<ModulPage> {
-  final _allCtrl = PageController(viewportFraction: .90);
-  final _cryptoCtrl = PageController(viewportFraction: .90);
-
   static const _prefKeyReadme = 'modul_readme_v1';
 
   String _kategori = 'Semua';
   String _tingkat = 'Semua';
-
-  final List<Lesson> _all = List.generate(12, (i) {
-    return Lesson(
-      title: [
-        'Trading Made Simple: Understand Crypto in 10 Minutes',
-        'Crypto vs. Stock Market: Which One Should You Trade?',
-        'The Future of Trading: AI, Crypto, and You',
-        'Risk Management 101 for New Traders',
-        'Swing Trading Basics for Busy People',
-      ][i % 5],
-      cover: [
-        'https://images.unsplash.com/photo-1640340434856-1f2f4d6e83ea?q=80&w=1600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1553729784-e91953dec042?q=80&w=1600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1559526324-593bc073d938?q=80&w=1600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1551281044-8ed89f2b2ba6?q=80&w=1600&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1518779578993-ec3579fee39f?q=80&w=1600&auto=format&fit=crop',
-      ][i % 5],
-      tag: i.isEven ? 'Live Class' : 'Recorded',
-      level: ['Semua', 'Dasar', 'Menengah', 'Lanjutan'][i % 4],
-      category: ['Semua', 'Crypto', 'Saham', 'Teknikal'][i % 4],
-    );
-  });
+  // search
+  final _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  bool _isSearching = false;
 
   @override
   void initState() {
@@ -59,6 +40,13 @@ class _ModulPageState extends State<ModulPage> {
       _maybeShowReadme();
       context.read<VblProvider>().fetchPlaylists();
     });
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _maybeShowReadme() async {
@@ -95,94 +83,70 @@ class _ModulPageState extends State<ModulPage> {
     ).push(MaterialPageRoute(builder: (_) => const VideoHistoryPage()));
   }
 
-  @override
-  void dispose() {
-    _allCtrl.dispose();
-    _cryptoCtrl.dispose();
-    super.dispose();
+  void _toggleSearch() {
+    setState(() {
+      if (_isSearching) {
+        _isSearching = false;
+        _searchController.clear();
+        context.read<VblProvider>().clearSearch();
+      } else {
+        _isSearching = true;
+      }
+    });
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {}); // rebuild segera biar body switch ke mode search/normal
+    _searchDebounce?.cancel();
+    final q = query.trim();
+    if (q.isEmpty) {
+      context.read<VblProvider>().clearSearch();
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+      context.read<VblProvider>().searchPlaylists(q);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    // final t = Theme.of(context);
-    // // final cs = t.colorScheme;
-
-    // final filtered = _all.where((e) {
-    //   final okKat = _kategori == 'Semua' || e.category == _kategori;
-    //   final okLvl = _tingkat == 'Semua' || e.level == _tingkat;
-    //   return okKat && okLvl;
-    // }).toList();
-
-    // final hero = filtered.isNotEmpty ? filtered.first : _all.first;
-    // final rest = filtered.skip(1).toList();
-
-    // final crypto = _all.where((e) => e.category == 'Crypto').toList();
-
-    // final cs = Theme.of(context).colorScheme;
     final t = Theme.of(context);
     final cs = t.colorScheme;
 
     final vbl = context.watch<VblProvider>();
-    final items = vbl.playlists ?? const <VblPlaylistItem>[];
-
-    // loading & error state
-    if (vbl.loadingList && items.isEmpty) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    if (vbl.errList != null && items.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Video Edukasi Saham')),
-
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(vbl.errList!, style: TextStyle(color: cs.error)),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: () => context.read<VblProvider>().fetchPlaylists(),
-                child: const Text('Coba lagi'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // ----- adaptasi filter lokal (opsional, tergantung kebutuhan UI lama)
-    final filtered = items.where((e) {
-      final okKat = _kategori == 'Semua' || e.category == _kategori;
-      final okLvl = _tingkat == 'Semua' || e.level == _tingkat;
-      return okKat && okLvl;
-    }).toList();
-
-    final rest = filtered.skip(1).toList();
-    final fundamental = items
-        .where((e) => e.category == 'Fundamental')
-        .toList();
-
-    final double cardHeight = 280; // tinggi kartu
-    final double cardWidth = cardHeight * 9 / 16; // 9:16 portrait
-
-    // tinggi hero 16:9 berdasarkan lebar konten (lebar layar - padding kiri/kanan 16)
-    final double contentWidth = MediaQuery.sizeOf(context).width - 32;
-    final double heroHeight = contentWidth * 9 / 16;
-
+    final isSearchMode =
+        _isSearching && _searchController.text.trim().isNotEmpty;
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
         titleSpacing: 16,
-        title: Text(
-          'Video Edukasi Saham',
-          style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-        ),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Cari playlist...',
+                  border: InputBorder.none,
+                ),
+                style: t.textTheme.titleMedium,
+                onChanged: _onSearchChanged,
+              )
+            : Text(
+                'Video Edukasi Saham',
+                style: t.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
         actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.search)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.star_border)),
-
+          IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
+            onPressed: _toggleSearch,
+          ),
           PopupMenuButton<String>(
             onSelected: (v) async {
-              if (v == 'reset_readme') {
+              if (v == 'show_readme') {
+                _openReadme();
+              } else if (v == 'reset_readme') {
                 await _resetReadmeFlag();
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -216,144 +180,277 @@ class _ModulPageState extends State<ModulPage> {
           ),
         ),
       ),
-      body: CustomScrollView(
-        slivers: [
-          // === Kontrol (Readme, History, Filter) — DIPIN ===
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _PinnedControlsDelegate(
-              height: 64, // sesuaikan: 56–64 biasanya pas
-              child: Row(
+      body: isSearchMode
+          ? _buildSearchBody(vbl, cs, t)
+          : _buildMainBody(vbl, cs, t),
+    );
+  }
+
+  // ======================= MODE: SEARCH =======================
+  Widget _buildSearchBody(VblProvider vbl, ColorScheme cs, ThemeData t) {
+    final results = vbl.searchResults ?? const <VblPlaylistItem>[];
+    final loading = vbl.loadingSearch && results.isEmpty;
+    final error = vbl.errSearch;
+
+    if (loading) return const Center(child: CircularProgressIndicator());
+    if (error != null && results.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(error, style: TextStyle(color: cs.error)),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () =>
+                  vbl.searchPlaylists(_searchController.text.trim()),
+              child: const Text('Coba lagi'),
+            ),
+          ],
+        ),
+      );
+    }
+    if (results.isEmpty) {
+      return const Center(child: Text('Tidak ada playlist yang cocok'));
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 14,
+        crossAxisSpacing: 14,
+        childAspectRatio: 0.62,
+      ),
+      itemCount: results.length + (vbl.searchNextCursor != null ? 1 : 0),
+      itemBuilder: (context, i) {
+        if (i >= results.length) {
+          if (!vbl.loadingMoreSearch) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              context.read<VblProvider>().loadMoreSearchResults(
+                _searchController.text.trim(),
+              );
+            });
+          }
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        return _VblCard(item: results[i]);
+      },
+    );
+  }
+
+  // ======================= MODE: NORMAL (Hero + sections) =======================
+  Widget _buildMainBody(VblProvider vbl, ColorScheme cs, ThemeData t) {
+    final items = vbl.playlists ?? const <VblPlaylistItem>[];
+
+    if (vbl.loadingList && items.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (vbl.errList != null && items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(vbl.errList!, style: TextStyle(color: cs.error)),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () => context.read<VblProvider>().fetchPlaylists(),
+              child: const Text('Coba lagi'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final filtered = items.where((e) {
+      final okKat = _kategori == 'Semua' || e.category == _kategori;
+      final okLvl = _tingkat == 'Semua' || e.level == _tingkat;
+      return okKat && okLvl;
+    }).toList();
+
+    final rest = filtered.skip(1).toList();
+    final fundamental = items
+        .where((e) => e.category == 'Fundamental')
+        .toList();
+
+    final double cardHeight = 280;
+    final double cardWidth = cardHeight * 9 / 16;
+    final double contentWidth = MediaQuery.sizeOf(context).width - 32;
+    final double heroHeight = contentWidth * 9 / 16;
+
+    return CustomScrollView(
+      slivers: [
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _PinnedControlsDelegate(
+            height: 64,
+            child: Row(
+              children: [
+                _TinyAction(
+                  icon: Icons.info_outline,
+                  tooltip: 'Readme',
+                  onTap: _openReadme,
+                ),
+                const SizedBox(width: 8),
+                _TinyAction(
+                  icon: Icons.history,
+                  tooltip: 'Riwayat',
+                  onTap: _openHistory,
+                ),
+                const Spacer(),
+                _FilterMenu(
+                  label: 'Kategori',
+                  value: _kategori,
+                  items: const ['Dasar', 'Teknikal', 'Fundamental', 'Makro'],
+                  onSelected: (v) => setState(() => _kategori = v),
+                ),
+                const SizedBox(width: 10),
+                _FilterMenu(
+                  label: 'Tingkat',
+                  value: _tingkat,
+                  items: const ['Beginner', 'Intermediate', 'Advanced'],
+                  onSelected: (v) => setState(() => _tingkat = v),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        if (filtered.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _TinyAction(
-                    icon: Icons.info_outline,
-                    tooltip: 'Readme',
-                    onTap: _openReadme,
-                  ),
-                  const SizedBox(width: 8),
-                  _TinyAction(
-                    icon: Icons.history,
-                    tooltip: 'Riwayat',
-                    onTap: _openHistory,
-                  ),
-                  const Spacer(),
-                  _FilterMenu(
-                    label: 'Kategori',
-                    value: _kategori,
-                    items: const ['Dasar', 'Teknikal', 'Fundamental', 'Makro'],
-                    onSelected: (v) => setState(() => _kategori = v),
-                  ),
-                  const SizedBox(width: 10),
-                  _FilterMenu(
-                    label: 'Tingkat',
-                    value: _tingkat,
-                    items: const ['Beginner', 'Intermediate', 'Advanced'],
-                    onSelected: (v) => setState(() => _tingkat = v),
-                  ),
+                  const Text('Belum ada playlist yang cocok'),
+                  if (vbl.nextCursor != null) ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      onPressed: () => vbl.loadMorePlaylists(),
+                      child: vbl.loadingMoreList
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Coba muat lebih banyak'),
+                    ),
+                  ],
                 ],
               ),
             ),
-          ),
-          if (filtered.isEmpty)
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(child: Text('Belum ada playlist yang cocok')),
-            )
-          else ...[
-            const SliverToBoxAdapter(child: SizedBox(height: 14)),
+          )
+        else ...[
+          const SliverToBoxAdapter(child: SizedBox(height: 14)),
 
-            // HERO yang DIPIN (sliver sendiri, BUKAN di dalam Row)
+          // HERO — TIDAK pinned lagi, ikut scroll natural
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverToBoxAdapter(
+              child: SizedBox(
+                height: heroHeight,
+                child: _HeroVbl(item: filtered.first),
+              ),
+            ),
+          ),
+
+          if (rest.isNotEmpty) ...[
+            const SliverToBoxAdapter(child: SizedBox(height: 20)),
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverPersistentHeader(
-                pinned: true,
-                delegate: _PinnedHeroDelegate(
-                  minExtentHeight: heroHeight,
-                  maxExtentHeight: heroHeight,
-                  child: _HeroVbl(item: filtered.first),
+              sliver: SliverToBoxAdapter(
+                child: Text(
+                  'All Classes',
+                  style: t.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: cs.onSurface,
+                  ),
                 ),
               ),
             ),
-
-            // ALL CLASSES: cuma tampil kalau ada isinya
-            if (rest.isNotEmpty) ...[
-              const SliverToBoxAdapter(child: SizedBox(height: 20)),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverToBoxAdapter(
-                  child: Text(
-                    'All Classes',
-                    style: t.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: cs.onSurface,
-                    ),
+            const SliverToBoxAdapter(child: SizedBox(height: 10)),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: cardHeight,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  primary: false,
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: rest.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (_, i) => SizedBox(
+                    width: cardWidth,
+                    child: _VblCard(item: rest[i]),
                   ),
                 ),
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: 10)),
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: cardHeight,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    primary: false,
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: rest.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemBuilder: (_, i) => SizedBox(
-                      width: cardWidth,
-                      child: _VblCard(item: rest[i]),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-
-            // const SliverToBoxAdapter(child: SizedBox(height: 20)),
-            // FUNDAMENTAL: cuma tampil kalau ada isinya
-            if (fundamental.isNotEmpty) ...[
-              const SliverToBoxAdapter(child: SizedBox(height: 20)),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverToBoxAdapter(
-                  child: Text(
-                    'Fundamental',
-                    style: t.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 10)),
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: cardHeight,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    primary: false,
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: fundamental.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemBuilder: (_, i) => SizedBox(
-                      width: cardWidth,
-                      child: _VblCard(item: fundamental[i]),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-
-            const SliverToBoxAdapter(child: SizedBox(height: 90)),
+            ),
           ],
+
+          if (fundamental.isNotEmpty) ...[
+            const SliverToBoxAdapter(child: SizedBox(height: 20)),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverToBoxAdapter(
+                child: Text(
+                  'Fundamental',
+                  style: t.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: cs.onSurface,
+                  ),
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 10)),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: cardHeight,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  primary: false,
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: fundamental.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (_, i) => SizedBox(
+                    width: cardWidth,
+                    child: _VblCard(item: fundamental[i]),
+                  ),
+                ),
+              ),
+            ),
+          ],
+
+          // FOOTER LOAD MORE — nambah lebih banyak playlist dari server
+          if (vbl.nextCursor != null) ...[
+            const SliverToBoxAdapter(child: SizedBox(height: 20)),
+            SliverToBoxAdapter(
+              child: Center(
+                child: vbl.loadingMoreList
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: CircularProgressIndicator(),
+                      )
+                    : OutlinedButton(
+                        onPressed: () => vbl.loadMorePlaylists(),
+                        child: const Text('Muat lebih banyak playlist'),
+                      ),
+              ),
+            ),
+          ],
+
+          const SliverToBoxAdapter(child: SizedBox(height: 90)),
         ],
-      ),
+      ],
     );
   }
 }
-
 /* ======================= COMPONENTS ======================= */
 
 class _TinyAction extends StatelessWidget {
@@ -433,197 +530,6 @@ class _FilterMenu extends StatelessWidget {
             const SizedBox(width: 6),
             Icon(Icons.keyboard_arrow_down, color: cs.onSurface),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeroLesson extends StatelessWidget {
-  final Lesson lesson;
-  const _HeroLesson({required this.lesson});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.pushNamed(
-            context,
-            AppRoutes.videoDetail,
-            arguments: lesson,
-          );
-        },
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Stack(
-            children: [
-              const AspectRatio(aspectRatio: 16 / 9, child: SizedBox.expand()),
-              Positioned.fill(
-                child: Image.network(lesson.cover, fit: BoxFit.cover),
-              ),
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: .15),
-                        Colors.black.withValues(alpha: .55),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 14,
-                right: 14,
-                bottom: 12,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: cs.primary.withValues(alpha: .88),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        lesson.tag,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      lesson.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        height: 1.25,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LessonCard extends StatelessWidget {
-  final Lesson lesson;
-  const _LessonCard({required this.lesson});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.pushNamed(
-            context,
-            AppRoutes.videoDetail,
-            arguments: lesson, // kirim Lesson langsung
-          );
-        },
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: cs.outlineVariant.withValues(alpha: .6)),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Stack(
-              children: [
-                // >>> portrait 9:16
-                const AspectRatio(
-                  aspectRatio: 9 / 16,
-                  child: SizedBox.expand(),
-                ),
-                Positioned.fill(
-                  child: Image.network(lesson.cover, fit: BoxFit.cover),
-                ),
-
-                // overlay supaya teks kebaca
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: .10),
-                          Colors.black.withValues(alpha: .55),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // tag kiri-atas
-                Positioned(
-                  left: 10,
-                  top: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: cs.primary.withValues(alpha: .9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      lesson.tag,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // title kiri-bawah
-                Positioned(
-                  left: 12,
-                  right: 12,
-                  bottom: 10,
-                  child: Text(
-                    lesson.title,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      height: 1.2,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
@@ -741,7 +647,6 @@ class _VblCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-
     final lesson = Lesson(
       title: item.title,
       cover: _coverOrPlaceholder(
@@ -761,10 +666,7 @@ class _VblCard extends StatelessWidget {
           Navigator.pushNamed(
             context,
             AppRoutes.videoDetail,
-            arguments: {
-              'lesson': lesson,
-              'playlistId': item.playlistId, // 👉 penting
-            },
+            arguments: {'lesson': lesson, 'playlistId': item.playlistId},
           );
         },
         child: Ink(
@@ -841,44 +743,6 @@ class _VblCard extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _PinnedHeroDelegate extends SliverPersistentHeaderDelegate {
-  final double minExtentHeight;
-  final double maxExtentHeight;
-  final Widget child;
-
-  _PinnedHeroDelegate({
-    required this.minExtentHeight,
-    required this.maxExtentHeight,
-    required this.child,
-  });
-
-  @override
-  double get minExtent => minExtentHeight;
-
-  @override
-  double get maxExtent => maxExtentHeight;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return Material(
-      // biar elevation/inkwell tetap oke
-      color: Colors.transparent,
-      child: child,
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _PinnedHeroDelegate oldDelegate) {
-    return minExtentHeight != oldDelegate.minExtentHeight ||
-        maxExtentHeight != oldDelegate.maxExtentHeight ||
-        child != oldDelegate.child;
   }
 }
 
