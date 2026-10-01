@@ -1,4 +1,5 @@
 import 'dart:ui' show ImageFilter;
+import 'package:cuan_app/components/html_content.dart';
 import 'package:cuan_app/providers/auth_provider.dart';
 import 'package:cuan_app/providers/qris_provider.dart';
 import 'package:flutter/material.dart';
@@ -195,43 +196,6 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
     final fullText = (_content ?? _lorem);
 
     final q = context.watch<QrisProvider>();
-    Widget _partialBody() {
-      if (fullText.length < 120) {
-        return Text(
-          fullText,
-          style: t.textTheme.bodyMedium?.copyWith(height: 1.35),
-        );
-      }
-      final desired = (fullText.length * widget.previewRatio).floor();
-      int cut = desired.clamp(20, fullText.length - 1);
-      final candidates = <int>[
-        fullText.lastIndexOf(' ', cut),
-        fullText.lastIndexOf('\n', cut),
-        fullText.lastIndexOf('.', cut),
-        fullText.lastIndexOf(',', cut),
-      ].where((i) => i >= 30).toList();
-      if (candidates.isNotEmpty) {
-        candidates.sort();
-        cut = candidates.last;
-      }
-      final visible = fullText.substring(0, cut).trimRight();
-      final hidden = fullText.substring(cut).trimLeft();
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(visible, style: t.textTheme.bodyMedium?.copyWith(height: 1.35)),
-          const SizedBox(height: 6),
-          ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: 5.5, sigmaY: 5.5),
-            child: Text(
-              hidden,
-              style: t.textTheme.bodyMedium?.copyWith(height: 1.35),
-            ),
-          ),
-        ],
-      );
-    }
 
     // LOADING
     if (_loading) {
@@ -376,12 +340,9 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
 
           // ===== CONTENT =====
           if (locked)
-            _partialBody()
+            HtmlTeaser(html: fullText, clearRatio: widget.previewRatio)
           else
-            Text(
-              fullText,
-              style: t.textTheme.bodyMedium?.copyWith(height: 1.35),
-            ),
+            HtmlContent(html: fullText),
 
           // ===== PREMIUM OFFER =====
           if (locked) ...[
