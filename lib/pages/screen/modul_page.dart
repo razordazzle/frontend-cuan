@@ -14,6 +14,13 @@ class ModulPage extends StatefulWidget {
   State<ModulPage> createState() => _ModulPageState();
 }
 
+String _coverOrPlaceholder(String url, String placeholder) {
+  final u = url.trim();
+  return (u.startsWith('http://') || u.startsWith('https://'))
+      ? u
+      : placeholder;
+}
+
 class _ModulPageState extends State<ModulPage> {
   final _allCtrl = PageController(viewportFraction: .90);
   final _cryptoCtrl = PageController(viewportFraction: .90);
@@ -149,16 +156,10 @@ class _ModulPageState extends State<ModulPage> {
       return okKat && okLvl;
     }).toList();
 
-    if (filtered.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Video Edukasi Saham')),
-        body: const Center(child: Text('Belum ada playlist')),
-      );
-    }
-
-    final hero = filtered.first;
     final rest = filtered.skip(1).toList();
-    final fundamental = items.where((e) => e.category == 'Fundamental').toList();
+    final fundamental = items
+        .where((e) => e.category == 'Fundamental')
+        .toList();
 
     final double cardHeight = 280; // tinggi kartu
     final double cardWidth = cardHeight * 9 / 16; // 9:16 portrait
@@ -166,7 +167,7 @@ class _ModulPageState extends State<ModulPage> {
     // tinggi hero 16:9 berdasarkan lebar konten (lebar layar - padding kiri/kanan 16)
     final double contentWidth = MediaQuery.sizeOf(context).width - 32;
     final double heroHeight = contentWidth * 9 / 16;
-    
+
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
@@ -218,7 +219,6 @@ class _ModulPageState extends State<ModulPage> {
       body: CustomScrollView(
         slivers: [
           // === Kontrol (Readme, History, Filter) — DIPIN ===
-          
           SliverPersistentHeader(
             pinned: true,
             delegate: _PinnedControlsDelegate(
@@ -240,12 +240,7 @@ class _ModulPageState extends State<ModulPage> {
                   _FilterMenu(
                     label: 'Kategori',
                     value: _kategori,
-                    items: const [
-                      'Dasar',
-                      'Teknikal',
-                      'Fundamental',
-                      'Makro',
-                    ],
+                    items: const ['Dasar', 'Teknikal', 'Fundamental', 'Makro'],
                     onSelected: (v) => setState(() => _kategori = v),
                   ),
                   const SizedBox(width: 10),
@@ -259,95 +254,100 @@ class _ModulPageState extends State<ModulPage> {
               ),
             ),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 14)),
+          if (filtered.isEmpty)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(child: Text('Belum ada playlist yang cocok')),
+            )
+          else ...[
+            const SliverToBoxAdapter(child: SizedBox(height: 14)),
 
-          // HERO yang DIPIN (sliver sendiri, BUKAN di dalam Row)
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverPersistentHeader(
-              pinned: true,
-              delegate: _PinnedHeroDelegate(
-                minExtentHeight: heroHeight,
-                maxExtentHeight: heroHeight,
-                child: _HeroVbl(item: hero),
-              ),
-            ),
-          ),
-
-          const SliverToBoxAdapter(child: SizedBox(height: 20)),
-
-          // Judul "All Classes"
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverToBoxAdapter(
-              child: Text(
-                'All Classes',
-                style: t.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: cs.onSurface,
+            // HERO yang DIPIN (sliver sendiri, BUKAN di dalam Row)
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverPersistentHeader(
+                pinned: true,
+                delegate: _PinnedHeroDelegate(
+                  minExtentHeight: heroHeight,
+                  maxExtentHeight: heroHeight,
+                  child: _HeroVbl(item: filtered.first),
                 ),
               ),
             ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
-          // List horizontal "All Classes"
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: cardHeight,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                // penting saat nested scroll:
-                primary: false,
-                shrinkWrap: true,
+            // ALL CLASSES: cuma tampil kalau ada isinya
+            if (rest.isNotEmpty) ...[
+              const SliverToBoxAdapter(child: SizedBox(height: 20)),
+              SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: rest.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (_, i) => SizedBox(
-                  width: cardWidth,
-                  child: _VblCard(item: rest[i]),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    'All Classes',
+                    style: t.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: cs.onSurface,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-
-          const SliverToBoxAdapter(child: SizedBox(height: 20)),
-
-          // Judul "Crypto Trading"
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverToBoxAdapter(
-              child: Text(
-                'Fundamental',
-                style: t.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: cs.onSurface,
+              const SliverToBoxAdapter(child: SizedBox(height: 10)),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: cardHeight,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    primary: false,
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: rest.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (_, i) => SizedBox(
+                      width: cardWidth,
+                      child: _VblCard(item: rest[i]),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 10)),
+            ],
 
-          // List horizontal "Crypto Trading"
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: cardHeight,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                primary: false,
-                shrinkWrap: true,
+            // const SliverToBoxAdapter(child: SizedBox(height: 20)),
+            // FUNDAMENTAL: cuma tampil kalau ada isinya
+            if (fundamental.isNotEmpty) ...[
+              const SliverToBoxAdapter(child: SizedBox(height: 20)),
+              SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: fundamental.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (_, i) => SizedBox(
-                  width: cardWidth,
-                  child: _VblCard(item: fundamental[i]),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    'Fundamental',
+                    style: t.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: cs.onSurface,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
+              const SliverToBoxAdapter(child: SizedBox(height: 10)),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: cardHeight,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    primary: false,
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: fundamental.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (_, i) => SizedBox(
+                      width: cardWidth,
+                      child: _VblCard(item: fundamental[i]),
+                    ),
+                  ),
+                ),
+              ),
+            ],
 
-          const SliverToBoxAdapter(child: SizedBox(height: 90)),
+            const SliverToBoxAdapter(child: SizedBox(height: 90)),
+          ],
         ],
       ),
     );
@@ -399,23 +399,32 @@ class _FilterMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final active = value != 'Semua';
     return PopupMenuButton<String>(
       onSelected: onSelected,
-      itemBuilder: (_) =>
-          items.map((e) => PopupMenuItem(value: e, child: Text(e))).toList(),
+      itemBuilder: (_) => [
+        'Semua',
+        ...items,
+      ].map((e) => PopupMenuItem(value: e, child: Text(e))).toList(),
       offset: const Offset(0, 8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest,
+          color: active
+              ? cs.primary.withValues(alpha: .12)
+              : cs.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: cs.outlineVariant.withValues(alpha: .5)),
+          border: Border.all(
+            color: active
+                ? cs.primary
+                : cs.outlineVariant.withValues(alpha: .5),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              label,
+              active ? value : label,
               style: TextStyle(
                 color: cs.onSurface,
                 fontWeight: FontWeight.w600,
@@ -632,7 +641,10 @@ class _HeroVbl extends StatelessWidget {
     // bikin “Lesson-like” hanya untuk UI (judul/cover/tag)
     final lesson = Lesson(
       title: item.title,
-      cover: item.thumbnail ?? 'https://placehold.co/1200x675?text=Playlist',
+      cover: _coverOrPlaceholder(
+        item.thumbnail,
+        'https://placehold.co/1200x675?text=Playlist',
+      ),
       tag: item.category, // pakai kategori sebagai tag
       level: item.level, // opsional
       category: item.category, // opsional
@@ -691,7 +703,7 @@ class _HeroVbl extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        item.level ?? 'Playlist',
+                        item.level,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
@@ -732,7 +744,10 @@ class _VblCard extends StatelessWidget {
 
     final lesson = Lesson(
       title: item.title,
-      cover: item.thumbnail ?? 'https://placehold.co/450x800?text=Playlist',
+      cover: _coverOrPlaceholder(
+        item.thumbnail,
+        'https://placehold.co/450x800?text=Playlist',
+      ),
       tag: item.category,
       level: item.level,
       category: item.category,
