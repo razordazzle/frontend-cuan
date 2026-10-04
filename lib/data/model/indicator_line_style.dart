@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
+import '../../utils/css_color.dart';
+
 /// Style satu garis plot indikator (mis. garis Smoothing MA).
 @immutable
 class IndicatorLineStyle {
@@ -48,13 +50,4 @@ class IndicatorLineStyle {
     'lineStyle': lineStyle,
     'isVisible': isVisible,
   };
-}
-
-extension CssColor on Color {
-  /// Warna dalam format CSS `rgba(r, g, b, a)`, alpha ikut terkirim ke chart.
-  String toCssRgba() {
-    final int argb = toARGB32();
-    return 'rgba(${(argb >> 16) & 0xFF}, ${(argb >> 8) & 0xFF}, ${argb & 0xFF}, '
-        '${a.toStringAsFixed(3)})';
-  }
 }

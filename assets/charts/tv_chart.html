@@ -2434,13 +2434,7 @@
         let chart = null;
         let candleSeries = null;
         let areaSeries = null;
-        let volumeSeries = null;
-        let smaSeries = null;
-        let rsiSeries = null;
         let currentType = 'candle';
-        let currentShowSma = false;
-        let currentShowRsi = false;
-        let currentShowVolume = false;
         let currentShowFib = false;
         let isDrawingFib = false;
         let isFibSelected = false; // true: Edit Mode (large handles, dashed line), false: Non-Edit Mode (subtle dots)
@@ -2568,12 +2562,10 @@
         let originalFibSettings = null;
         let pendingFibSettings = null;
         let rawCandlesData = [];
-        let currentRsiData = [];
         let currentVolumeData = [];
         const VOLUME_BAR_OPACITY = 0.5;
         let volumeUpColor = 'rgba(33, 192, 122, 0.5)';
         let volumeDownColor = 'rgba(229, 57, 53, 0.5)';
-        let pendingData = null;
 
         let horizontalLines = []; // Array of prices: [7650, 7820]
         let isDrawingHorizontalLine = false;
@@ -3616,6 +3608,71 @@
             }
         }
 
+        // ===== Komponen color picker bersama untuk popover di modal settings =====
+        // (palet 10x8 + recent colors + opacity). Dipakai popover "Trend line" Fibonacci
+        // dan popover warna level Fibonacci; markup & CSS keduanya memakai class tv-fib-*.
+
+        const FIB_TRENDLINE_COLOR_PICKER = {
+            grid: 'tv-fib-palette-grid',
+            recent: 'tv-fib-recent-colors',
+            slider: 'tv-fib-trendline-opacity-slider',
+            gradient: 'tv-fib-opacity-gradient',
+            badge: 'tv-fib-trendline-opacity-val',
+            maxRecent: 3,
+        };
+        const FIB_LEVEL_COLOR_PICKER = {
+            grid: 'tv-fib-cp-palette-grid',
+            recent: 'tv-fib-cp-recent-colors',
+            slider: 'tv-fib-cp-opacity-slider',
+            gradient: 'tv-fib-cp-opacity-gradient',
+            badge: 'tv-fib-cp-opacity-val',
+            maxRecent: 4,
+        };
+        const TV_PALETTE_FLAT = TV_PALETTE_COLORS.flat();
+
+        // Simpan warna di urutan pertama recent colors (tanpa duplikat, maksimal maxCount).
+        function rememberRecentColor(recentColors, color, maxCount) {
+            const upper = color.toUpperCase();
+            if (recentColors.some(c => c.toUpperCase() === upper)) return;
+            recentColors.unshift(upper);
+            if (recentColors.length > maxCount) recentColors.pop();
+        }
+
+        function renderColorSwatches(container, colors, className, selectedColor, onPick) {
+            if (!container) return;
+            const selected = selectedColor.toUpperCase();
+            container.innerHTML = '';
+            for (const color of colors) {
+                const swatch = document.createElement('div');
+                swatch.className = className + (color.toUpperCase() === selected ? ' selected' : '');
+                swatch.style.backgroundColor = color;
+                swatch.onclick = (e) => {
+                    e.stopPropagation();
+                    onPick(color);
+                };
+                container.appendChild(swatch);
+            }
+        }
+
+        function renderOpacityControls(picker, color, opacity) {
+            const pct = Math.round(opacity * 100);
+            const slider = document.getElementById(picker.slider);
+            const badge = document.getElementById(picker.badge);
+            const gradient = document.getElementById(picker.gradient);
+            if (slider) slider.value = String(pct);
+            if (badge) badge.textContent = `${pct}%`;
+            if (gradient) {
+                gradient.style.background = `linear-gradient(to right, ${hexToRgba(color, 0)}, ${hexToRgba(color, 1)})`;
+            }
+        }
+
+        function renderColorPickerPopover(picker, color, opacity, recentColors, onPick) {
+            rememberRecentColor(recentColors, color, picker.maxRecent);
+            renderColorSwatches(document.getElementById(picker.grid), TV_PALETTE_FLAT, 'tv-fib-palette-swatch', color, onPick);
+            renderColorSwatches(document.getElementById(picker.recent), recentColors, 'tv-fib-recent-swatch', color, onPick);
+            renderOpacityControls(picker, color, opacity);
+        }
+
         let fibRecentTrendlineColors = ['#AB47BC', '#2A2E39'];
 
         function closeFibTrendlinePopover() {
@@ -3656,81 +3713,20 @@
 
         function renderFibTrendlinePopoverUI() {
             if (!pendingFibSettings) return;
-            const curColor = (pendingFibSettings.trendlineColor || '#AB47BC').toUpperCase();
-            const curOpacity = pendingFibSettings.trendlineOpacity !== undefined ? pendingFibSettings.trendlineOpacity : 1.0;
-            const curWidth = pendingFibSettings.trendlineWidth || 1;
-            const curStyle = pendingFibSettings.trendlineStyle || 'dashed';
-
-            // 1. Palette Grid (8x10)
-            const paletteGrid = document.getElementById('tv-fib-palette-grid');
-            if (paletteGrid) {
-                paletteGrid.innerHTML = '';
-                TV_PALETTE_COLORS.forEach(row => {
-                    row.forEach(col => {
-                        const sw = document.createElement('div');
-                        sw.className = 'tv-fib-palette-swatch' + (col.toUpperCase() === curColor ? ' selected' : '');
-                        sw.style.backgroundColor = col;
-                        sw.onclick = (e) => {
-                            e.stopPropagation();
-                            selectTrendlineColor(col);
-                        };
-                        paletteGrid.appendChild(sw);
-                    });
-                });
-            }
-
-            // 2. Recent colors
-            renderFibRecentColorsUI();
-
-            // 3. Opacity Slider & Badge
-            const opacitySlider = document.getElementById('tv-fib-trendline-opacity-slider');
-            const opacityGrad = document.getElementById('tv-fib-opacity-gradient');
-            const opacityVal = document.getElementById('tv-fib-trendline-opacity-val');
-            const pct = Math.round(curOpacity * 100);
-            if (opacitySlider) opacitySlider.value = String(pct);
-            if (opacityVal) opacityVal.textContent = `${pct}%`;
-            if (opacityGrad) {
-                opacityGrad.style.background = `linear-gradient(to right, ${hexToRgba(curColor, 0)}, ${hexToRgba(curColor, 1)})`;
-            }
-
-            // 4. Thickness Segments
-            updateThicknessSegmentsUI(curWidth);
-
-            // 5. Line Style Segments
-            updateStyleSegmentsUI(curStyle);
-        }
-
-        function renderFibRecentColorsUI() {
-            const container = document.getElementById('tv-fib-recent-colors');
-            if (!container || !pendingFibSettings) return;
-            container.innerHTML = '';
-            const curColor = (pendingFibSettings.trendlineColor || '#AB47BC').toUpperCase();
-
-            if (!fibRecentTrendlineColors.map(c => c.toUpperCase()).includes(curColor)) {
-                fibRecentTrendlineColors.unshift(curColor);
-                if (fibRecentTrendlineColors.length > 3) fibRecentTrendlineColors.pop();
-            }
-
-            fibRecentTrendlineColors.forEach(col => {
-                const sw = document.createElement('div');
-                sw.className = 'tv-fib-recent-swatch' + (col.toUpperCase() === curColor ? ' selected' : '');
-                sw.style.backgroundColor = col;
-                sw.onclick = (e) => {
-                    e.stopPropagation();
-                    selectTrendlineColor(col);
-                };
-                container.appendChild(sw);
-            });
+            renderColorPickerPopover(
+                FIB_TRENDLINE_COLOR_PICKER,
+                pendingFibSettings.trendlineColor || '#AB47BC',
+                pendingFibSettings.trendlineOpacity !== undefined ? pendingFibSettings.trendlineOpacity : 1.0,
+                fibRecentTrendlineColors,
+                selectTrendlineColor,
+            );
+            updateThicknessSegmentsUI(pendingFibSettings.trendlineWidth || 1);
+            updateStyleSegmentsUI(pendingFibSettings.trendlineStyle || 'dashed');
         }
 
         function selectTrendlineColor(color) {
             if (!pendingFibSettings) return;
             pendingFibSettings.trendlineColor = color;
-            const curColor = color.toUpperCase();
-            if (!fibRecentTrendlineColors.map(c => c.toUpperCase()).includes(curColor)) {
-                fibRecentTrendlineColors.unshift(curColor);
-                if (fibRecentTrendlineColors.length > 3) fibRecentTrendlineColors.pop();
-            }
             renderFibTrendlinePopoverUI();
             updateTrendlinePillUI();
             commitFibSettings(pendingFibSettings);
@@ -3856,17 +3852,6 @@
         let currentFibColorPickerOpacity = 1.0;
         let fibRecentColorsList = ['#FFFFFF', '#000000', '#2A2E39', '#AB47BC'];
 
-        function colToHex(col) {
-            if (!col) return '';
-            if (col.startsWith('#')) return col;
-            const rgb = col.match(/\d+/g);
-            if (!rgb || rgb.length < 3) return col;
-            const r = parseInt(rgb[0], 10).toString(16).padStart(2, '0');
-            const g = parseInt(rgb[1], 10).toString(16).padStart(2, '0');
-            const b = parseInt(rgb[2], 10).toString(16).padStart(2, '0');
-            return '#' + r + g + b;
-        }
-
         function closeFibColorPickerPopover() {
             const pop = document.getElementById('tv-fib-color-picker-popover');
             if (pop) pop.style.display = 'none';
@@ -3898,39 +3883,7 @@
             currentFibColorPickerOpacity = initialOpacity !== undefined ? initialOpacity : 1.0;
             targetBtn.classList.add('active');
 
-            // 1. Render Palette Grid (10x8)
-            const grid = document.getElementById('tv-fib-cp-palette-grid');
-            if (grid) {
-                grid.innerHTML = '';
-                TV_PALETTE_COLORS.forEach(row => {
-                    row.forEach(col => {
-                        const sw = document.createElement('div');
-                        sw.className = 'tv-fib-palette-swatch' + (col.toUpperCase() === currentFibColorPickerColor ? ' selected' : '');
-                        sw.style.backgroundColor = col;
-                        sw.setAttribute('data-color', col);
-                        sw.onclick = (e) => {
-                            e.stopPropagation();
-                            selectFibColorPickerColor(col);
-                        };
-                        grid.appendChild(sw);
-                    });
-                });
-            }
-
-            // 2. Render Recent Colors
-            renderFibColorPickerRecentUI();
-
-            // 3. Opacity Slider & Badge
-            const opacitySlider = document.getElementById('tv-fib-cp-opacity-slider');
-            const opacityGrad = document.getElementById('tv-fib-cp-opacity-gradient');
-            const opacityVal = document.getElementById('tv-fib-cp-opacity-val');
-            const pct = Math.round(currentFibColorPickerOpacity * 100);
-            if (opacitySlider) opacitySlider.value = String(pct);
-            if (opacityVal) opacityVal.textContent = `${pct}%`;
-            if (opacityGrad) {
-                opacityGrad.style.background = `linear-gradient(to right, ${hexToRgba(currentFibColorPickerColor, 0)}, ${hexToRgba(currentFibColorPickerColor, 1)})`;
-            }
-
+            renderFibLevelColorPicker();
             pop.style.display = 'block';
 
             if (modal) {
@@ -3950,42 +3903,19 @@
             }
         }
 
-        function renderFibColorPickerRecentUI() {
-            const container = document.getElementById('tv-fib-cp-recent-colors');
-            if (!container) return;
-            container.innerHTML = '';
-            if (!fibRecentColorsList.map(c => c.toUpperCase()).includes(currentFibColorPickerColor)) {
-                fibRecentColorsList.unshift(currentFibColorPickerColor);
-                if (fibRecentColorsList.length > 4) fibRecentColorsList.pop();
-            }
-            fibRecentColorsList.forEach(col => {
-                const sw = document.createElement('div');
-                sw.className = 'tv-fib-recent-swatch' + (col.toUpperCase() === currentFibColorPickerColor ? ' selected' : '');
-                sw.style.backgroundColor = col;
-                sw.setAttribute('data-color', col);
-                sw.onclick = (e) => {
-                    e.stopPropagation();
-                    selectFibColorPickerColor(col);
-                };
-                container.appendChild(sw);
-            });
+        function renderFibLevelColorPicker() {
+            renderColorPickerPopover(
+                FIB_LEVEL_COLOR_PICKER,
+                currentFibColorPickerColor,
+                currentFibColorPickerOpacity,
+                fibRecentColorsList,
+                selectFibColorPickerColor,
+            );
         }
 
         function selectFibColorPickerColor(col) {
             currentFibColorPickerColor = col.toUpperCase();
-            if (!fibRecentColorsList.map(c => c.toUpperCase()).includes(currentFibColorPickerColor)) {
-                fibRecentColorsList.unshift(currentFibColorPickerColor);
-                if (fibRecentColorsList.length > 4) fibRecentColorsList.pop();
-            }
-            renderFibColorPickerRecentUI();
-            document.querySelectorAll('#tv-fib-cp-palette-grid .tv-fib-palette-swatch').forEach(sw => {
-                const dataCol = sw.getAttribute('data-color') || colToHex(sw.style.backgroundColor);
-                sw.classList.toggle('selected', !!dataCol && dataCol.toUpperCase() === currentFibColorPickerColor);
-            });
-            const opacityGrad = document.getElementById('tv-fib-cp-opacity-gradient');
-            if (opacityGrad) {
-                opacityGrad.style.background = `linear-gradient(to right, ${hexToRgba(currentFibColorPickerColor, 0)}, ${hexToRgba(currentFibColorPickerColor, 1)})`;
-            }
+            renderFibLevelColorPicker();
             if (typeof currentFibColorPickerCallback === 'function') {
                 currentFibColorPickerCallback(col, currentFibColorPickerOpacity);
             }
@@ -4316,8 +4246,7 @@
                     if (!pendingFibSettings) return;
                     const pct = parseInt(trendOpacitySlider.value, 10);
                     pendingFibSettings.trendlineOpacity = pct / 100;
-                    const opacityVal = document.getElementById('tv-fib-trendline-opacity-val');
-                    if (opacityVal) opacityVal.textContent = `${pct}%`;
+                    renderOpacityControls(FIB_TRENDLINE_COLOR_PICKER, pendingFibSettings.trendlineColor || '#AB47BC', pendingFibSettings.trendlineOpacity);
                     updateTrendlinePillUI();
                     commitFibSettings(pendingFibSettings);
                 };
@@ -4474,8 +4403,7 @@
                 cpOpacitySlider.oninput = () => {
                     const pct = parseInt(cpOpacitySlider.value, 10);
                     currentFibColorPickerOpacity = pct / 100;
-                    const opacityVal = document.getElementById('tv-fib-cp-opacity-val');
-                    if (opacityVal) opacityVal.textContent = `${pct}%`;
+                    renderOpacityControls(FIB_LEVEL_COLOR_PICKER, currentFibColorPickerColor, currentFibColorPickerOpacity);
                     if (typeof currentFibColorPickerCallback === 'function') {
                         currentFibColorPickerCallback(currentFibColorPickerColor, currentFibColorPickerOpacity);
                     }
@@ -9345,7 +9273,7 @@
 
         function initChart(upColor, downColor, gridColor, interactive, crosshairColor) {
             if (chart) {
-                applyTrendColors(upColor, downColor);
+                applyThemeColors(upColor, downColor, gridColor);
                 return;
             }
             upColor = upColor || '#21C07A';
@@ -9444,18 +9372,7 @@
                 lineWidth: 2,
             }, 0);
 
-            // Initialize SMA series in pane 0
-            smaSeries = chart.addSeries(LightweightCharts.LineSeries, {
-                color: '#2962FF',
-                lineWidth: 2,
-                title: '',
-                priceLineVisible: false,
-                lastValueVisible: false,
-                visible: currentShowSma,
-            }, 0);
-
             setSeriesType(currentType);
-            updatePanes();
 
             chart.subscribeCrosshairMove(param => {
                 isCrosshairActive = Boolean(param.time);
@@ -9571,26 +9488,35 @@
 
             setTimeout(resizeFibCanvas, 100);
             initFibPointerEvents();
-
-            if (pendingData) {
-                const p = pendingData;
-                pendingData = null;
-                setDataWithIndicators(p);
-            }
         }
 
-        // Warna naik/turun dari tema app: candle + bar volume.
-        function applyTrendColors(upColor, downColor) {
-            if (!upColor || !downColor) return;
-            volumeUpColor = hexToRgba(upColor, VOLUME_BAR_OPACITY);
-            volumeDownColor = hexToRgba(downColor, VOLUME_BAR_OPACITY);
-            candleSeries.applyOptions({
-                upColor: upColor,
-                downColor: downColor,
-                wickUpColor: upColor,
-                wickDownColor: downColor,
-            });
-            if (rawCandlesData.length > 0) setVolumeData(rawCandlesData.map(toVolumeBar));
+        // Warna tema app: naik/turun (hex) untuk candle, area & bar volume; grid (rgba).
+        function applyThemeColors(upColor, downColor, gridColor) {
+            if (!chart) return;
+            if (upColor && downColor) {
+                volumeUpColor = hexToRgba(upColor, VOLUME_BAR_OPACITY);
+                volumeDownColor = hexToRgba(downColor, VOLUME_BAR_OPACITY);
+                candleSeries.applyOptions({
+                    upColor: upColor,
+                    downColor: downColor,
+                    wickUpColor: upColor,
+                    wickDownColor: downColor,
+                });
+                areaSeries.applyOptions({
+                    lineColor: upColor,
+                    topColor: upColor + '55',
+                    bottomColor: upColor + '05',
+                });
+                if (rawCandlesData.length > 0) setVolumeData(rawCandlesData.map(toVolumeBar));
+            }
+            if (gridColor) {
+                chart.applyOptions({
+                    grid: {
+                        vertLines: { color: gridColor },
+                        horzLines: { color: gridColor },
+                    },
+                });
+            }
         }
 
         function toVolumeBar(candle) {
@@ -9601,13 +9527,11 @@
             };
         }
 
-        // Semua series volume yang aktif (legacy + indikator Volume dari activeIndicators).
+        // Semua series indikator Volume yang aktif.
         function getVolumeSeriesList() {
-            const list = Object.values(activeIndicatorSeriesMap)
+            return Object.values(activeIndicatorSeriesMap)
                 .filter(entry => entry.type === 'vol')
                 .map(entry => entry.series);
-            if (volumeSeries) list.push(volumeSeries);
-            return list;
         }
 
         function setVolumeData(volumeBars) {
@@ -9651,128 +9575,10 @@
             renderFib();
         }
 
-        function updatePanes() {
-            try {
-                if (!chart || !candleSeries) return;
-
-                // Remove series that are toggled off
-                if (!currentShowRsi && rsiSeries) {
-                    try { chart.removeSeries(rsiSeries); } catch (_) {}
-                    rsiSeries = null;
-                }
-                if (!currentShowVolume && volumeSeries) {
-                    try { chart.removeSeries(volumeSeries); } catch (_) {}
-                    volumeSeries = null;
-                }
-
-                // Determine dynamic pane indices
-                let nextPaneIndex = 1;
-                let targetRsiPane = null;
-                let targetVolumePane = null;
-
-                if (currentShowRsi) {
-                    targetRsiPane = nextPaneIndex++;
-                }
-                if (currentShowVolume) {
-                    targetVolumePane = nextPaneIndex++;
-                }
-
-                // Create or position RSI series
-                if (currentShowRsi) {
-                    if (!rsiSeries) {
-                        rsiSeries = chart.addSeries(LightweightCharts.LineSeries, {
-                            color: '#E91E63',
-                            lineWidth: 2,
-                            title: 'RSI 14',
-                            priceScaleId: 'rsi-scale',
-                            priceFormat: {
-                                type: 'custom',
-                                minMove: 0.01,
-                                formatter: (p) => p.toFixed(1),
-                            },
-                        }, targetRsiPane);
-
-                        rsiSeries.createPriceLine({
-                            price: 70,
-                            color: 'rgba(233, 30, 99, 0.4)',
-                            lineWidth: 1,
-                            lineStyle: LightweightCharts.LineStyle.Dashed,
-                            axisLabelVisible: true,
-                            title: '70',
-                        });
-                        rsiSeries.createPriceLine({
-                            price: 30,
-                            color: 'rgba(233, 30, 99, 0.4)',
-                            lineWidth: 1,
-                            lineStyle: LightweightCharts.LineStyle.Dashed,
-                            axisLabelVisible: true,
-                            title: '30',
-                        });
-                        rsiSeries.priceScale().applyOptions({
-                            scaleMargins: { top: 0.1, bottom: 0.1 },
-                        });
-
-                        if (currentRsiData && currentRsiData.length > 0) {
-                            rsiSeries.setData(currentRsiData);
-                        }
-                    } else if (rsiSeries.getPane && rsiSeries.getPane().paneIndex() !== targetRsiPane) {
-                        rsiSeries.moveToPane(targetRsiPane);
-                    }
-                }
-
-                // Create or position Volume series
-                if (currentShowVolume) {
-                    if (!volumeSeries) {
-                        volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries, {
-                            priceFormat: { type: 'volume' },
-                            priceScaleId: 'volume-scale',
-                            title: 'VOL',
-                        }, targetVolumePane);
-
-                        volumeSeries.priceScale().applyOptions({
-                            scaleMargins: { top: 0.15, bottom: 0 },
-                        });
-
-                        if (currentVolumeData && currentVolumeData.length > 0) {
-                            volumeSeries.setData(currentVolumeData);
-                        }
-                    } else if (volumeSeries.getPane && volumeSeries.getPane().paneIndex() !== targetVolumePane) {
-                        volumeSeries.moveToPane(targetVolumePane);
-                    }
-                }
-
-                // Configure stretch factors based on active panes:
-                try {
-                    const panes = chart.panes();
-                    if (panes && panes.length === 1) {
-                        panes[0].setStretchFactor(1);
-                    } else if (panes && panes.length === 2) {
-                        panes[0].setStretchFactor(4);
-                        panes[1].setStretchFactor(1.2);
-                    } else if (panes && panes.length >= 3) {
-                        panes[0].setStretchFactor(5);
-                        panes[1].setStretchFactor(1.4);
-                        panes[2].setStretchFactor(1.2);
-                    }
-                } catch (paneErr) {
-                    console.warn("setStretchFactor warning:", paneErr);
-                }
-
-                candleSeries.priceScale().applyOptions({
-                    scaleMargins: { top: 0.08, bottom: 0.08 }
-                });
-
-                renderFib();
-            } catch (err) {
-                console.error("updatePanes error:", err);
-            }
-        }
-
 
         const DEFAULT_SMA_COLOR = '#2962FF';
         const DEFAULT_SMOOTHING_COLOR = '#FFEB3B';
         const DEFAULT_PRECISION_DIGITS = 2;
-        let activeIndicatorConfigs = [];
         // id -> { type, series, smoothingSeries?, smaConfig?, rsiConfig?, calcKey? }
         let activeIndicatorSeriesMap = {};
         let isCrosshairActive = false;
@@ -10160,7 +9966,7 @@
         function setActiveIndicators(indicatorsInput) {
             if (!chart) return;
             const indicators = typeof indicatorsInput === 'string' ? JSON.parse(indicatorsInput) : indicatorsInput;
-            activeIndicatorConfigs = indicators || [];
+            const activeIndicatorConfigs = indicators || [];
 
             // 1. Remove series that are no longer active
             const currentIds = new Set(activeIndicatorConfigs.map(item => item.id));
@@ -10171,12 +9977,7 @@
                 }
             }
 
-            // 2. Hide default single series when managing via activeIndicatorConfigs
-            if (smaSeries) smaSeries.applyOptions({ visible: false });
-            if (rsiSeries) rsiSeries.applyOptions({ visible: false });
-            if (volumeSeries) volumeSeries.applyOptions({ visible: false });
-
-            // 3. Allocate panes & sync series (RSI & Volume masing-masing di pane sendiri di bawah harga)
+            // 2. Allocate panes & sync series (RSI & Volume masing-masing di pane sendiri di bawah harga)
             let nextPane = 1;
 
             for (const item of activeIndicatorConfigs) {
@@ -10215,32 +10016,6 @@
 
         window.setActiveIndicators = setActiveIndicators;
 
-        function setIndicators(showSma, showRsi, showVolume) {
-            currentShowSma = Boolean(showSma);
-            currentShowRsi = Boolean(showRsi);
-            if (showVolume !== undefined && showVolume !== null) {
-                currentShowVolume = Boolean(showVolume);
-            }
-
-            if (activeIndicatorConfigs && activeIndicatorConfigs.length > 0) {
-                if (smaSeries) smaSeries.applyOptions({ visible: false });
-                if (rsiSeries) rsiSeries.applyOptions({ visible: false });
-                if (volumeSeries) volumeSeries.applyOptions({ visible: false });
-                return;
-            }
-
-            if (smaSeries) {
-                smaSeries.applyOptions({
-                    visible: currentShowSma,
-                    title: '',
-                    priceLineVisible: false,
-                    lastValueVisible: false,
-                });
-            }
-
-            updatePanes();
-        }
-
         function setData(candlesJson) {
             if (!chart) initChart();
             const candles = typeof candlesJson === 'string' ? JSON.parse(candlesJson) : candlesJson;
@@ -10251,44 +10026,6 @@
             if (currentShowFib && (!fibPoint1 || !fibPoint2)) {
                 startFibDrawing();
             }
-            updatePanes();
-            refreshActiveIndicatorsData();
-            chart.timeScale().fitContent();
-            renderFib();
-        }
-
-        function setDataWithIndicators(payloadInput) {
-            if (!chart) {
-                pendingData = payloadInput;
-                initChart();
-                return;
-            }
-
-            const payload = typeof payloadInput === 'string' ? JSON.parse(payloadInput) : payloadInput;
-
-            if (payload.candles && Array.isArray(payload.candles) && payload.candles.length > 0) {
-                rawCandlesData = payload.candles;
-                candleSeries.setData(payload.candles);
-                areaSeries.setData(payload.candles.map(c => ({ time: c.time, value: c.close })));
-                setVolumeData(payload.candles.map(toVolumeBar));
-            }
-
-            if (payload.indicators) {
-                if (payload.indicators.sma20 && Array.isArray(payload.indicators.sma20)) {
-                    smaSeries.setData(payload.indicators.sma20);
-                }
-                if (payload.indicators.rsi14 && Array.isArray(payload.indicators.rsi14)) {
-                    currentRsiData = payload.indicators.rsi14;
-                    if (rsiSeries) {
-                        rsiSeries.setData(payload.indicators.rsi14);
-                    }
-                }
-            }
-
-            if (currentShowFib && (!fibPoint1 || !fibPoint2)) {
-                startFibDrawing();
-            }
-            setIndicators(currentShowSma, currentShowRsi, currentShowVolume);
             refreshActiveIndicatorsData();
             chart.timeScale().fitContent();
             renderFib();
@@ -10325,10 +10062,8 @@
                 const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
                 if (!data || !data.type) return;
 
-                if (data.type === 'setDataWithIndicators') {
-                    setDataWithIndicators(data.payload);
-                } else if (data.type === 'setIndicators') {
-                    setIndicators(data.showSma, data.showRsi, data.showVolume);
+                if (data.type === 'setActiveIndicators') {
+                    setActiveIndicators(data.indicators);
                 } else if (data.type === 'setFibonacci') {
                     setFibonacci(data.showFib);
                 } else if (data.type === 'resetFibonacci') {
@@ -10368,7 +10103,7 @@
                 } else if (data.type === 'setSeriesType') {
                     setSeriesType(data.seriesType);
                 } else if (data.type === 'initChart') {
-                    initChart(data.upColor, data.downColor, data.gridColor, data.interactive);
+                    initChart(data.upColor, data.downColor, data.gridColor, data.interactive, data.crosshairColor);
                 }
             } catch (e) {
                 console.error("tv_chart message error:", e);

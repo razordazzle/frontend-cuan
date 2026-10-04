@@ -54,10 +54,6 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => IndicatorsModalSheet(
-        showSma: _indicators.hasType('sma'),
-        showRsi: _indicators.hasType('rsi'),
-        showVolume: _indicators.hasType('vol'),
-        showFibonacci: _drawings.showFibonacci,
         favoriteIndicators: _indicators.favorites,
         onAddIndicator: _indicators.add,
         onToggleFavorite: _indicators.toggleFavorite,
@@ -270,9 +266,6 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                         payload: p.tvChartPayload,
                         isCandle: _isCandle,
                         activeIndicators: _indicators.indicators,
-                        showSma: _indicators.isTypeVisible('sma'),
-                        showRsi: _indicators.isTypeVisible('rsi'),
-                        showVolume: _indicators.isTypeVisible('vol'),
                         showFibonacci: _drawings.showFibonacci,
                         isDrawingFib: _drawings.isDrawing(
                           ChartDrawingTool.fibonacci,
@@ -339,12 +332,6 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                             onToggleIndicatorVisibility:
                                 _indicators.toggleVisibility,
                             onDeleteIndicator: _indicators.remove,
-                            showSma: _indicators.hasType('sma'),
-                            showRsi: _indicators.hasType('rsi'),
-                            showVolume: _indicators.hasType('vol'),
-                            visibleSma: _indicators.isTypeVisible('sma'),
-                            visibleRsi: _indicators.isTypeVisible('rsi'),
-                            visibleVolume: _indicators.isTypeVisible('vol'),
                             symbol: 'IHSG',
                             timeframe: p.tvResolution,
                             onOpenSettings: _openIndicatorSettings,

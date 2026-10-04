@@ -44,13 +44,6 @@ class ChartIndicatorsController extends ChangeNotifier {
 
   Set<String> get favorites => UnmodifiableSetView<String>(_favorites);
 
-  bool hasType(String type) =>
-      _indicators.any((ActiveChartIndicator i) => i.type == type);
-
-  bool isTypeVisible(String type) => _indicators.any(
-    (ActiveChartIndicator i) => i.type == type && i.isVisible,
-  );
-
   ActiveChartIndicator? findById(String id) {
     final int index = _indexOf(id);
     return index == -1 ? null : _indicators[index];

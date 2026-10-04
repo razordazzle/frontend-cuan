@@ -233,23 +233,11 @@ class _VolumeIconPainter extends CustomPainter {
 class ChartIndicatorsLegend extends StatefulWidget {
   final String symbol;
   final String timeframe;
-  final List<ActiveChartIndicator>? activeIndicators;
+  final List<ActiveChartIndicator> activeIndicators;
   final ValueChanged<String>? onToggleIndicatorVisibility;
   final ValueChanged<String>? onDeleteIndicator;
-  final bool showSma;
-  final bool showRsi;
-  final bool showVolume;
-  final bool visibleSma;
-  final bool visibleRsi;
-  final bool visibleVolume;
   final String? selectedId;
   final ValueChanged<String?>? onSelectionChanged;
-  final ValueChanged<bool>? onToggleVisibilitySma;
-  final ValueChanged<bool>? onToggleVisibilityRsi;
-  final ValueChanged<bool>? onToggleVisibilityVolume;
-  final VoidCallback? onDeleteSma;
-  final VoidCallback? onDeleteRsi;
-  final VoidCallback? onDeleteVolume;
   final ValueChanged<String>? onOpenSettings;
 
   /// Nilai plot terkini per indikator untuk status line (opsional).
@@ -259,23 +247,11 @@ class ChartIndicatorsLegend extends StatefulWidget {
     super.key,
     this.symbol = 'IHSG',
     this.timeframe = '1D',
-    this.activeIndicators,
+    required this.activeIndicators,
     this.onToggleIndicatorVisibility,
     this.onDeleteIndicator,
-    this.showSma = false,
-    this.showRsi = false,
-    this.showVolume = false,
-    this.visibleSma = true,
-    this.visibleRsi = true,
-    this.visibleVolume = true,
     this.selectedId,
     this.onSelectionChanged,
-    this.onToggleVisibilitySma,
-    this.onToggleVisibilityRsi,
-    this.onToggleVisibilityVolume,
-    this.onDeleteSma,
-    this.onDeleteRsi,
-    this.onDeleteVolume,
     this.onOpenSettings,
     this.plotValues,
   });
@@ -285,7 +261,7 @@ class ChartIndicatorsLegend extends StatefulWidget {
 }
 
 class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
-  String? _internalSelectedId; // 'sma', 'rsi', 'vol'
+  String? _internalSelectedId;
   String? get _effectiveSelectedId => widget.selectedId ?? _internalSelectedId;
 
   void _setSelectedId(String? id) {
@@ -299,76 +275,8 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
 
   @override
   Widget build(BuildContext context) {
-    // Kumpulkan indikator yang sedang aktif
-    final List<Map<String, dynamic>> activeItems = <Map<String, dynamic>>[];
-
-    if (widget.activeIndicators != null) {
-      for (final ActiveChartIndicator ind in widget.activeIndicators!) {
-        activeItems.add(<String, dynamic>{
-          'id': ind.id,
-          'type': ind.type,
-          'title': ind.inputsInStatusLine ? ind.title : ind.shortTitle,
-          'indicator': ind,
-          'isHidden': !ind.isVisible,
-          'onToggleEye': () => widget.onToggleIndicatorVisibility?.call(ind.id),
-          'onDelete': () {
-            _setSelectedId(null);
-            widget.onDeleteIndicator?.call(ind.id);
-          },
-          'onSettings': () => widget.onOpenSettings?.call(ind.id),
-        });
-      }
-    } else {
-      if (widget.showSma) {
-        activeItems.add(<String, dynamic>{
-          'id': 'sma',
-          'type': 'sma',
-          'title': 'SMA 20 close',
-          'isHidden': !widget.visibleSma,
-          'onToggleEye': () => widget.onToggleVisibilitySma?.call(!widget.visibleSma),
-          'onDelete': () {
-            _setSelectedId(null);
-            widget.onDeleteSma?.call();
-          },
-          'onSettings': () => widget.onOpenSettings?.call('sma'),
-        });
-      }
-
-      if (widget.showRsi) {
-        activeItems.add(<String, dynamic>{
-          'id': 'rsi',
-          'type': 'rsi',
-          'title': 'RSI 14 close',
-          'isHidden': !widget.visibleRsi,
-          'onToggleEye': () => widget.onToggleVisibilityRsi?.call(!widget.visibleRsi),
-          'onDelete': () {
-            _setSelectedId(null);
-            widget.onDeleteRsi?.call();
-          },
-          'onSettings': () => widget.onOpenSettings?.call('rsi'),
-        });
-      }
-
-      if (widget.showVolume) {
-        activeItems.add(<String, dynamic>{
-          'id': 'vol',
-          'type': 'vol',
-          'title': 'Vol',
-          'isHidden': !widget.visibleVolume,
-          'onToggleEye': () => widget.onToggleVisibilityVolume?.call(!widget.visibleVolume),
-          'onDelete': () {
-            _setSelectedId(null);
-            widget.onDeleteVolume?.call();
-          },
-          'onSettings': () => widget.onOpenSettings?.call('vol'),
-        });
-      }
-    }
-
-    // Jika tidak ada indikator yang aktif sama sekali
-    if (activeItems.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    final List<ActiveChartIndicator> indicators = widget.activeIndicators;
+    if (indicators.isEmpty) return const SizedBox.shrink();
 
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color textColor = isDark ? Colors.white : const Color(0xFF131722);
@@ -386,48 +294,12 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
         children: <Widget>[
           // Daftar Indikator (jika tidak di-collapse)
           if (!_isCollapsed)
-            ...activeItems.map((Map<String, dynamic> item) {
-              final String id = item['id'] as String;
-              final String title = item['title'] as String;
-              final bool isHidden = item['isHidden'] as bool;
-              final VoidCallback onToggleEye = item['onToggleEye'] as VoidCallback;
-              final VoidCallback onDelete = item['onDelete'] as VoidCallback;
-              final VoidCallback onSettings = item['onSettings'] as VoidCallback;
-              final ActiveChartIndicator? indicator = item['indicator'] as ActiveChartIndicator?;
-              final ValueListenable<IndicatorPlotValues>? plotValues = widget.plotValues;
-              final Widget? values = (indicator != null && plotValues != null && !isHidden)
-                  ? _PlotValuesText(
-                      indicator: indicator,
-                      plotValues: plotValues,
-                      fallbackColor: textColor,
-                    )
-                  : null;
-              final bool isSelected = _effectiveSelectedId == id;
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: isSelected
-                    ? _buildSelectedRow(
-                        id: id,
-                        title: title,
-                        isHidden: isHidden,
-                        values: values,
-                        textColor: textColor,
-                        mutedColor: mutedTextColor,
-                        onToggleEye: onToggleEye,
-                        onDelete: onDelete,
-                        onSettings: onSettings,
-                      )
-                    : _buildNormalRow(
-                        id: id,
-                        title: title,
-                        isHidden: isHidden,
-                        values: values,
-                        textColor: textColor,
-                        mutedColor: mutedTextColor,
-                      ),
-              );
-            }),
+            for (final ActiveChartIndicator indicator in indicators)
+              _buildIndicatorRow(
+                indicator,
+                textColor: textColor,
+                mutedColor: mutedTextColor,
+              ),
 
           // Tombol Collapse / Expand [⌃] ala TradingView
           GestureDetector(
@@ -460,6 +332,57 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
       ),
     );
   }
+
+  Widget _buildIndicatorRow(
+    ActiveChartIndicator indicator, {
+    required Color textColor,
+    required Color mutedColor,
+  }) {
+    final String id = indicator.id;
+    final String title = indicator.inputsInStatusLine ? indicator.title : indicator.shortTitle;
+    final bool isHidden = !indicator.isVisible;
+    final ValueListenable<IndicatorPlotValues>? plotValues = widget.plotValues;
+    final Widget? values = (plotValues != null && !isHidden)
+        ? _PlotValuesText(
+            indicator: indicator,
+            plotValues: plotValues,
+            fallbackColor: textColor,
+          )
+        : null;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: _effectiveSelectedId == id
+          ? _buildSelectedRow(
+              id: id,
+              title: title,
+              isHidden: isHidden,
+              values: values,
+              textColor: textColor,
+              mutedColor: mutedColor,
+              onToggleEye: () => widget.onToggleIndicatorVisibility?.call(id),
+              onDelete: () {
+                _setSelectedId(null);
+                widget.onDeleteIndicator?.call(id);
+              },
+              onSettings: () => widget.onOpenSettings?.call(id),
+            )
+          : _buildNormalRow(
+              id: id,
+              title: title,
+              isHidden: isHidden,
+              values: values,
+              textColor: textColor,
+              mutedColor: mutedColor,
+            ),
+    );
+  }
+
+  static CustomPainter _indicatorIconPainter(String type, Color color) => switch (type) {
+    'sma' => _SmaIconPainter(color),
+    'rsi' => _RsiIconPainter(color),
+    _ => _VolumeIconPainter(color),
+  };
 
   // Baris Normal (Gambar 1)
   Widget _buildNormalRow({
@@ -815,98 +738,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
 
         return StatefulBuilder(
           builder: (BuildContext bCtx, void Function(void Function()) setModalState) {
-            final List<Map<String, dynamic>> items = <Map<String, dynamic>>[];
-
-            if (widget.activeIndicators != null) {
-              for (final ActiveChartIndicator ind in widget.activeIndicators!) {
-                CustomPainter painter;
-                if (ind.type == 'sma') {
-                  painter = _SmaIconPainter(neutralIconColor);
-                } else if (ind.type == 'rsi') {
-                  painter = _RsiIconPainter(neutralIconColor);
-                } else {
-                  painter = _VolumeIconPainter(neutralIconColor);
-                }
-
-                items.add(<String, dynamic>{
-                  'id': ind.id,
-                  'title': ind.title,
-                  'isHidden': !ind.isVisible,
-                  'icon': CustomPaint(
-                    size: const Size(18, 18),
-                    painter: painter,
-                  ),
-                  'onToggleEye': () {
-                    widget.onToggleIndicatorVisibility?.call(ind.id);
-                    setModalState(() {});
-                  },
-                  'onDelete': () {
-                    widget.onDeleteIndicator?.call(ind.id);
-                    setModalState(() {});
-                  },
-                });
-              }
-            } else {
-              if (widget.showSma) {
-                items.add(<String, dynamic>{
-                  'id': 'sma',
-                  'title': 'SMA 20 close',
-                  'isHidden': !widget.visibleSma,
-                  'icon': CustomPaint(
-                    size: const Size(18, 18),
-                    painter: _SmaIconPainter(neutralIconColor),
-                  ),
-                  'onToggleEye': () {
-                    widget.onToggleVisibilitySma?.call(!widget.visibleSma);
-                    setModalState(() {});
-                  },
-                  'onDelete': () {
-                    widget.onDeleteSma?.call();
-                    setModalState(() {});
-                  },
-                });
-              }
-
-              if (widget.showRsi) {
-                items.add(<String, dynamic>{
-                  'id': 'rsi',
-                  'title': 'RSI 14 close',
-                  'isHidden': !widget.visibleRsi,
-                  'icon': CustomPaint(
-                    size: const Size(18, 18),
-                    painter: _RsiIconPainter(neutralIconColor),
-                  ),
-                  'onToggleEye': () {
-                    widget.onToggleVisibilityRsi?.call(!widget.visibleRsi);
-                    setModalState(() {});
-                  },
-                  'onDelete': () {
-                    widget.onDeleteRsi?.call();
-                    setModalState(() {});
-                  },
-                });
-              }
-
-              if (widget.showVolume) {
-                items.add(<String, dynamic>{
-                  'id': 'vol',
-                  'title': 'Vol',
-                  'isHidden': !widget.visibleVolume,
-                  'icon': CustomPaint(
-                    size: const Size(18, 18),
-                    painter: _VolumeIconPainter(neutralIconColor),
-                  ),
-                  'onToggleEye': () {
-                    widget.onToggleVisibilityVolume?.call(!widget.visibleVolume);
-                    setModalState(() {});
-                  },
-                  'onDelete': () {
-                    widget.onDeleteVolume?.call();
-                    setModalState(() {});
-                  },
-                });
-              }
-            }
+            final List<ActiveChartIndicator> indicators = widget.activeIndicators;
 
             return Container(
               height: MediaQuery.of(context).size.height * 0.80,
@@ -990,7 +822,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                         ),
 
                         // Empty State if no active indicators
-                        if (items.isEmpty)
+                        if (indicators.isEmpty)
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 20),
                             child: Center(
@@ -1001,12 +833,22 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                             ),
                           )
                         else
-                          ...items.map((Map<String, dynamic> item) {
-                            final String title = item['title'] as String;
-                            final bool isHidden = item['isHidden'] as bool;
-                            final Widget iconWidget = item['icon'] as Widget;
-                            final VoidCallback onToggleEye = item['onToggleEye'] as VoidCallback;
-                            final VoidCallback onDelete = item['onDelete'] as VoidCallback;
+                          ...indicators.map((ActiveChartIndicator indicator) {
+                            final String title = indicator.title;
+                            final bool isHidden = !indicator.isVisible;
+                            final Widget iconWidget = CustomPaint(
+                              size: const Size(18, 18),
+                              painter: _indicatorIconPainter(indicator.type, neutralIconColor),
+                            );
+                            void onToggleEye() {
+                              widget.onToggleIndicatorVisibility?.call(indicator.id);
+                              setModalState(() {});
+                            }
+
+                            void onDelete() {
+                              widget.onDeleteIndicator?.call(indicator.id);
+                              setModalState(() {});
+                            }
 
                             return Container(
                               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),

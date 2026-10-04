@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/css_color.dart';
 import 'indicator_line_style.dart';
 
 /// Nilai plot indikator per id indikator (mis. SMA: [MA, Smoothing MA]); null = tidak ada nilai.
