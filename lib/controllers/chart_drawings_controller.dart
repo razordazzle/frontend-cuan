@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 
 enum ChartDrawingTool { fibonacci, horizontalLine, trendline, rectangle }
@@ -14,10 +16,21 @@ class ChartDrawingsController extends ChangeNotifier {
   List<Map<String, dynamic>> _horizontalLines = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _trendlines = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _rectangles = const <Map<String, dynamic>>[];
+  final Set<ChartDrawingTool> _favoriteTools = <ChartDrawingTool>{
+    ChartDrawingTool.rectangle,
+    ChartDrawingTool.trendline,
+    ChartDrawingTool.horizontalLine,
+    ChartDrawingTool.fibonacci,
+  };
 
   ChartDrawingTool? get activeTool => _activeTool;
   bool get showFibonacci => _showFibonacci;
   bool get isToolbarVisible => _isToolbarVisible;
+
+  /// Tool favorit, urut sesuai waktu ditambahkan (jadi urutan tombol di toolbar chart).
+  Set<ChartDrawingTool> get favoriteTools =>
+      UnmodifiableSetView<ChartDrawingTool>(_favoriteTools);
+  bool isFavorite(ChartDrawingTool tool) => _favoriteTools.contains(tool);
   List<Map<String, dynamic>> get horizontalLines => _horizontalLines;
   List<Map<String, dynamic>> get trendlines => _trendlines;
   List<Map<String, dynamic>> get rectangles => _rectangles;
@@ -85,6 +98,11 @@ class ChartDrawingsController extends ChangeNotifier {
   void setToolbarVisible(bool visible) {
     if (_isToolbarVisible == visible) return;
     _isToolbarVisible = visible;
+    notifyListeners();
+  }
+
+  void toggleFavorite(ChartDrawingTool tool) {
+    if (!_favoriteTools.remove(tool)) _favoriteTools.add(tool);
     notifyListeners();
   }
 
