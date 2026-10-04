@@ -1686,6 +1686,7 @@
         }
     </style>
     <script src="lightweight-charts.standalone.production.js"></script>
+    <script src="indicators.js"></script>
 </head>
 
 <body>
@@ -9583,124 +9584,6 @@
         let activeIndicatorSeriesMap = {};
         let isCrosshairActive = false;
 
-        function getCandleSourceValue(c, src = 'close') {
-            const s = (src || 'close').toLowerCase().trim();
-            if (s === 'open') return c.open;
-            if (s === 'high') return c.high;
-            if (s === 'low') return c.low;
-            if (s === 'hl2' || s.includes('(h + l)/2') || s.includes('h + l')) return (c.high + c.low) / 2;
-            if (s === 'hlc3' || s.includes('(h + l + c)/3') || s.includes('h + l + c')) return (c.high + c.low + c.close) / 3;
-            if (s === 'ohlc4' || s.includes('(o + h + l + c)/4') || s.includes('o + h + l + c')) return (c.open + c.high + c.low + c.close) / 4;
-            return c.close;
-        }
-
-        function calculateSMAData(candles, period = 20, source = 'close', offset = 0) {
-            if (!candles || candles.length < period) return [];
-            const res = [];
-            let sum = 0;
-            const vals = candles.map(c => getCandleSourceValue(c, source));
-            for (let i = 0; i < candles.length; i++) {
-                sum += vals[i];
-                if (i >= period) {
-                    sum -= vals[i - period];
-                }
-                if (i >= period - 1) {
-                    const targetIdx = i + (offset || 0);
-                    if (targetIdx >= 0 && targetIdx < candles.length) {
-                        res.push({ time: candles[targetIdx].time, value: sum / period });
-                    }
-                }
-            }
-            return res;
-        }
-
-        function calculateRSIData(candles, period = 14, source = 'close') {
-            if (!candles || candles.length <= period) return [];
-            const gains = new Array(candles.length - 1);
-            const losses = new Array(candles.length - 1);
-            let previous = getCandleSourceValue(candles[0], source);
-            for (let i = 1; i < candles.length; i++) {
-                const current = getCandleSourceValue(candles[i], source);
-                const change = current - previous;
-                gains[i - 1] = change > 0 ? change : 0;
-                losses[i - 1] = change < 0 ? -change : 0;
-                previous = current;
-            }
-            const avgGains = movingAverageExponential(gains, period, 1 / period);
-            const avgLosses = movingAverageExponential(losses, period, 1 / period);
-            const res = [];
-            for (let i = period - 1; i < gains.length; i++) {
-                const up = avgGains[i];
-                const down = avgLosses[i];
-                const rsi = down === 0 ? 100 : up === 0 ? 0 : 100 - 100 / (1 + up / down);
-                res.push({ time: candles[i + 1].time, value: rsi });
-            }
-            return res;
-        }
-
-        // ===== Moving average generik (array angka -> array sejajar, null = data belum cukup) =====
-
-        function movingAverageSma(values, length) {
-            const out = new Array(values.length).fill(null);
-            let sum = 0;
-            for (let i = 0; i < values.length; i++) {
-                sum += values[i];
-                if (i >= length) sum -= values[i - length];
-                if (i >= length - 1) out[i] = sum / length;
-            }
-            return out;
-        }
-
-        // EMA (alpha = 2/(n+1)) dan RMA (alpha = 1/n), di-seed dengan SMA seperti TradingView.
-        function movingAverageExponential(values, length, alpha) {
-            const out = new Array(values.length).fill(null);
-            if (values.length < length) return out;
-            let prev = 0;
-            for (let i = 0; i < length; i++) prev += values[i];
-            prev /= length;
-            out[length - 1] = prev;
-            for (let i = length; i < values.length; i++) {
-                prev = alpha * values[i] + (1 - alpha) * prev;
-                out[i] = prev;
-            }
-            return out;
-        }
-
-        // WMA O(n): bobot 1..n, data terbaru bobot terbesar.
-        function movingAverageWma(values, length) {
-            const out = new Array(values.length).fill(null);
-            const denominator = length * (length + 1) / 2;
-            let weightedSum = 0;
-            let sum = 0;
-            for (let i = 0; i < values.length; i++) {
-                const value = values[i];
-                if (i < length) {
-                    weightedSum += value * (i + 1);
-                    sum += value;
-                } else {
-                    weightedSum += length * value - sum;
-                    sum += value - values[i - length];
-                }
-                if (i >= length - 1) out[i] = weightedSum / denominator;
-            }
-            return out;
-        }
-
-        function calculateMovingAverage(type, values, length, volumes) {
-            switch (type) {
-                case 'SMA': return movingAverageSma(values, length);
-                case 'EMA': return movingAverageExponential(values, length, 2 / (length + 1));
-                case 'SMMA (RMA)': return movingAverageExponential(values, length, 1 / length);
-                case 'WMA': return movingAverageWma(values, length);
-                case 'VWMA': {
-                    const priceVolume = movingAverageSma(values.map((v, i) => v * volumes[i]), length);
-                    const volume = movingAverageSma(volumes, length);
-                    return priceVolume.map((pv, i) => (pv === null || !volume[i]) ? null : pv / volume[i]);
-                }
-                default: return new Array(values.length).fill(null);
-            }
-        }
-
         // ===== SMA indicator =====
 
         function normalizeSmaConfig(item) {
@@ -9713,47 +9596,14 @@
             };
         }
 
-        // Data SMA sebelum di-offset (dasar untuk garis utama & smoothing).
-        function getSmaBaseData(cfg) {
-            return calculateSMAData(rawCandlesData, cfg.period, cfg.source, 0);
-        }
-
-        function shiftDataByBars(data, offset) {
-            if (!offset) return data;
-            const indexByTime = new Map(rawCandlesData.map((c, i) => [c.time, i]));
-            const res = [];
-            for (const point of data) {
-                const index = indexByTime.get(point.time);
-                if (index === undefined) continue;
-                const target = index + offset;
-                if (target >= 0 && target < rawCandlesData.length) {
-                    res.push({ time: rawCandlesData[target].time, value: point.value });
-                }
-            }
-            return res;
-        }
-
-        function calculateSmoothingData(baseData, cfg) {
-            if (cfg.smoothingType === 'None' || baseData.length === 0) return [];
-            const values = baseData.map(p => p.value);
-            let volumes = null;
-            if (cfg.smoothingType === 'VWMA') {
-                const volumeByTime = new Map(rawCandlesData.map(c => [c.time, c.volume || 0]));
-                volumes = baseData.map(p => volumeByTime.get(p.time) || 0);
-            }
-            const smoothed = calculateMovingAverage(cfg.smoothingType, values, cfg.smoothingLength, volumes);
-            const res = [];
-            for (let i = 0; i < baseData.length; i++) {
-                if (smoothed[i] !== null) res.push({ time: baseData[i].time, value: smoothed[i] });
-            }
-            return res;
-        }
-
         function updateSmaData(entry) {
             const cfg = entry.smaConfig;
-            const baseData = getSmaBaseData(cfg);
-            entry.series.setData(shiftDataByBars(baseData, cfg.offset));
-            entry.smoothingSeries.setData(calculateSmoothingData(baseData, cfg));
+            // Data SMA sebelum di-offset: dasar untuk garis utama & smoothing.
+            const baseData = Indicators.smaPoints(rawCandlesData, cfg.period, cfg.source);
+            entry.series.setData(Indicators.shiftPoints(baseData, cfg.offset, rawCandlesData));
+            entry.smoothingSeries.setData(cfg.smoothingType === 'None'
+                ? []
+                : Indicators.smoothPoints(baseData, cfg.smoothingType, cfg.smoothingLength, rawCandlesData));
         }
 
         function toLineStyle(style) {
@@ -9833,7 +9683,7 @@
 
         function updateRsiData(entry) {
             const cfg = entry.rsiConfig;
-            entry.series.setData(calculateRSIData(rawCandlesData, cfg.period, cfg.source));
+            entry.series.setData(Indicators.rsiPoints(rawCandlesData, cfg.period, cfg.source));
         }
 
         // Pindahkan series ke pane tujuan (null = indikator disembunyikan, biarkan di pane-nya).
