@@ -9719,8 +9719,7 @@
         const DEFAULT_SMOOTHING_COLOR = '#FFEB3B';
         const DEFAULT_PRECISION_DIGITS = 2;
         let activeIndicatorConfigs = [];
-        let currentPayloadIndicators = null;
-        // id -> { type, series, smoothingSeries?, smaConfig?, calcKey?, paneIndex? }
+        // id -> { type, series, smoothingSeries?, smaConfig?, rsiConfig?, calcKey? }
         let activeIndicatorSeriesMap = {};
         let isCrosshairActive = false;
 
@@ -9755,28 +9754,26 @@
             return res;
         }
 
-        function calculateRSIData(candles, period = 14) {
+        function calculateRSIData(candles, period = 14, source = 'close') {
             if (!candles || candles.length <= period) return [];
-            const res = [];
-            let gains = 0, losses = 0;
-            for (let i = 1; i <= period; i++) {
-                const diff = candles[i].close - candles[i - 1].close;
-                if (diff >= 0) gains += diff;
-                else losses -= diff;
+            const gains = new Array(candles.length - 1);
+            const losses = new Array(candles.length - 1);
+            let previous = getCandleSourceValue(candles[0], source);
+            for (let i = 1; i < candles.length; i++) {
+                const current = getCandleSourceValue(candles[i], source);
+                const change = current - previous;
+                gains[i - 1] = change > 0 ? change : 0;
+                losses[i - 1] = change < 0 ? -change : 0;
+                previous = current;
             }
-            let avgGain = gains / period;
-            let avgLoss = losses / period;
-            let rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-            res.push({ time: candles[period].time, value: 100 - (100 / (1 + rs)) });
-
-            for (let i = period + 1; i < candles.length; i++) {
-                const diff = candles[i].close - candles[i - 1].close;
-                const gain = diff > 0 ? diff : 0;
-                const loss = diff < 0 ? -diff : 0;
-                avgGain = (avgGain * (period - 1) + gain) / period;
-                avgLoss = (avgLoss * (period - 1) + loss) / period;
-                rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-                res.push({ time: candles[i].time, value: 100 - (100 / (1 + rs)) });
+            const avgGains = movingAverageExponential(gains, period, 1 / period);
+            const avgLosses = movingAverageExponential(losses, period, 1 / period);
+            const res = [];
+            for (let i = period - 1; i < gains.length; i++) {
+                const up = avgGains[i];
+                const down = avgLosses[i];
+                const rsi = down === 0 ? 100 : up === 0 ? 0 : 100 - 100 / (1 + up / down);
+                res.push({ time: candles[i + 1].time, value: rsi });
             }
             return res;
         }
@@ -9858,9 +9855,7 @@
 
         // Data SMA sebelum di-offset (dasar untuk garis utama & smoothing).
         function getSmaBaseData(cfg) {
-            const sma20 = currentPayloadIndicators && currentPayloadIndicators.sma20;
-            const isBackendDefault = cfg.period === 20 && cfg.source.toLowerCase() === 'close' && sma20 && sma20.length > 0;
-            return isBackendDefault ? sma20 : calculateSMAData(rawCandlesData, cfg.period, cfg.source, 0);
+            return calculateSMAData(rawCandlesData, cfg.period, cfg.source, 0);
         }
 
         function shiftDataByBars(data, offset) {
@@ -9969,6 +9964,94 @@
             return entry;
         }
 
+        function normalizeRsiConfig(item) {
+            return {
+                period: item.period || 14,
+                source: item.source || 'Close',
+            };
+        }
+
+        function updateRsiData(entry) {
+            const cfg = entry.rsiConfig;
+            entry.series.setData(calculateRSIData(rawCandlesData, cfg.period, cfg.source));
+        }
+
+        // Pindahkan series ke pane tujuan (null = indikator disembunyikan, biarkan di pane-nya).
+        function moveSeriesToPane(series, paneIndex) {
+            if (paneIndex === null || !series.getPane || series.getPane().paneIndex() === paneIndex) return;
+            series.moveToPane(paneIndex);
+        }
+
+        function syncRsiIndicator(item, entry, paneIndex) {
+            const cfg = normalizeRsiConfig(item);
+            const options = {
+                color: item.color || '#E91E63',
+                title: item.title || 'RSI ' + cfg.period,
+                visible: item.isVisible !== false,
+            };
+
+            if (entry) {
+                entry.series.applyOptions(options);
+                moveSeriesToPane(entry.series, paneIndex);
+            } else {
+                const series = chart.addSeries(LightweightCharts.LineSeries, {
+                    ...options,
+                    lineWidth: 2,
+                    priceScaleId: 'rsi-scale-' + item.id,
+                    priceFormat: {
+                        type: 'custom',
+                        minMove: 0.01,
+                        formatter: (p) => p.toFixed(1),
+                    },
+                }, paneIndex ?? 1);
+                for (const level of [70, 30]) {
+                    series.createPriceLine({
+                        price: level,
+                        color: 'rgba(233, 30, 99, 0.4)',
+                        lineWidth: 1,
+                        lineStyle: LightweightCharts.LineStyle.Dashed,
+                        axisLabelVisible: true,
+                        title: String(level),
+                    });
+                }
+                series.priceScale().applyOptions({
+                    scaleMargins: { top: 0.1, bottom: 0.1 },
+                });
+                entry = { type: 'rsi', series: series, rsiConfig: null, calcKey: null };
+            }
+
+            // Hitung ulang hanya kalau input perhitungan berubah (bukan saat ganti style/visibility).
+            const calcKey = [cfg.period, cfg.source].join('|');
+            if (entry.calcKey !== calcKey) {
+                entry.calcKey = calcKey;
+                entry.rsiConfig = cfg;
+                updateRsiData(entry);
+            }
+            return entry;
+        }
+
+        function syncVolumeIndicator(item, entry, paneIndex) {
+            const visible = item.isVisible !== false;
+            if (entry) {
+                entry.series.applyOptions({ visible: visible });
+                moveSeriesToPane(entry.series, paneIndex);
+                return entry;
+            }
+            const series = chart.addSeries(LightweightCharts.HistogramSeries, {
+                priceFormat: { type: 'volume' },
+                priceScaleId: 'volume-scale-' + item.id,
+                title: item.title || 'VOL',
+                visible: visible,
+            }, paneIndex ?? 1);
+            series.priceScale().applyOptions({
+                scaleMargins: { top: 0.15, bottom: 0 },
+            });
+            if (currentVolumeData && currentVolumeData.length > 0) {
+                series.setData(currentVolumeData);
+            }
+            return { type: 'vol', series: series };
+        }
+
         function removeIndicatorEntry(entry) {
             for (const series of [entry.series, entry.smoothingSeries]) {
                 if (!series) continue;
@@ -10014,15 +10097,7 @@
                 if (entry.type === 'sma') {
                     updateSmaData(entry);
                 } else if (entry.type === 'rsi') {
-                    let rData = [];
-                    if ((!entry.period || entry.period === 14) && currentPayloadIndicators && currentPayloadIndicators.rsi14 && currentPayloadIndicators.rsi14.length > 0) {
-                        rData = currentPayloadIndicators.rsi14;
-                    } else if (currentRsiData && currentRsiData.length > 0) {
-                        rData = currentRsiData;
-                    } else {
-                        rData = calculateRSIData(rawCandlesData, entry.period || 14);
-                    }
-                    if (rData && rData.length > 0) entry.series.setData(rData);
+                    updateRsiData(entry);
                 } else if (entry.type === 'vol') {
                     if (currentVolumeData && currentVolumeData.length > 0) {
                         entry.series.setData(currentVolumeData);
@@ -10051,92 +10126,20 @@
             if (rsiSeries) rsiSeries.applyOptions({ visible: false });
             if (volumeSeries) volumeSeries.applyOptions({ visible: false });
 
-            // 3. Allocate panes & sync series
+            // 3. Allocate panes & sync series (RSI & Volume masing-masing di pane sendiri di bawah harga)
             let nextPane = 1;
 
-            activeIndicatorConfigs.forEach((item) => {
+            for (const item of activeIndicatorConfigs) {
+                const entry = activeIndicatorSeriesMap[item.id];
+                const paneIndex = (item.type !== 'sma' && item.isVisible !== false) ? nextPane++ : null;
                 if (item.type === 'sma') {
-                    activeIndicatorSeriesMap[item.id] = syncSmaIndicator(item, activeIndicatorSeriesMap[item.id]);
-                    return;
+                    activeIndicatorSeriesMap[item.id] = syncSmaIndicator(item, entry);
+                } else if (item.type === 'rsi') {
+                    activeIndicatorSeriesMap[item.id] = syncRsiIndicator(item, entry, paneIndex);
+                } else if (item.type === 'vol') {
+                    activeIndicatorSeriesMap[item.id] = syncVolumeIndicator(item, entry, paneIndex);
                 }
-
-                let entry = activeIndicatorSeriesMap[item.id];
-                if (!entry) {
-                    if (item.type === 'rsi') {
-                        const isVis = item.isVisible !== false;
-                        const targetPane = isVis ? nextPane++ : 1;
-                        const s = chart.addSeries(LightweightCharts.LineSeries, {
-                            color: item.color || '#E91E63',
-                            lineWidth: 2,
-                            title: item.title || 'RSI ' + (item.period || 14),
-                            priceScaleId: 'rsi-scale-' + item.id,
-                            visible: isVis,
-                            priceFormat: {
-                                type: 'custom',
-                                minMove: 0.01,
-                                formatter: (p) => p.toFixed(1),
-                            },
-                        }, targetPane);
-                        s.createPriceLine({
-                            price: 70,
-                            color: 'rgba(233, 30, 99, 0.4)',
-                            lineWidth: 1,
-                            lineStyle: LightweightCharts.LineStyle.Dashed,
-                            axisLabelVisible: true,
-                            title: '70',
-                        });
-                        s.createPriceLine({
-                            price: 30,
-                            color: 'rgba(233, 30, 99, 0.4)',
-                            lineWidth: 1,
-                            lineStyle: LightweightCharts.LineStyle.Dashed,
-                            axisLabelVisible: true,
-                            title: '30',
-                        });
-                        s.priceScale().applyOptions({
-                            scaleMargins: { top: 0.1, bottom: 0.1 },
-                        });
-                        let rData = [];
-                        if ((!item.period || item.period === 14) && currentPayloadIndicators && currentPayloadIndicators.rsi14 && currentPayloadIndicators.rsi14.length > 0) {
-                            rData = currentPayloadIndicators.rsi14;
-                        } else if (currentRsiData && currentRsiData.length > 0) {
-                            rData = currentRsiData;
-                        } else {
-                            rData = calculateRSIData(rawCandlesData, item.period || 14);
-                        }
-                        if (rData && rData.length > 0) s.setData(rData);
-                        activeIndicatorSeriesMap[item.id] = { series: s, type: 'rsi', period: item.period || 14, paneIndex: targetPane };
-                    } else if (item.type === 'vol') {
-                        const isVis = item.isVisible !== false;
-                        const targetPane = isVis ? nextPane++ : 1;
-                        const s = chart.addSeries(LightweightCharts.HistogramSeries, {
-                            priceFormat: { type: 'volume' },
-                            priceScaleId: 'volume-scale-' + item.id,
-                            title: item.title || 'VOL',
-                            visible: isVis,
-                        }, targetPane);
-                        s.priceScale().applyOptions({
-                            scaleMargins: { top: 0.15, bottom: 0 },
-                        });
-                        if (currentVolumeData && currentVolumeData.length > 0) {
-                            s.setData(currentVolumeData);
-                        }
-                        activeIndicatorSeriesMap[item.id] = { series: s, type: 'vol', paneIndex: targetPane };
-                    }
-                } else {
-                    // Update options
-                    const isVis = item.isVisible !== false;
-                    entry.series.applyOptions({ visible: isVis });
-
-                    if (isVis) {
-                        const targetPane = nextPane++;
-                        if (entry.series.getPane && entry.series.getPane().paneIndex() !== targetPane) {
-                            entry.series.moveToPane(targetPane);
-                            entry.paneIndex = targetPane;
-                        }
-                    }
-                }
-            });
+            }
 
             // Update pane stretch factors
             try {
@@ -10236,7 +10239,6 @@
             }
 
             if (payload.indicators) {
-                currentPayloadIndicators = payload.indicators;
                 if (payload.indicators.sma20 && Array.isArray(payload.indicators.sma20)) {
                     smaSeries.setData(payload.indicators.sma20);
                 }
@@ -10260,6 +10262,12 @@
         function updateBar(barInput, volBarInput) {
             if (!chart) return;
             const bar = typeof barInput === 'string' ? JSON.parse(barInput) : barInput;
+            const lastIndex = rawCandlesData.length - 1;
+            if (lastIndex >= 0 && rawCandlesData[lastIndex].time === bar.time) {
+                rawCandlesData[lastIndex] = bar;
+            } else if (lastIndex < 0 || bar.time > rawCandlesData[lastIndex].time) {
+                rawCandlesData.push(bar);
+            }
             candleSeries.update(bar);
             areaSeries.update({ time: bar.time, value: bar.close });
             if (volBarInput) {
