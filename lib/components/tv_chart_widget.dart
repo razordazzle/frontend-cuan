@@ -46,6 +46,7 @@ class TvChartWidget extends StatefulWidget {
   final bool interactive; // false di home (preview doang)
   final ValueChanged<Map<String, dynamic>?>? onCrosshairMove;
   final ValueChanged<bool>? onChartModalStateChanged;
+  final ValueChanged<IndicatorPlotValues>? onIndicatorValues;
 
   const TvChartWidget({
     super.key,
@@ -82,6 +83,7 @@ class TvChartWidget extends StatefulWidget {
     this.interactive = true,
     this.onCrosshairMove,
     this.onChartModalStateChanged,
+    this.onIndicatorValues,
   });
 
   static String? _cachedHtml;
@@ -173,7 +175,24 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         if (payload is bool) {
           widget.onChartModalStateChanged?.call(payload);
         }
+      } else if (type == 'onIndicatorValues') {
+        _emitIndicatorValues(payload);
       }
+    });
+  }
+
+  /// Payload JS: JSON `{ "<id>": [nilaiPlot1, nilaiPlot2, ...] }`.
+  void _emitIndicatorValues(Object? payload) {
+    final ValueChanged<IndicatorPlotValues>? callback = widget.onIndicatorValues;
+    if (callback == null || payload is! String) return;
+    final Map<String, dynamic> decoded =
+        jsonDecode(payload) as Map<String, dynamic>;
+    callback(<String, List<double?>>{
+      for (final MapEntry<String, dynamic>(:String key, :dynamic value)
+          in decoded.entries)
+        key: <double?>[
+          for (final dynamic v in value as List<dynamic>) (v as num?)?.toDouble(),
+        ],
     });
   }
 
@@ -621,6 +640,13 @@ class _TvChartWidgetState extends State<TvChartWidget> {
                   .toList();
               widget.onRectanglesChanged?.call(updated);
             }
+            return null;
+          },
+        );
+        c.addJavaScriptHandler(
+          handlerName: 'onIndicatorValues',
+          callback: (List<dynamic> args) {
+            if (args.isNotEmpty) _emitIndicatorValues(args[0]);
             return null;
           },
         );

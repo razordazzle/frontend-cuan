@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../data/model/active_chart_indicator.dart';
 
 /// Painter untuk menggambar icon baut/mur segi-enam (Nut Icon)
@@ -250,6 +252,9 @@ class ChartIndicatorsLegend extends StatefulWidget {
   final VoidCallback? onDeleteVolume;
   final ValueChanged<String>? onOpenSettings;
 
+  /// Nilai plot terkini per indikator untuk status line (opsional).
+  final ValueListenable<IndicatorPlotValues>? plotValues;
+
   const ChartIndicatorsLegend({
     super.key,
     this.symbol = 'IHSG',
@@ -272,6 +277,7 @@ class ChartIndicatorsLegend extends StatefulWidget {
     this.onDeleteRsi,
     this.onDeleteVolume,
     this.onOpenSettings,
+    this.plotValues,
   });
 
   @override
@@ -301,7 +307,8 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
         activeItems.add(<String, dynamic>{
           'id': ind.id,
           'type': ind.type,
-          'title': ind.title,
+          'title': ind.inputsInStatusLine ? ind.title : ind.shortTitle,
+          'indicator': ind,
           'isHidden': !ind.isVisible,
           'onToggleEye': () => widget.onToggleIndicatorVisibility?.call(ind.id),
           'onDelete': () {
@@ -386,6 +393,15 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
               final VoidCallback onToggleEye = item['onToggleEye'] as VoidCallback;
               final VoidCallback onDelete = item['onDelete'] as VoidCallback;
               final VoidCallback onSettings = item['onSettings'] as VoidCallback;
+              final ActiveChartIndicator? indicator = item['indicator'] as ActiveChartIndicator?;
+              final ValueListenable<IndicatorPlotValues>? plotValues = widget.plotValues;
+              final Widget? values = (indicator != null && plotValues != null && !isHidden)
+                  ? _PlotValuesText(
+                      indicator: indicator,
+                      plotValues: plotValues,
+                      fallbackColor: textColor,
+                    )
+                  : null;
               final bool isSelected = _effectiveSelectedId == id;
 
               return Padding(
@@ -395,6 +411,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                         id: id,
                         title: title,
                         isHidden: isHidden,
+                        values: values,
                         textColor: textColor,
                         mutedColor: mutedTextColor,
                         onToggleEye: onToggleEye,
@@ -405,6 +422,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                         id: id,
                         title: title,
                         isHidden: isHidden,
+                        values: values,
                         textColor: textColor,
                         mutedColor: mutedTextColor,
                       ),
@@ -448,6 +466,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
     required String id,
     required String title,
     required bool isHidden,
+    required Widget? values,
     required Color textColor,
     required Color mutedColor,
   }) {
@@ -474,6 +493,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                 decoration: TextDecoration.none,
               ),
             ),
+            if (values != null) ...<Widget>[const SizedBox(width: 6), values],
             const SizedBox(width: 6),
             // Purple sync/refresh icon badge ala TradingView (Gambar 1)
             Opacity(
@@ -503,6 +523,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
     required String id,
     required String title,
     required bool isHidden,
+    required Widget? values,
     required Color textColor,
     required Color mutedColor,
     required VoidCallback onToggleEye,
@@ -545,6 +566,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                 decoration: TextDecoration.none,
               ),
             ),
+            if (values != null) ...<Widget>[const SizedBox(width: 6), values],
             const SizedBox(width: 14),
 
             // 1. Eye Button (Visibility)
@@ -1069,6 +1091,66 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
               ),
             );
           },
+        );
+      },
+    );
+  }
+}
+
+/// Nilai plot indikator di status line, diwarnai sesuai warna garisnya.
+class _PlotValuesText extends StatelessWidget {
+  static final NumberFormat _compactFormat = NumberFormat.compact();
+
+  final ActiveChartIndicator indicator;
+  final ValueListenable<IndicatorPlotValues> plotValues;
+  final Color fallbackColor;
+
+  const _PlotValuesText({
+    required this.indicator,
+    required this.plotValues,
+    required this.fallbackColor,
+  });
+
+  Color _plotColor(int plotIndex) => switch ((indicator.type, plotIndex)) {
+    ('vol', _) => fallbackColor,
+    (_, 0) => indicator.color ?? fallbackColor,
+    _ => indicator.smoothingStyle.color,
+  };
+
+  String _format(double value) => indicator.type == 'vol'
+      ? _compactFormat.format(value)
+      : value.toStringAsFixed(indicator.precisionDigits);
+
+  @override
+  Widget build(BuildContext context) {
+    if (!indicator.valuesInStatusLine) return const SizedBox.shrink();
+
+    return ValueListenableBuilder<IndicatorPlotValues>(
+      valueListenable: plotValues,
+      builder: (BuildContext context, IndicatorPlotValues values, _) {
+        final List<(int, double)> visiblePlots = <(int, double)>[
+          for (final (int index, double? value)
+              in (values[indicator.id] ?? const <double?>[]).indexed)
+            if (value != null) (index, value),
+        ];
+        if (visiblePlots.isEmpty) return const SizedBox.shrink();
+
+        return Text.rich(
+          TextSpan(
+            children: <InlineSpan>[
+              for (final (int position, (int plotIndex, double value))
+                  in visiblePlots.indexed)
+                TextSpan(
+                  text: '${position > 0 ? ' ' : ''}${_format(value)}',
+                  style: TextStyle(color: _plotColor(plotIndex)),
+                ),
+            ],
+          ),
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w500,
+            decoration: TextDecoration.none,
+          ),
         );
       },
     );

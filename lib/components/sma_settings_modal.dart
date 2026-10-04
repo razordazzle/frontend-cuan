@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/model/active_chart_indicator.dart';
+import '../data/model/indicator_line_style.dart';
 
 class SmaSettingsModal extends StatefulWidget {
   final ActiveChartIndicator indicator;
@@ -44,23 +45,17 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
   late TextEditingController _smoothingLengthController;
   late String _source;
   late String _smoothingType;
-  late String _timeframe;
-  late bool _waitForClose;
 
   // Style state
-  late bool _isMaVisible;
-  late Color _color;
-  late double _opacity;
-  late int _lineWidth;
-  late int _lineStyle; // 0: solid, 1: dashed, 2: dotted
-  late String _plotType;
-  late bool _priceLine;
+  late final _PlotStyleDraft _maStyle;
+  late final _PlotStyleDraft _smoothingStyle;
   late String _precision;
   late bool _labelsOnPriceScale;
   late bool _valuesInStatusLine;
   late bool _inputsInStatusLine;
-  bool _isColorPickerOpen = false;
-  final GlobalKey _swatchKey = GlobalKey();
+
+  /// Plot yang color picker-nya sedang terbuka (untuk highlight swatch).
+  _PlotStyleDraft? _colorPickerTarget;
 
   final List<Color> _recentColors = <Color>[
     const Color(0xFF2A2E39),
@@ -141,19 +136,6 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
     'VWMA',
   ];
 
-  static const List<String> _timeframeItems = <String>[
-    'Chart',
-    '1 minute',
-    '5 minutes',
-    '15 minutes',
-    '30 minutes',
-    '1 hour',
-    '4 hours',
-    '1 day',
-    '1 week',
-    '1 month',
-  ];
-
   static const List<String> _precisionItems = <String>[
     'Default',
     '0',
@@ -176,17 +158,20 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
     _smoothingLengthController = TextEditingController(text: ind.smoothingLength.toString());
     _source = ind.source.isNotEmpty ? ind.source : 'Close';
     _smoothingType = ind.smoothingType.isNotEmpty ? ind.smoothingType : 'None';
-    _timeframe = ind.timeframe.isNotEmpty ? ind.timeframe : 'Chart';
-    _waitForClose = ind.waitForClose;
 
-    _isMaVisible = ind.isVisible;
-    final Color c = ind.color ?? const Color(0xFF2962FF);
-    _opacity = c.a > 0 ? c.a : 1.0;
-    _color = c.withValues(alpha: 1.0);
-    _lineWidth = ind.lineWidth;
-    _lineStyle = ind.lineStyle;
-    _plotType = ind.plotType;
-    _priceLine = ind.priceLine;
+    _maStyle = _PlotStyleDraft(
+      isVisible: ind.isVisible,
+      color: ind.color ?? const Color(0xFF2962FF),
+      lineWidth: ind.lineWidth,
+      lineStyle: ind.lineStyle,
+    );
+    final IndicatorLineStyle smoothing = ind.smoothingStyle;
+    _smoothingStyle = _PlotStyleDraft(
+      isVisible: smoothing.isVisible,
+      color: smoothing.color,
+      lineWidth: smoothing.lineWidth,
+      lineStyle: smoothing.lineStyle,
+    );
     _precision = ind.precision.isNotEmpty ? ind.precision : 'Default';
     _labelsOnPriceScale = ind.labelsOnPriceScale;
     _valuesInStatusLine = ind.valuesInStatusLine;
@@ -207,28 +192,31 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
     final int newSmoothingLength =
         int.tryParse(_smoothingLengthController.text.trim()) ?? widget.indicator.smoothingLength;
 
-    // Format title (e.g. SMA 20 close)
-    final String srcFormatted = _source.toLowerCase();
-    final String newTitle = 'SMA $newPeriod $srcFormatted';
+    final int period = newPeriod > 0 ? newPeriod : 20;
+    final int smoothingLength = newSmoothingLength > 0 ? newSmoothingLength : 14;
+    final bool hasSmoothing = _smoothingType != 'None';
+
+    // Format title (e.g. "SMA 20 close" / "SMA 20 close EMA 14")
+    final String newTitle = <String>[
+      'SMA $period ${_source.toLowerCase()}',
+      if (hasSmoothing) '$_smoothingType $smoothingLength',
+    ].join(' ');
 
     final ActiveChartIndicator updated = widget.indicator.copyWith(
-      period: newPeriod > 0 ? newPeriod : 20,
+      period: period,
       offset: newOffset,
       source: _source,
       smoothingType: _smoothingType,
-      smoothingLength: newSmoothingLength > 0 ? newSmoothingLength : 14,
-      timeframe: _timeframe,
-      waitForClose: _waitForClose,
-      isVisible: _isMaVisible,
-      color: _color.withValues(alpha: _opacity),
-      lineWidth: _lineWidth,
-      lineStyle: _lineStyle,
+      smoothingLength: smoothingLength,
+      smoothingStyle: _smoothingStyle.toLineStyle(),
+      isVisible: _maStyle.isVisible,
+      color: _maStyle.resolvedColor,
+      lineWidth: _maStyle.lineWidth,
+      lineStyle: _maStyle.lineStyle,
       precision: _precision,
       labelsOnPriceScale: _labelsOnPriceScale,
       valuesInStatusLine: _valuesInStatusLine,
       inputsInStatusLine: _inputsInStatusLine,
-      plotType: _plotType,
-      priceLine: _priceLine,
       title: newTitle,
     );
 
@@ -472,51 +460,6 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
             );
           },
         ),
-        const SizedBox(height: 26),
-
-        // Section: CALCULATION
-        _buildSectionHeader('CALCULATION'),
-        const SizedBox(height: 16),
-
-        // Timeframe
-        _buildRow(
-          labelWidget: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(
-                'Timeframe',
-                style: TextStyle(
-                  color: Color(0xFFD1D4DC),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-              SizedBox(width: 8),
-              Icon(Icons.help_outline_rounded, color: Color(0xFF787B86), size: 16),
-            ],
-          ),
-          control: _buildPickerTrigger(
-            value: _timeframe,
-            width: _controlWidth,
-            onTap: () {
-              _openPickerSheet(
-                title: 'Timeframe',
-                items: _timeframeItems,
-                currentValue: _timeframe,
-                onSelected: (String val) => setState(() => _timeframe = val),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Checkbox: Wait for timeframe closes (default ON)
-        _buildCheckboxRow(
-          label: 'Wait for timeframe closes',
-          value: _waitForClose,
-          onChanged: (bool val) => setState(() => _waitForClose = val),
-        ),
         const SizedBox(height: 20),
       ],
     );
@@ -526,82 +469,11 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       children: <Widget>[
-        // MA Checkbox & Controls
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            // Left: [x] MA
-            GestureDetector(
-              onTap: () => setState(() => _isMaVisible = !_isMaVisible),
-              behavior: HitTestBehavior.opaque,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  _buildCustomCheckbox(_isMaVisible),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'MA',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w500,
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Right: Trendline-style combined pill button
-            GestureDetector(
-              onTap: _openColorPickerModal,
-              child: Container(
-                key: _swatchKey,
-                width: 82,
-                height: 36,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2A2A2A),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: _isColorPickerOpen ? const Color(0xFF2962FF) : const Color(0xFF3A3A3C),
-                    width: 1.5,
-                  ),
-                  boxShadow: _isColorPickerOpen
-                      ? const <BoxShadow>[
-                          BoxShadow(color: Color(0x662962FF), blurRadius: 4, spreadRadius: 1),
-                        ]
-                      : null,
-                ),
-                child: Row(
-                  children: <Widget>[
-                    Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        color: _color.withValues(alpha: _opacity),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Center(
-                        child: CustomPaint(
-                          size: const Size(34, 12),
-                          painter: _LinePreviewPainter(
-                            color: _color.withValues(alpha: _opacity),
-                            width: _lineWidth.toDouble().clamp(1.0, 4.0),
-                            lineStyle: _lineStyle,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+        _buildPlotStyleRow(label: 'MA', style: _maStyle),
+        if (_smoothingType != 'None') ...<Widget>[
+          const SizedBox(height: 16),
+          _buildPlotStyleRow(label: 'Smoothing MA', style: _smoothingStyle),
+        ],
         const SizedBox(height: 26),
 
         // Section: OUTPUT VALUES
@@ -653,6 +525,89 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
           onChanged: (bool val) => setState(() => _inputsInStatusLine = val),
         ),
         const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  /// Baris style satu plot: [checkbox visible] label ........ [swatch warna + preview garis]
+  Widget _buildPlotStyleRow({
+    required String label,
+    required _PlotStyleDraft style,
+  }) {
+    final bool isPickerOpen = identical(_colorPickerTarget, style);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: <Widget>[
+        GestureDetector(
+          onTap: () => setState(() => style.isVisible = !style.isVisible),
+          behavior: HitTestBehavior.opaque,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              _buildCustomCheckbox(style.isVisible),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w500,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Trendline-style combined pill button
+        GestureDetector(
+          onTap: () => _openColorPickerModal(style),
+          child: Container(
+            key: style.swatchKey,
+            width: 82,
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2A2A2A),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isPickerOpen ? const Color(0xFF2962FF) : const Color(0xFF3A3A3C),
+                width: 1.5,
+              ),
+              boxShadow: isPickerOpen
+                  ? const <BoxShadow>[
+                      BoxShadow(color: Color(0x662962FF), blurRadius: 4, spreadRadius: 1),
+                    ]
+                  : null,
+            ),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: style.resolvedColor,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Center(
+                    child: CustomPaint(
+                      size: const Size(34, 12),
+                      painter: _LinePreviewPainter(
+                        color: style.resolvedColor,
+                        width: style.lineWidth.toDouble().clamp(1.0, 4.0),
+                        lineStyle: style.lineStyle,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -909,8 +864,8 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
     );
   }
 
-  void _openColorPickerModal() {
-    final RenderBox? renderBox = _swatchKey.currentContext?.findRenderObject() as RenderBox?;
+  void _openColorPickerModal(_PlotStyleDraft target) {
+    final RenderBox? renderBox = target.swatchKey.currentContext?.findRenderObject() as RenderBox?;
     final MediaQueryData mediaQuery = MediaQuery.of(context);
     final double screenWidth = mediaQuery.size.width;
     final double screenHeight = mediaQuery.size.height;
@@ -940,7 +895,7 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
       }
     }
 
-    setState(() => _isColorPickerOpen = true);
+    setState(() => _colorPickerTarget = target);
 
     showGeneralDialog<void>(
       context: context,
@@ -1007,14 +962,14 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
                                       final int cIdx = colEntry.key;
                                       final Color c = colEntry.value;
                                       final bool isSelected =
-                                          (_color.toARGB32() & 0xFFFFFF) == (c.toARGB32() & 0xFFFFFF);
+                                          (target.color.toARGB32() & 0xFFFFFF) == (c.toARGB32() & 0xFFFFFF);
                                       return Expanded(
                                         child: Padding(
                                           padding: EdgeInsets.only(right: cIdx < row.length - 1 ? 4.0 : 0.0),
                                           child: GestureDetector(
                                             onTap: () {
                                               setState(() {
-                                                _color = c;
+                                                target.color = c;
                                                 if (!_recentColors.any((Color rc) =>
                                                     (rc.toARGB32() & 0xFFFFFF) == (c.toARGB32() & 0xFFFFFF))) {
                                                   _recentColors.insert(0, c);
@@ -1054,10 +1009,10 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
                       children: <Widget>[
                         ..._recentColors.map((Color c) {
                           final bool isSelected =
-                              (_color.toARGB32() & 0xFFFFFF) == (c.toARGB32() & 0xFFFFFF);
+                              (target.color.toARGB32() & 0xFFFFFF) == (c.toARGB32() & 0xFFFFFF);
                           return GestureDetector(
                             onTap: () {
-                              setState(() => _color = c);
+                              setState(() => target.color = c);
                               dialogSetState(() {});
                             },
                             child: Container(
@@ -1077,9 +1032,9 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
                         GestureDetector(
                           onTap: () {
                             if (!_recentColors.any((Color rc) =>
-                                (rc.toARGB32() & 0xFFFFFF) == (_color.toARGB32() & 0xFFFFFF))) {
+                                (rc.toARGB32() & 0xFFFFFF) == (target.color.toARGB32() & 0xFFFFFF))) {
                               setState(() {
-                                _recentColors.insert(0, _color);
+                                _recentColors.insert(0, target.color);
                                 if (_recentColors.length > 4) _recentColors.removeLast();
                               });
                               dialogSetState(() {});
@@ -1117,16 +1072,16 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
                           child: SliderTheme(
                             data: SliderThemeData(
                               trackHeight: 12,
-                              trackShape: _OpacitySliderTrackShape(_color),
+                              trackShape: _OpacitySliderTrackShape(target.color),
                               thumbShape: _OpacitySliderThumbShape(),
                               overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
                             ),
                             child: Slider(
-                              value: _opacity.clamp(0.0, 1.0),
+                              value: target.opacity.clamp(0.0, 1.0),
                               min: 0.0,
                               max: 1.0,
                               onChanged: (double val) {
-                                setState(() => _opacity = val);
+                                setState(() => target.opacity = val);
                                 dialogSetState(() {});
                               },
                             ),
@@ -1143,7 +1098,7 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
                           ),
                           alignment: Alignment.center,
                           child: Text(
-                            '${(_opacity * 100).round()}%',
+                            '${(target.opacity * 100).round()}%',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
@@ -1175,12 +1130,12 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
                       ),
                       child: Row(
                         children: <int>[1, 2, 3, 4].map((int w) {
-                          final bool isSelected = _lineWidth == w;
+                          final bool isSelected = target.lineWidth == w;
                           final bool isLast = w == 4;
                           return Expanded(
                             child: GestureDetector(
                               onTap: () {
-                                setState(() => _lineWidth = w);
+                                setState(() => target.lineWidth = w);
                                 dialogSetState(() {});
                               },
                               behavior: HitTestBehavior.opaque,
@@ -1229,12 +1184,12 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
                       ),
                       child: Row(
                         children: <int>[0, 1, 2].map((int style) {
-                          final bool isSelected = _lineStyle == style;
+                          final bool isSelected = target.lineStyle == style;
                           final bool isLast = style == 2;
                           return Expanded(
                             child: GestureDetector(
                               onTap: () {
-                                setState(() => _lineStyle = style);
+                                setState(() => target.lineStyle = style);
                                 dialogSetState(() {});
                               },
                               behavior: HitTestBehavior.opaque,
@@ -1275,7 +1230,7 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
       },
     ).whenComplete(() {
       if (mounted) {
-        setState(() => _isColorPickerOpen = false);
+        setState(() => _colorPickerTarget = null);
       }
     });
   }
@@ -1345,6 +1300,33 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
 }
 
 
+
+/// Draft style satu garis plot selama modal terbuka.
+class _PlotStyleDraft {
+  bool isVisible;
+  Color color; // selalu opaque, opacity disimpan terpisah di [opacity]
+  double opacity;
+  int lineWidth;
+  int lineStyle; // 0: solid, 1: dashed, 2: dotted
+  final GlobalKey swatchKey = GlobalKey();
+
+  _PlotStyleDraft({
+    required this.isVisible,
+    required Color color,
+    required this.lineWidth,
+    required this.lineStyle,
+  }) : color = color.withValues(alpha: 1.0),
+       opacity = color.a > 0 ? color.a : 1.0;
+
+  Color get resolvedColor => color.withValues(alpha: opacity);
+
+  IndicatorLineStyle toLineStyle() => IndicatorLineStyle(
+    color: resolvedColor,
+    lineWidth: lineWidth,
+    lineStyle: lineStyle,
+    isVisible: isVisible,
+  );
+}
 
 class _OpacitySliderTrackShape extends SliderTrackShape with BaseSliderTrackShape {
   final Color baseColor;

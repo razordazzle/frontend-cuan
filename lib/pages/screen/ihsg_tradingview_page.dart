@@ -314,6 +314,8 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                             setState(() => _crosshair = v),
                         onChartModalStateChanged: (bool isOpen) =>
                             setState(() => _isChartModalOpen = isOpen),
+                        onIndicatorValues: (IndicatorPlotValues values) =>
+                            _indicators.plotValues.value = values,
                       ),
 
                       // Tap-outside detector saat ada indikator legend yang sedang terseleksi
@@ -346,6 +348,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                             symbol: 'IHSG',
                             timeframe: p.tvResolution,
                             onOpenSettings: _openIndicatorSettings,
+                            plotValues: _indicators.plotValues,
                           ),
                         ),
 

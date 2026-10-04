@@ -316,6 +316,8 @@ class _StockTradingViewPageState extends State<StockTradingViewPage> {
                             setState(() => _crosshair = v),
                         onChartModalStateChanged: (bool isOpen) =>
                             setState(() => _isChartModalOpen = isOpen),
+                        onIndicatorValues: (IndicatorPlotValues values) =>
+                            _indicators.plotValues.value = values,
                       ),
 
                       // Tap-outside detector saat ada indikator legend yang sedang terseleksi
@@ -348,6 +350,7 @@ class _StockTradingViewPageState extends State<StockTradingViewPage> {
                             symbol: widget.ticker,
                             timeframe: p.tvResolution,
                             onOpenSettings: _openIndicatorSettings,
+                            plotValues: _indicators.plotValues,
                           ),
                         ),
 
