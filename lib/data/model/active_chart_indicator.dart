@@ -232,9 +232,7 @@ class ActiveChartIndicator {
     'title': title,
     'isVisible': isVisible,
     'period': period,
-    'color': color != null
-        ? '#${(color!.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}'
-        : null,
+    'color': color?.toCssRgba(),
     'lineWidth': lineWidth,
     'lineStyle': lineStyle,
     'source': source,

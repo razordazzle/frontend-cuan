@@ -116,6 +116,8 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
   ];
 
   static const double _controlWidth = 125;
+  static const double _paletteGap = 4;
+  static const int _maxRecentColors = 4;
 
   static const List<String> _sourceItems = <String>[
     'Open',
@@ -864,6 +866,16 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
     );
   }
 
+  static bool _isSameRgb(Color a, Color b) =>
+      (a.toARGB32() & 0xFFFFFF) == (b.toARGB32() & 0xFFFFFF);
+
+  /// Simpan [color] di urutan pertama recent colors (tanpa duplikat, maks [_maxRecentColors]).
+  void _rememberRecentColor(Color color) {
+    if (_recentColors.any((Color c) => _isSameRgb(c, color))) return;
+    _recentColors.insert(0, color);
+    if (_recentColors.length > _maxRecentColors) _recentColors.removeLast();
+  }
+
   void _openColorPickerModal(_PlotStyleDraft target) {
     final RenderBox? renderBox = target.swatchKey.currentContext?.findRenderObject() as RenderBox?;
     final MediaQueryData mediaQuery = MediaQuery.of(context);
@@ -950,31 +962,23 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            // 1. Color palette grid (10x8)
+                            // 1. Color palette grid (10x8). Jarak antar kotak ditaruh di luar
+                            // Expanded supaya semua kotak (termasuk kolom terakhir) sama besar.
                             Column(
-                              children: _tradingViewColorMatrix.asMap().entries.map((MapEntry<int, List<Color>> rowEntry) {
-                                final int rIdx = rowEntry.key;
-                                final List<Color> row = rowEntry.value;
-                                return Padding(
-                                  padding: EdgeInsets.only(bottom: rIdx < _tradingViewColorMatrix.length - 1 ? 4.0 : 0.0),
-                                  child: Row(
-                                    children: row.asMap().entries.map((MapEntry<int, Color> colEntry) {
-                                      final int cIdx = colEntry.key;
-                                      final Color c = colEntry.value;
-                                      final bool isSelected =
-                                          (target.color.toARGB32() & 0xFFFFFF) == (c.toARGB32() & 0xFFFFFF);
-                                      return Expanded(
-                                        child: Padding(
-                                          padding: EdgeInsets.only(right: cIdx < row.length - 1 ? 4.0 : 0.0),
+                              children: <Widget>[
+                                for (final (int rowIndex, List<Color> row)
+                                    in _tradingViewColorMatrix.indexed) ...<Widget>[
+                                  if (rowIndex > 0) const SizedBox(height: _paletteGap),
+                                  Row(
+                                    children: <Widget>[
+                                      for (final (int colIndex, Color swatch) in row.indexed) ...<Widget>[
+                                        if (colIndex > 0) const SizedBox(width: _paletteGap),
+                                        Expanded(
                                           child: GestureDetector(
                                             onTap: () {
                                               setState(() {
-                                                target.color = c;
-                                                if (!_recentColors.any((Color rc) =>
-                                                    (rc.toARGB32() & 0xFFFFFF) == (c.toARGB32() & 0xFFFFFF))) {
-                                                  _recentColors.insert(0, c);
-                                                  if (_recentColors.length > 4) _recentColors.removeLast();
-                                                }
+                                                target.color = swatch;
+                                                _rememberRecentColor(swatch);
                                               });
                                               dialogSetState(() {});
                                             },
@@ -982,9 +986,9 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
                                               aspectRatio: 1.0,
                                               child: Container(
                                                 decoration: BoxDecoration(
-                                                  color: c,
+                                                  color: swatch,
                                                   borderRadius: BorderRadius.circular(3.5),
-                                                  border: isSelected
+                                                  border: _isSameRgb(target.color, swatch)
                                                       ? Border.all(color: Colors.white, width: 2.0)
                                                       : null,
                                                 ),
@@ -992,11 +996,11 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
                                             ),
                                           ),
                                         ),
-                                      );
-                                    }).toList(),
+                                      ],
+                                    ],
                                   ),
-                                );
-                              }).toList(),
+                                ],
+                              ],
                             ),
 
                     // 2. Recent colors + Add button
@@ -1008,8 +1012,7 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
                     Row(
                       children: <Widget>[
                         ..._recentColors.map((Color c) {
-                          final bool isSelected =
-                              (target.color.toARGB32() & 0xFFFFFF) == (c.toARGB32() & 0xFFFFFF);
+                          final bool isSelected = _isSameRgb(target.color, c);
                           return GestureDetector(
                             onTap: () {
                               setState(() => target.color = c);
@@ -1031,14 +1034,8 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
                         }),
                         GestureDetector(
                           onTap: () {
-                            if (!_recentColors.any((Color rc) =>
-                                (rc.toARGB32() & 0xFFFFFF) == (target.color.toARGB32() & 0xFFFFFF))) {
-                              setState(() {
-                                _recentColors.insert(0, target.color);
-                                if (_recentColors.length > 4) _recentColors.removeLast();
-                              });
-                              dialogSetState(() {});
-                            }
+                            setState(() => _rememberRecentColor(target.color));
+                            dialogSetState(() {});
                           },
                           child: Container(
                             width: 24,
