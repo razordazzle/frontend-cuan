@@ -2570,6 +2570,9 @@
         let rawCandlesData = [];
         let currentRsiData = [];
         let currentVolumeData = [];
+        const VOLUME_BAR_OPACITY = 0.5;
+        let volumeUpColor = 'rgba(33, 192, 122, 0.5)';
+        let volumeDownColor = 'rgba(229, 57, 53, 0.5)';
         let pendingData = null;
 
         let horizontalLines = []; // Array of prices: [7650, 7820]
@@ -9341,9 +9344,14 @@
         }
 
         function initChart(upColor, downColor, gridColor, interactive, crosshairColor) {
-            if (chart) return;
+            if (chart) {
+                applyTrendColors(upColor, downColor);
+                return;
+            }
             upColor = upColor || '#21C07A';
             downColor = downColor || '#E53935';
+            volumeUpColor = hexToRgba(upColor, VOLUME_BAR_OPACITY);
+            volumeDownColor = hexToRgba(downColor, VOLUME_BAR_OPACITY);
             gridColor = gridColor || 'rgba(128, 128, 128, 0.15)';
             if (interactive === undefined || interactive === null) interactive = true;
             if (crosshairColor) currentCrosshairColor = crosshairColor;
@@ -9568,6 +9576,52 @@
                 const p = pendingData;
                 pendingData = null;
                 setDataWithIndicators(p);
+            }
+        }
+
+        // Warna naik/turun dari tema app: candle + bar volume.
+        function applyTrendColors(upColor, downColor) {
+            if (!upColor || !downColor) return;
+            volumeUpColor = hexToRgba(upColor, VOLUME_BAR_OPACITY);
+            volumeDownColor = hexToRgba(downColor, VOLUME_BAR_OPACITY);
+            candleSeries.applyOptions({
+                upColor: upColor,
+                downColor: downColor,
+                wickUpColor: upColor,
+                wickDownColor: downColor,
+            });
+            if (rawCandlesData.length > 0) setVolumeData(rawCandlesData.map(toVolumeBar));
+        }
+
+        function toVolumeBar(candle) {
+            return {
+                time: candle.time,
+                value: candle.volume || 0,
+                color: candle.close >= candle.open ? volumeUpColor : volumeDownColor,
+            };
+        }
+
+        // Semua series volume yang aktif (legacy + indikator Volume dari activeIndicators).
+        function getVolumeSeriesList() {
+            const list = Object.values(activeIndicatorSeriesMap)
+                .filter(entry => entry.type === 'vol')
+                .map(entry => entry.series);
+            if (volumeSeries) list.push(volumeSeries);
+            return list;
+        }
+
+        function setVolumeData(volumeBars) {
+            currentVolumeData = volumeBars;
+            for (const series of getVolumeSeriesList()) series.setData(volumeBars);
+        }
+
+        // Ganti titik terakhir kalau waktunya sama, tambah kalau lebih baru (update bar live).
+        function upsertLastByTime(list, point) {
+            const lastIndex = list.length - 1;
+            if (lastIndex >= 0 && list[lastIndex].time === point.time) {
+                list[lastIndex] = point;
+            } else if (lastIndex < 0 || point.time > list[lastIndex].time) {
+                list.push(point);
             }
         }
 
@@ -10098,10 +10152,6 @@
                     updateSmaData(entry);
                 } else if (entry.type === 'rsi') {
                     updateRsiData(entry);
-                } else if (entry.type === 'vol') {
-                    if (currentVolumeData && currentVolumeData.length > 0) {
-                        entry.series.setData(currentVolumeData);
-                    }
                 }
             }
             if (!isCrosshairActive) emitIndicatorValues(null);
@@ -10191,19 +10241,13 @@
             updatePanes();
         }
 
-        function setData(candlesJson, volumesJson) {
+        function setData(candlesJson) {
             if (!chart) initChart();
             const candles = typeof candlesJson === 'string' ? JSON.parse(candlesJson) : candlesJson;
             rawCandlesData = candles;
             candleSeries.setData(candles);
             areaSeries.setData(candles.map(c => ({ time: c.time, value: c.close })));
-            if (volumesJson) {
-                const vols = typeof volumesJson === 'string' ? JSON.parse(volumesJson) : volumesJson;
-                currentVolumeData = vols;
-                if (volumeSeries) {
-                    volumeSeries.setData(vols);
-                }
-            }
+            setVolumeData(candles.map(toVolumeBar));
             if (currentShowFib && (!fibPoint1 || !fibPoint2)) {
                 startFibDrawing();
             }
@@ -10226,16 +10270,7 @@
                 rawCandlesData = payload.candles;
                 candleSeries.setData(payload.candles);
                 areaSeries.setData(payload.candles.map(c => ({ time: c.time, value: c.close })));
-
-                const volData = payload.candles.map(c => ({
-                    time: c.time,
-                    value: c.volume || 0,
-                    color: c.close >= c.open ? '#26a69a88' : '#ef535088'
-                }));
-                currentVolumeData = volData;
-                if (volumeSeries) {
-                    volumeSeries.setData(volData);
-                }
+                setVolumeData(payload.candles.map(toVolumeBar));
             }
 
             if (payload.indicators) {
@@ -10259,31 +10294,15 @@
             renderFib();
         }
 
-        function updateBar(barInput, volBarInput) {
+        function updateBar(barInput) {
             if (!chart) return;
             const bar = typeof barInput === 'string' ? JSON.parse(barInput) : barInput;
-            const lastIndex = rawCandlesData.length - 1;
-            if (lastIndex >= 0 && rawCandlesData[lastIndex].time === bar.time) {
-                rawCandlesData[lastIndex] = bar;
-            } else if (lastIndex < 0 || bar.time > rawCandlesData[lastIndex].time) {
-                rawCandlesData.push(bar);
-            }
+            const volumeBar = toVolumeBar(bar);
+            upsertLastByTime(rawCandlesData, bar);
+            upsertLastByTime(currentVolumeData, volumeBar);
             candleSeries.update(bar);
             areaSeries.update({ time: bar.time, value: bar.close });
-            if (volBarInput) {
-                const vol = typeof volBarInput === 'string' ? JSON.parse(volBarInput) : volBarInput;
-                if (currentVolumeData && currentVolumeData.length > 0) {
-                    const lastIdx = currentVolumeData.length - 1;
-                    if (currentVolumeData[lastIdx].time === vol.time) {
-                        currentVolumeData[lastIdx] = vol;
-                    } else {
-                        currentVolumeData.push(vol);
-                    }
-                }
-                if (volumeSeries) {
-                    volumeSeries.update(vol);
-                }
-            }
+            for (const series of getVolumeSeriesList()) series.update(volumeBar);
             refreshActiveIndicatorsData();
             renderFib();
         }
@@ -10345,7 +10364,7 @@
                 } else if (data.type === 'clearAllDrawings') {
                     clearAllDrawings();
                 } else if (data.type === 'setData') {
-                    setData(data.candles, data.volumes);
+                    setData(data.candles);
                 } else if (data.type === 'setSeriesType') {
                     setSeriesType(data.seriesType);
                 } else if (data.type === 'initChart') {

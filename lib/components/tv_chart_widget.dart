@@ -219,14 +219,6 @@ class _TvChartWidgetState extends State<TvChartWidget> {
     return 'rgba($r, $g, $b, $opacity)';
   }
 
-  Map<String, dynamic> _volJson(Ohlc c) => <String, dynamic>{
-    'time': _sec(c.time),
-    'value': c.volume,
-    'color': c.close >= c.open
-        ? _rgba(widget.upColor, .5)
-        : _rgba(widget.downColor, .5),
-  };
-
   Future<void> _pushAll() async {
     if (_ctrl == null) return;
     debugPrint("TV_CHART_DART: _pushAll called, candles=${widget.candles.length}, hasPayload=${widget.payload != null}");
@@ -267,13 +259,6 @@ class _TvChartWidgetState extends State<TvChartWidget> {
       await _ctrl!.evaluateJavascript(
         source: "setDataWithIndicators(${jsonEncode(payloadStr)});",
       );
-
-      final String volsJson = jsonEncode(
-        widget.payload!.candles.map(_volJson).toList(),
-      );
-      await _ctrl!.evaluateJavascript(
-        source: "if (window.setVolumeData) setVolumeData(${jsonEncode(volsJson)});",
-      );
     } else {
       final List<Ohlc> activeCandles = widget.candles.isNotEmpty
           ? widget.candles
@@ -281,11 +266,8 @@ class _TvChartWidgetState extends State<TvChartWidget> {
       final String candlesJson = jsonEncode(
         activeCandles.map(_barJson).toList(),
       );
-      final String volsJson = jsonEncode(
-        activeCandles.map(_volJson).toList(),
-      );
       await _ctrl!.evaluateJavascript(
-        source: "setData(${jsonEncode(candlesJson)}, ${jsonEncode(volsJson)});",
+        source: "setData(${jsonEncode(candlesJson)});",
       );
     }
 
@@ -500,9 +482,8 @@ class _TvChartWidgetState extends State<TvChartWidget> {
       if (widget.liveBar != null &&
           (old.liveBar?.close != widget.liveBar?.close)) {
         final String bar = jsonEncode(_barJson(widget.liveBar!));
-        final String vol = jsonEncode(_volJson(widget.liveBar!));
         _ctrl?.evaluateJavascript(
-          source: "updateBar(${jsonEncode(bar)}, ${jsonEncode(vol)});",
+          source: "updateBar(${jsonEncode(bar)});",
         );
       }
     }
