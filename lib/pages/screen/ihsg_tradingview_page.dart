@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 import 'package:cuan_app/components/chart_indicators_legend.dart';
+import 'package:cuan_app/components/indicator_settings_sheet.dart';
 import 'package:cuan_app/components/indicators_modal_sheet.dart';
-import 'package:cuan_app/components/sma_settings_modal.dart';
 import 'package:cuan_app/components/tv_chart_widget.dart';
+import 'package:cuan_app/controllers/chart_drawings_controller.dart';
+import 'package:cuan_app/controllers/chart_indicators_controller.dart';
 import 'package:cuan_app/data/model/active_chart_indicator.dart';
 import 'package:cuan_app/data/model/candle_item.dart';
 import 'package:flutter/material.dart';
@@ -19,31 +21,16 @@ class IhsgTradingViewPage extends StatefulWidget {
 }
 
 class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
+  final ChartIndicatorsController _indicators = ChartIndicatorsController();
+  final ChartDrawingsController _drawings = ChartDrawingsController();
+  late final Listenable _chartState = Listenable.merge(<Listenable>[
+    _indicators,
+    _drawings,
+  ]);
   bool _isCandle = true;
-  final List<ActiveChartIndicator> _activeIndicators = <ActiveChartIndicator>[];
-  bool _showSma = false;
-  bool _showRsi = false;
-  bool _showVolume = false;
-  bool _visibleSma = true;
-  bool _visibleRsi = true;
-  bool _visibleVolume = true;
-  bool _showFibonacci = false;
-  bool _isDrawingFib = false;
-  List<Map<String, dynamic>> _horizontalLines = <Map<String, dynamic>>[];
-  bool _isDrawingHorizontalLine = false;
-  List<Map<String, dynamic>> _trendlines = <Map<String, dynamic>>[];
-  bool _isDrawingTrendline = false;
-  List<Map<String, dynamic>> _rectangles = <Map<String, dynamic>>[];
-  bool _isDrawingRectangle = false;
   bool _isChartModalOpen = false;
-  bool _showDrawingToolbar = false;
   Map<String, dynamic>? _crosshair;
-  String? _selectedLegendIndicatorId;
-  final Set<String> _favoriteIndicators = <String>{
-    'Moving Average',
-    'Relative Strength Index',
-    'Volume',
-  };
+
   @override
   void initState() {
     super.initState();
@@ -52,56 +39,11 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
     });
   }
 
-  int get _activeIndicatorsCount => _activeIndicators.length;
-
-  void _startDrawingFibonacci() {
-    setState(() {
-      _isDrawingHorizontalLine = false;
-      _isDrawingTrendline = false;
-      _isDrawingRectangle = false;
-      _showFibonacci = true;
-      _isDrawingFib = true;
-    });
-  }
-
-  void _startDrawingHorizontalLine() {
-    setState(() {
-      _isDrawingFib = false;
-      _isDrawingTrendline = false;
-      _isDrawingRectangle = false;
-      _isDrawingHorizontalLine = true;
-    });
-  }
-
-  void _startDrawingTrendline() {
-    setState(() {
-      _isDrawingFib = false;
-      _isDrawingHorizontalLine = false;
-      _isDrawingRectangle = false;
-      _isDrawingTrendline = true;
-    });
-  }
-
-  void _startDrawingRectangle() {
-    setState(() {
-      _isDrawingFib = false;
-      _isDrawingHorizontalLine = false;
-      _isDrawingTrendline = false;
-      _isDrawingRectangle = true;
-    });
-  }
-
-  void _clearAllDrawings() {
-    setState(() {
-      _showFibonacci = false;
-      _isDrawingFib = false;
-      _horizontalLines = <Map<String, dynamic>>[];
-      _isDrawingHorizontalLine = false;
-      _trendlines = <Map<String, dynamic>>[];
-      _isDrawingTrendline = false;
-      _rectangles = <Map<String, dynamic>>[];
-      _isDrawingRectangle = false;
-    });
+  @override
+  void dispose() {
+    _indicators.dispose();
+    _drawings.dispose();
+    super.dispose();
   }
 
   void _showDrawingsBottomSheet(BuildContext context) {
@@ -110,129 +52,34 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext sheetContext) {
-        final bool hasDrawings =
-            _showFibonacci ||
-            _horizontalLines.isNotEmpty ||
-            _trendlines.isNotEmpty ||
-            _rectangles.isNotEmpty;
+        void startDrawing(ChartDrawingTool tool) {
+          Navigator.of(sheetContext).pop();
+          _drawings.startDrawing(tool);
+        }
 
         return _DrawingsBottomSheetWidget(
-          isDrawingTrendline: _isDrawingTrendline,
-          isDrawingHorizontalLine: _isDrawingHorizontalLine,
-          showFibonacci: _showFibonacci,
-          isDrawingFib: _isDrawingFib,
-          isDrawingRectangle: _isDrawingRectangle,
-          showDrawingToolbar: _showDrawingToolbar,
-          hasDrawings: hasDrawings,
-          onSelectTrendline: () {
-            Navigator.of(sheetContext).pop();
-            _startDrawingTrendline();
-          },
-          onSelectHorizontalLine: () {
-            Navigator.of(sheetContext).pop();
-            _startDrawingHorizontalLine();
-          },
-          onSelectFibonacci: () {
-            Navigator.of(sheetContext).pop();
-            _startDrawingFibonacci();
-          },
-          onSelectRectangle: () {
-            Navigator.of(sheetContext).pop();
-            _startDrawingRectangle();
-          },
+          isDrawingTrendline: _drawings.isDrawing(ChartDrawingTool.trendline),
+          isDrawingHorizontalLine: _drawings.isDrawing(
+            ChartDrawingTool.horizontalLine,
+          ),
+          showFibonacci: _drawings.showFibonacci,
+          isDrawingFib: _drawings.isDrawing(ChartDrawingTool.fibonacci),
+          isDrawingRectangle: _drawings.isDrawing(ChartDrawingTool.rectangle),
+          showDrawingToolbar: _drawings.isToolbarVisible,
+          hasDrawings: _drawings.hasDrawings,
+          onSelectTrendline: () => startDrawing(ChartDrawingTool.trendline),
+          onSelectHorizontalLine: () =>
+              startDrawing(ChartDrawingTool.horizontalLine),
+          onSelectFibonacci: () => startDrawing(ChartDrawingTool.fibonacci),
+          onSelectRectangle: () => startDrawing(ChartDrawingTool.rectangle),
           onClearAllDrawings: () {
             Navigator.of(sheetContext).pop();
-            _clearAllDrawings();
+            _drawings.clearAll();
           },
-          onToggleDrawingToolbar: (bool val) {
-            setState(() => _showDrawingToolbar = val);
-          },
+          onToggleDrawingToolbar: _drawings.setToolbarVisible,
         );
       },
     );
-  }
-
-  void _syncLegacyIndicators() {
-    final List<ActiveChartIndicator> activeSmas = _activeIndicators
-        .where((ActiveChartIndicator i) => i.type == 'sma')
-        .toList();
-    final List<ActiveChartIndicator> activeRsis = _activeIndicators
-        .where((ActiveChartIndicator i) => i.type == 'rsi')
-        .toList();
-    final List<ActiveChartIndicator> activeVols = _activeIndicators
-        .where((ActiveChartIndicator i) => i.type == 'vol')
-        .toList();
-
-    _showSma = activeSmas.isNotEmpty;
-    _visibleSma = activeSmas.any((ActiveChartIndicator i) => i.isVisible);
-
-    _showRsi = activeRsis.isNotEmpty;
-    _visibleRsi = activeRsis.any((ActiveChartIndicator i) => i.isVisible);
-
-    _showVolume = activeVols.isNotEmpty;
-    _visibleVolume = activeVols.any((ActiveChartIndicator i) => i.isVisible);
-  }
-
-  void _addIndicator(String id) {
-    setState(() {
-      final int count = _activeIndicators
-          .where((ActiveChartIndicator i) => i.type == id)
-          .length;
-      final String suffix = count > 0 ? ' ${count + 1}' : '';
-      if (id == 'sma') {
-        const int period = 20;
-        _activeIndicators.add(
-          ActiveChartIndicator(
-            id: 'sma_${DateTime.now().microsecondsSinceEpoch}',
-            type: 'sma',
-            title: 'SMA $period close$suffix',
-            period: period,
-          ),
-        );
-      } else if (id == 'rsi') {
-        const int period = 14;
-        _activeIndicators.add(
-          ActiveChartIndicator(
-            id: 'rsi_${DateTime.now().microsecondsSinceEpoch}',
-            type: 'rsi',
-            title: 'RSI $period close$suffix',
-            period: period,
-          ),
-        );
-      } else if (id == 'vol') {
-        _activeIndicators.add(
-          ActiveChartIndicator(
-            id: 'vol_${DateTime.now().microsecondsSinceEpoch}',
-            type: 'vol',
-            title: 'Vol$suffix',
-          ),
-        );
-      }
-      _syncLegacyIndicators();
-    });
-  }
-
-  void _toggleIndicatorVisibility(String id) {
-    setState(() {
-      final int idx = _activeIndicators.indexWhere(
-        (ActiveChartIndicator i) => i.id == id,
-      );
-      if (idx != -1) {
-        final ActiveChartIndicator item = _activeIndicators[idx];
-        _activeIndicators[idx] = item.copyWith(isVisible: !item.isVisible);
-      }
-      _syncLegacyIndicators();
-    });
-  }
-
-  void _deleteIndicator(String id) {
-    setState(() {
-      _activeIndicators.removeWhere((ActiveChartIndicator i) => i.id == id);
-      if (_selectedLegendIndicatorId == id) {
-        _selectedLegendIndicatorId = null;
-      }
-      _syncLegacyIndicators();
-    });
   }
 
   void _showIndicatorsBottomSheet(BuildContext context) {
@@ -241,141 +88,25 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (BuildContext sheetContext) {
-        return IndicatorsModalSheet(
-          showSma: _showSma,
-          showRsi: _showRsi,
-          showVolume: _showVolume,
-          showFibonacci: _showFibonacci,
-          favoriteIndicators: _favoriteIndicators,
-          onAddIndicator: (String id) => _addIndicator(id),
-          onToggleFavorite: (String name) {
-            setState(() {
-              if (_favoriteIndicators.contains(name)) {
-                _favoriteIndicators.remove(name);
-              } else {
-                _favoriteIndicators.add(name);
-              }
-            });
-          },
-          onToggleSma: (bool val) => setState(() {
-            _showSma = val;
-            if (val) _visibleSma = true;
-          }),
-          onToggleRsi: (bool val) => setState(() {
-            _showRsi = val;
-            if (val) _visibleRsi = true;
-          }),
-          onToggleVolume: (bool val) => setState(() {
-            _showVolume = val;
-            if (val) _visibleVolume = true;
-          }),
-          onToggleFibonacci: (bool val) => setState(() => _showFibonacci = val),
-        );
-      },
+      builder: (_) => IndicatorsModalSheet(
+        showSma: _indicators.hasType('sma'),
+        showRsi: _indicators.hasType('rsi'),
+        showVolume: _indicators.hasType('vol'),
+        showFibonacci: _drawings.showFibonacci,
+        favoriteIndicators: _indicators.favorites,
+        onAddIndicator: _indicators.add,
+        onToggleFavorite: _indicators.toggleFavorite,
+      ),
     );
   }
 
   void _openIndicatorSettings(String id) {
-    ActiveChartIndicator? indicator;
-    final int idx = _activeIndicators.indexWhere(
-      (ActiveChartIndicator i) => i.id == id,
-    );
-    if (idx != -1) {
-      indicator = _activeIndicators[idx];
-    } else if (id == 'sma' || id.startsWith('sma')) {
-      final int smaIdx = _activeIndicators.indexWhere(
-        (ActiveChartIndicator i) => i.type == 'sma',
-      );
-      if (smaIdx != -1) {
-        indicator = _activeIndicators[smaIdx];
-      } else {
-        indicator = ActiveChartIndicator(
-          id: 'sma_${DateTime.now().microsecondsSinceEpoch}',
-          type: 'sma',
-          title: 'SMA 20 close',
-          period: 20,
-        );
-      }
-    }
-
-    if (indicator != null && indicator.type == 'sma') {
-      SmaSettingsModal.show(
-        context: context,
-        indicator: indicator,
-        onSave: (ActiveChartIndicator updated) {
-          setState(() {
-            final int targetIdx = _activeIndicators.indexWhere(
-              (ActiveChartIndicator i) => i.id == updated.id,
-            );
-            if (targetIdx != -1) {
-              _activeIndicators[targetIdx] = updated;
-            } else {
-              _activeIndicators.add(updated);
-            }
-            _syncLegacyIndicators();
-          });
-        },
-      );
-      return;
-    }
-
-    final String title = id == 'sma'
-        ? 'Moving Average (SMA)'
-        : id == 'rsi'
-        ? 'Relative Strength Index (RSI)'
-        : 'Volume';
-
-    showModalBottomSheet<void>(
+    final ActiveChartIndicator? indicator = _indicators.findById(id);
+    if (indicator == null) return;
+    showIndicatorSettingsSheet(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext sheetCtx) {
-        final bool isDark = Theme.of(sheetCtx).brightness == Brightness.dark;
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E222D) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(sheetCtx).pop(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Customization untuk $title akan dikonfigurasi di langkah berikutnya.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDark
-                        ? const Color(0xFFD1D4DC)
-                        : const Color(0xFF4A4E5A),
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        );
-      },
+      indicator: indicator,
+      onSave: _indicators.update,
     );
   }
 
@@ -400,491 +131,383 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
           ),
         ],
       ),
-      body: Consumer<StocksProvider>(
-        builder: (BuildContext context, StocksProvider p, _) {
-          final List<Ohlc> rawCandles =
-              (p.tvChartPayload?.candles.isNotEmpty == true)
-              ? p.tvChartPayload!.candles
-              : p.tvCandles
-                    .map(
-                      (CandleItem c) => Ohlc(
-                        time: c.ts,
-                        open: c.open ?? c.close ?? 0,
-                        high: c.high ?? c.close ?? 0,
-                        low: c.low ?? c.close ?? 0,
-                        close: c.close ?? 0,
-                        volume: (c.volume ?? 0).toDouble(),
-                      ),
-                    )
-                    .toList();
-          // (p.ihsgChartPayload?.candles.isNotEmpty == true)
-          // ? p.ihsgChartPayload!.candles
-          // : p.ihsgCandles
-          //       .map(
-          //         (CandleItem c) => Ohlc(
-          //           time: c.ts,
-          //           open: c.open ?? c.close ?? 0,
-          //           high: c.high ?? c.close ?? 0,
-          //           low: c.low ?? c.close ?? 0,
-          //           close: c.close ?? 0,
-          //           volume: (c.volume ?? 0).toDouble(),
-          //         ),
-          //       )
-          //       .toList();
-          final List<Ohlc> candles = rawCandles.isNotEmpty
-              ? rawCandles
-              : makeDummyCandles(60);
-
-          final Ohlc? liveBar = (candles.isNotEmpty && p.ihsgLast != null)
-              ? Ohlc(
-                  time: candles.last.time,
-                  open: candles.last.open,
-                  high: math.max(candles.last.high, p.ihsgLast!),
-                  low: math.min(candles.last.low, p.ihsgLast!),
-                  close: p.ihsgLast!,
-                  volume: candles.last.volume,
-                )
-              : null;
-
-          return Column(
-            children: [
-              // Legend OHLCV live, update pas jari geser di chart
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: _Legend(
-                  crosshair: _crosshair,
-                  fallback:
-                      liveBar ?? (candles.isNotEmpty ? candles.last : null),
-                ),
-              ),
-              // Clean Top Bar: Timeframe (Kiri) + Action Buttons [fx] & [✏️] (Kanan)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    // Timeframe pills (sekarang sangat rapi dan pas di layar)
-                    Expanded(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: ['1D', '1W', '1M']
-                              .map(
-                                (String r) => Padding(
-                                  padding: const EdgeInsets.only(right: 6),
-                                  child: ChoiceChip(
-                                    label: Text(r),
-                                    selected: p.tvResolution == r,
-                                    onSelected: (_) => p.setTvResolution(r),
-                                  ),
-                                ),
-                              )
-                              .toList(),
+      body: ListenableBuilder(
+        listenable: _chartState,
+        builder: (BuildContext context, _) => Consumer<StocksProvider>(
+          builder: (BuildContext context, StocksProvider p, _) {
+            final List<Ohlc> rawCandles =
+                (p.tvChartPayload?.candles.isNotEmpty == true)
+                ? p.tvChartPayload!.candles
+                : p.tvCandles
+                      .map(
+                        (CandleItem c) => Ohlc(
+                          time: c.ts,
+                          open: c.open ?? c.close ?? 0,
+                          high: c.high ?? c.close ?? 0,
+                          low: c.low ?? c.close ?? 0,
+                          close: c.close ?? 0,
+                          volume: (c.volume ?? 0).toDouble(),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    // Pembatas visual
-                    Container(
-                      width: 1,
-                      height: 22,
-                      color: cs.outline.withValues(alpha: 0.25),
-                    ),
-                    const SizedBox(width: 8),
-                    // Tombol Indikator Teknikal (fx) dengan badge counter
-                    _ActionButton(
-                      tooltip: 'Indikator Teknikal',
-                      onTap: () => _showIndicatorsBottomSheet(context),
-                      isActive: _activeIndicatorsCount > 0,
-                      activeColor: const Color(0xFF00A3A8),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'fx',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 14,
-                              color: _activeIndicatorsCount > 0
-                                  ? const Color(0xFF00A3A8)
-                                  : (isDark
-                                        ? const Color(0xFFD8D8D8)
-                                        : const Color(0xFF373737)),
-                            ),
-                          ),
-                          if (_activeIndicatorsCount > 0) ...[
-                            const SizedBox(width: 5),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 5,
-                                vertical: 1,
-                              ),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF00A3A8),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(
-                                '$_activeIndicatorsCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    // Tombol Drawing Toolbar (✏️)
-                    _ActionButton(
-                      tooltip: 'Alat Gambar (Drawings)',
-                      onTap: () => _showDrawingsBottomSheet(context),
-                      isActive:
-                          _showDrawingToolbar ||
-                          _isDrawingHorizontalLine ||
-                          _isDrawingTrendline ||
-                          _isDrawingRectangle ||
-                          _isDrawingFib,
-                      activeColor: const Color(0xFF00A3A8),
-                      child: Icon(
-                        Icons.edit_outlined,
-                        size: 17,
-                        color:
-                            (_showDrawingToolbar ||
-                                _isDrawingHorizontalLine ||
-                                _isDrawingTrendline ||
-                                _isDrawingRectangle ||
-                                _isDrawingFib)
-                            ? const Color(0xFF00A3A8)
-                            : (isDark
-                                  ? const Color(0xFFD8D8D8)
-                                  : const Color(0xFF373737)),
-                      ),
-                    ),
-                  ],
+                      )
+                      .toList();
+            // (p.ihsgChartPayload?.candles.isNotEmpty == true)
+            // ? p.ihsgChartPayload!.candles
+            // : p.ihsgCandles
+            //       .map(
+            //         (CandleItem c) => Ohlc(
+            //           time: c.ts,
+            //           open: c.open ?? c.close ?? 0,
+            //           high: c.high ?? c.close ?? 0,
+            //           low: c.low ?? c.close ?? 0,
+            //           close: c.close ?? 0,
+            //           volume: (c.volume ?? 0).toDouble(),
+            //         ),
+            //       )
+            //       .toList();
+            final List<Ohlc> candles = rawCandles.isNotEmpty
+                ? rawCandles
+                : makeDummyCandles(60);
+
+            final Ohlc? liveBar = (candles.isNotEmpty && p.ihsgLast != null)
+                ? Ohlc(
+                    time: candles.last.time,
+                    open: candles.last.open,
+                    high: math.max(candles.last.high, p.ihsgLast!),
+                    low: math.min(candles.last.low, p.ihsgLast!),
+                    close: p.ihsgLast!,
+                    volume: candles.last.volume,
+                  )
+                : null;
+
+            return Column(
+              children: [
+                // Legend OHLCV live, update pas jari geser di chart
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: _Legend(
+                    crosshair: _crosshair,
+                    fallback:
+                        liveBar ?? (candles.isNotEmpty ? candles.last : null),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: Stack(
-                  children: [
-                    TvChartWidget(
-                      symbol: 'IHSG',
-                      timeframe: p.tvResolution,
-                      candles: candles,
-                      payload: p.tvChartPayload,
-                      isCandle: _isCandle,
-                      activeIndicators: List<ActiveChartIndicator>.from(
-                        _activeIndicators,
-                      ),
-                      showSma: _showSma && _visibleSma,
-                      showRsi: _showRsi && _visibleRsi,
-                      showVolume: _showVolume && _visibleVolume,
-                      showFibonacci: _showFibonacci,
-                      isDrawingFib: _isDrawingFib,
-                      onFibDrawn: () {
-                        if (mounted && _isDrawingFib) {
-                          setState(() => _isDrawingFib = false);
-                        }
-                      },
-                      onFibDeleted: () {
-                        if (mounted) {
-                          setState(() {
-                            _showFibonacci = false;
-                            _isDrawingFib = false;
-                          });
-                        }
-                      },
-                      horizontalLines: _horizontalLines,
-                      isDrawingHorizontalLine: _isDrawingHorizontalLine,
-                      onHorizontalLineAdded: (dynamic item) {
-                        if (mounted) {
-                          setState(() {
-                            _isDrawingHorizontalLine = false;
-                          });
-                        }
-                      },
-                      onHorizontalLinesChanged:
-                          (List<Map<String, dynamic>> updated) {
-                            if (mounted) {
-                              setState(() {
-                                _horizontalLines =
-                                    List<Map<String, dynamic>>.from(updated);
-                                _isDrawingHorizontalLine = false;
-                              });
-                            }
-                          },
-                      trendlines: _trendlines,
-                      isDrawingTrendline: _isDrawingTrendline,
-                      onTrendlineAdded: (Map<String, dynamic> line) {
-                        if (mounted) {
-                          setState(() {
-                            _isDrawingTrendline = false;
-                          });
-                        }
-                      },
-                      onTrendlinesChanged:
-                          (List<Map<String, dynamic>> updated) {
-                            if (mounted) {
-                              setState(() {
-                                _trendlines = List<Map<String, dynamic>>.from(
-                                  updated,
-                                );
-                                _isDrawingTrendline = false;
-                              });
-                            }
-                          },
-                      rectangles: _rectangles,
-                      isDrawingRectangle: _isDrawingRectangle,
-                      onRectangleAdded: (Map<String, dynamic> rect) {
-                        if (mounted) {
-                          setState(() {
-                            _isDrawingRectangle = false;
-                          });
-                        }
-                      },
-                      onRectanglesChanged:
-                          (List<Map<String, dynamic>> updated) {
-                            if (mounted) {
-                              setState(() {
-                                _rectangles = List<Map<String, dynamic>>.from(
-                                  updated,
-                                );
-                                _isDrawingRectangle = false;
-                              });
-                            }
-                          },
-                      upColor: upColor,
-                      downColor: downColor,
-                      gridColor: cs.outline.withValues(alpha: .15),
-                      crosshairColor: t.brightness == Brightness.dark
-                          ? const Color(0xFFD1D4DC)
-                          : const Color(0xFF4A4E5A),
-                      liveBar: liveBar,
-                      interactive: true,
-                      onCrosshairMove: (Map<String, dynamic>? v) =>
-                          setState(() => _crosshair = v),
-                      onChartModalStateChanged: (bool isOpen) =>
-                          setState(() => _isChartModalOpen = isOpen),
-                    ),
-
-                    // Tap-outside detector saat ada indikator legend yang sedang terseleksi
-                    if (!_isChartModalOpen &&
-                        _selectedLegendIndicatorId != null)
-                      Positioned.fill(
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.translucent,
-                          onTap: () {
-                            setState(() {
-                              _selectedLegendIndicatorId = null;
-                            });
-                          },
-                        ),
-                      ),
-
-                    // Active Indicators Legend di Pojok Kiri Atas Chart (ala TradingView)
-                    if (!_isChartModalOpen)
-                      Positioned(
-                        top: 10,
-                        left: 10,
-                        child: ChartIndicatorsLegend(
-                          selectedId: _selectedLegendIndicatorId,
-                          onSelectionChanged: (String? id) =>
-                              setState(() => _selectedLegendIndicatorId = id),
-                          activeIndicators: _activeIndicators,
-                          onToggleIndicatorVisibility:
-                              _toggleIndicatorVisibility,
-                          onDeleteIndicator: _deleteIndicator,
-                          showSma: _showSma,
-                          showRsi: _showRsi,
-                          showVolume: _showVolume,
-                          visibleSma: _visibleSma,
-                          visibleRsi: _visibleRsi,
-                          visibleVolume: _visibleVolume,
-                          onToggleVisibilitySma: (bool val) =>
-                              setState(() => _visibleSma = val),
-                          onToggleVisibilityRsi: (bool val) =>
-                              setState(() => _visibleRsi = val),
-                          onToggleVisibilityVolume: (bool val) =>
-                              setState(() => _visibleVolume = val),
-                          onDeleteSma: () => setState(() {
-                            _showSma = false;
-                            _visibleSma = true;
-                          }),
-                          onDeleteRsi: () => setState(() {
-                            _showRsi = false;
-                            _visibleRsi = true;
-                          }),
-                          onDeleteVolume: () => setState(() {
-                            _showVolume = false;
-                            _visibleVolume = true;
-                          }),
-                          symbol: 'IHSG',
-                          timeframe: p.tvResolution,
-                          onOpenSettings: (String id) =>
-                              _openIndicatorSettings(id),
-                        ),
-                      ),
-
-                    // Active Drawing Prompt Banner (Memberikan instruksi saat user sedang menggambar)
-                    if (_isDrawingHorizontalLine ||
-                        _isDrawingTrendline ||
-                        _isDrawingRectangle ||
-                        _isDrawingFib)
-                      Positioned(
-                        top: 10,
-                        left: 16,
-                        right: 16,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF1E1E1E)
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: isDark
-                                  ? const Color(0xFF2C2C2E)
-                                  : const Color(0xFFE0E3EB),
-                              width: 1.0,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(
-                                  alpha: isDark ? 0.35 : 0.08,
-                                ),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
+                // Clean Top Bar: Timeframe (Kiri) + Action Buttons [fx] & [✏️] (Kanan)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      // Timeframe pills (sekarang sangat rapi dan pas di layar)
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
                           child: Row(
-                            children: [
-                              Icon(
-                                Icons.touch_app_outlined,
-                                size: 16,
-                                color: isDark
-                                    ? const Color(0xFFD8D8D8)
-                                    : const Color(0xFF373737),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  _isDrawingHorizontalLine
-                                      ? 'Ketuk chart untuk menaruh garis Support/Resistance'
-                                      : _isDrawingTrendline
-                                      ? 'Ketuk titik 1 lalu titik 2 untuk menarik Trendline'
-                                      : _isDrawingRectangle
-                                      ? 'Ketuk sudut 1 lalu sudut 2 untuk membuat Box Area'
-                                      : 'Tarik dari titik asal ke puncak untuk Fibonacci',
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: isDark
-                                        ? const Color(0xFFD8D8D8)
-                                        : const Color(0xFF373737),
+                            children: ['1D', '1W', '1M']
+                                .map(
+                                  (String r) => Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: ChoiceChip(
+                                      label: Text(r),
+                                      selected: p.tvResolution == r,
+                                      onSelected: (_) => p.setTvResolution(r),
+                                    ),
                                   ),
-                                ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      // Pembatas visual
+                      Container(
+                        width: 1,
+                        height: 22,
+                        color: cs.outline.withValues(alpha: 0.25),
+                      ),
+                      const SizedBox(width: 8),
+                      // Tombol Indikator Teknikal (fx) dengan badge counter
+                      _ActionButton(
+                        tooltip: 'Indikator Teknikal',
+                        onTap: () => _showIndicatorsBottomSheet(context),
+                        isActive: _indicators.count > 0,
+                        activeColor: const Color(0xFF00A3A8),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'fx',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
+                                color: _indicators.count > 0
+                                    ? const Color(0xFF00A3A8)
+                                    : (isDark
+                                          ? const Color(0xFFD8D8D8)
+                                          : const Color(0xFF373737)),
                               ),
-                              InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _isDrawingHorizontalLine = false;
-                                    _isDrawingTrendline = false;
-                                    _isDrawingRectangle = false;
-                                    _isDrawingFib = false;
-                                  });
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(4),
-                                  child: Icon(
-                                    Icons.close,
-                                    size: 16,
-                                    color: isDark
-                                        ? const Color(0xFF868993)
-                                        : const Color(0xFF787B86),
+                            ),
+                            if (_indicators.count > 0) ...[
+                              const SizedBox(width: 5),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 1,
+                                ),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF00A3A8),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  '$_indicators.count',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ),
                             ],
-                          ),
+                          ],
                         ),
+                      ),
+                      const SizedBox(width: 6),
+                      // Tombol Drawing Toolbar (✏️)
+                      _ActionButton(
+                        tooltip: 'Alat Gambar (Drawings)',
+                        onTap: () => _showDrawingsBottomSheet(context),
+                        isActive: _drawings.isToolbarActive,
+                        activeColor: const Color(0xFF00A3A8),
+                        child: Icon(
+                          Icons.edit_outlined,
+                          size: 17,
+                          color: _drawings.isToolbarActive
+                              ? const Color(0xFF00A3A8)
+                              : (isDark
+                                    ? const Color(0xFFD8D8D8)
+                                    : const Color(0xFF373737)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      TvChartWidget(
+                        symbol: 'IHSG',
+                        timeframe: p.tvResolution,
+                        candles: candles,
+                        payload: p.tvChartPayload,
+                        isCandle: _isCandle,
+                        activeIndicators: _indicators.indicators,
+                        showSma: _indicators.isTypeVisible('sma'),
+                        showRsi: _indicators.isTypeVisible('rsi'),
+                        showVolume: _indicators.isTypeVisible('vol'),
+                        showFibonacci: _drawings.showFibonacci,
+                        isDrawingFib: _drawings.isDrawing(
+                          ChartDrawingTool.fibonacci,
+                        ),
+                        onFibDrawn: () =>
+                            _drawings.finishDrawing(ChartDrawingTool.fibonacci),
+                        onFibDeleted: _drawings.deleteFibonacci,
+                        horizontalLines: _drawings.horizontalLines,
+                        isDrawingHorizontalLine: _drawings.isDrawing(
+                          ChartDrawingTool.horizontalLine,
+                        ),
+                        onHorizontalLineAdded: (_) => _drawings.finishDrawing(
+                          ChartDrawingTool.horizontalLine,
+                        ),
+                        onHorizontalLinesChanged: _drawings.setHorizontalLines,
+                        trendlines: _drawings.trendlines,
+                        isDrawingTrendline: _drawings.isDrawing(
+                          ChartDrawingTool.trendline,
+                        ),
+                        onTrendlineAdded: (_) =>
+                            _drawings.finishDrawing(ChartDrawingTool.trendline),
+                        onTrendlinesChanged: _drawings.setTrendlines,
+                        rectangles: _drawings.rectangles,
+                        isDrawingRectangle: _drawings.isDrawing(
+                          ChartDrawingTool.rectangle,
+                        ),
+                        onRectangleAdded: (_) =>
+                            _drawings.finishDrawing(ChartDrawingTool.rectangle),
+                        onRectanglesChanged: _drawings.setRectangles,
+                        upColor: upColor,
+                        downColor: downColor,
+                        gridColor: cs.outline.withValues(alpha: .15),
+                        crosshairColor: t.brightness == Brightness.dark
+                            ? const Color(0xFFD1D4DC)
+                            : const Color(0xFF4A4E5A),
+                        liveBar: liveBar,
+                        interactive: true,
+                        onCrosshairMove: (Map<String, dynamic>? v) =>
+                            setState(() => _crosshair = v),
+                        onChartModalStateChanged: (bool isOpen) =>
+                            setState(() => _isChartModalOpen = isOpen),
                       ),
 
-                    // Floating Drawing Toolbar (Muncul saat tombol ✏️ diaktifkan)
-                    if (_showDrawingToolbar)
-                      Positioned(
-                        bottom: 16,
-                        left: 16,
-                        right: 16,
-                        child: Center(
-                          child: _DrawingToolbar(
-                            showFib: _showFibonacci,
-                            isDrawingFib: _isDrawingFib,
-                            onToggleFib: () {
-                              if (_isDrawingFib) {
-                                setState(() => _isDrawingFib = false);
-                              } else {
-                                _startDrawingFibonacci();
-                              }
-                            },
-                            isDrawingHLine: _isDrawingHorizontalLine,
-                            onToggleHLine: () {
-                              if (_isDrawingHorizontalLine) {
-                                setState(
-                                  () => _isDrawingHorizontalLine = false,
-                                );
-                              } else {
-                                _startDrawingHorizontalLine();
-                              }
-                            },
-                            isDrawingTrendline: _isDrawingTrendline,
-                            onToggleTrendline: () {
-                              if (_isDrawingTrendline) {
-                                setState(() => _isDrawingTrendline = false);
-                              } else {
-                                _startDrawingTrendline();
-                              }
-                            },
-                            isDrawingRectangle: _isDrawingRectangle,
-                            onToggleRectangle: () {
-                              if (_isDrawingRectangle) {
-                                setState(() => _isDrawingRectangle = false);
-                              } else {
-                                _startDrawingRectangle();
-                              }
-                            },
-                            hasDrawings:
-                                _showFibonacci ||
-                                _horizontalLines.isNotEmpty ||
-                                _trendlines.isNotEmpty ||
-                                _rectangles.isNotEmpty,
-                            onClearAll: _clearAllDrawings,
-                            onClose: () {
-                              setState(() {
-                                _showDrawingToolbar = false;
-                                _isDrawingHorizontalLine = false;
-                                _isDrawingTrendline = false;
-                                _isDrawingRectangle = false;
-                                _isDrawingFib = false;
-                              });
-                            },
+                      // Tap-outside detector saat ada indikator legend yang sedang terseleksi
+                      if (!_isChartModalOpen && _indicators.selectedId != null)
+                        Positioned.fill(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onTap: () => _indicators.select(null),
                           ),
                         ),
-                      ),
-                  ],
+
+                      // Active Indicators Legend di Pojok Kiri Atas Chart (ala TradingView)
+                      if (!_isChartModalOpen)
+                        Positioned(
+                          top: 10,
+                          left: 10,
+                          child: ChartIndicatorsLegend(
+                            selectedId: _indicators.selectedId,
+                            onSelectionChanged: _indicators.select,
+                            activeIndicators: _indicators.indicators,
+                            onToggleIndicatorVisibility:
+                                _indicators.toggleVisibility,
+                            onDeleteIndicator: _indicators.remove,
+                            showSma: _indicators.hasType('sma'),
+                            showRsi: _indicators.hasType('rsi'),
+                            showVolume: _indicators.hasType('vol'),
+                            visibleSma: _indicators.isTypeVisible('sma'),
+                            visibleRsi: _indicators.isTypeVisible('rsi'),
+                            visibleVolume: _indicators.isTypeVisible('vol'),
+                            symbol: 'IHSG',
+                            timeframe: p.tvResolution,
+                            onOpenSettings: _openIndicatorSettings,
+                          ),
+                        ),
+
+                      // Active Drawing Prompt Banner (Memberikan instruksi saat user sedang menggambar)
+                      if (_drawings.isDrawingAny)
+                        Positioned(
+                          top: 10,
+                          left: 16,
+                          right: 16,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF1E1E1E)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isDark
+                                    ? const Color(0xFF2C2C2E)
+                                    : const Color(0xFFE0E3EB),
+                                width: 1.0,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(
+                                    alpha: isDark ? 0.35 : 0.08,
+                                  ),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.touch_app_outlined,
+                                  size: 16,
+                                  color: isDark
+                                      ? const Color(0xFFD8D8D8)
+                                      : const Color(0xFF373737),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    switch (_drawings.activeTool) {
+                                      ChartDrawingTool.horizontalLine =>
+                                        'Ketuk chart untuk menaruh garis Support/Resistance',
+                                      ChartDrawingTool.trendline =>
+                                        'Ketuk titik 1 lalu titik 2 untuk menarik Trendline',
+                                      ChartDrawingTool.rectangle =>
+                                        'Ketuk sudut 1 lalu sudut 2 untuk membuat Box Area',
+                                      ChartDrawingTool.fibonacci || null =>
+                                        'Tarik dari titik asal ke puncak untuk Fibonacci',
+                                    },
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark
+                                          ? const Color(0xFFD8D8D8)
+                                          : const Color(0xFF373737),
+                                    ),
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: _drawings.stopDrawing,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(4),
+                                    child: Icon(
+                                      Icons.close,
+                                      size: 16,
+                                      color: isDark
+                                          ? const Color(0xFF868993)
+                                          : const Color(0xFF787B86),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      // Floating Drawing Toolbar (Muncul saat tombol ✏️ diaktifkan)
+                      if (_drawings.isToolbarVisible)
+                        Positioned(
+                          bottom: 16,
+                          left: 16,
+                          right: 16,
+                          child: Center(
+                            child: _DrawingToolbar(
+                              showFib: _drawings.showFibonacci,
+                              isDrawingFib: _drawings.isDrawing(
+                                ChartDrawingTool.fibonacci,
+                              ),
+                              onToggleFib: () => _drawings.toggleDrawing(
+                                ChartDrawingTool.fibonacci,
+                              ),
+                              isDrawingHLine: _drawings.isDrawing(
+                                ChartDrawingTool.horizontalLine,
+                              ),
+                              onToggleHLine: () => _drawings.toggleDrawing(
+                                ChartDrawingTool.horizontalLine,
+                              ),
+                              isDrawingTrendline: _drawings.isDrawing(
+                                ChartDrawingTool.trendline,
+                              ),
+                              onToggleTrendline: () => _drawings.toggleDrawing(
+                                ChartDrawingTool.trendline,
+                              ),
+                              isDrawingRectangle: _drawings.isDrawing(
+                                ChartDrawingTool.rectangle,
+                              ),
+                              onToggleRectangle: () => _drawings.toggleDrawing(
+                                ChartDrawingTool.rectangle,
+                              ),
+                              hasDrawings: _drawings.hasDrawings,
+                              onClearAll: _drawings.clearAll,
+                              onClose: _drawings.closeToolbar,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
