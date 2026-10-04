@@ -259,7 +259,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                                   shape: BoxShape.circle,
                                 ),
                                 child: Text(
-                                  '$_indicators.count',
+                                  '${_indicators.count}',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 10,
