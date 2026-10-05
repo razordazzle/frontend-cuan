@@ -1686,6 +1686,7 @@
         }
     </style>
     <script src="lightweight-charts.standalone.production.js"></script>
+    <script src="indicators.js"></script>
 </head>
 
 <body>
@@ -2434,13 +2435,7 @@
         let chart = null;
         let candleSeries = null;
         let areaSeries = null;
-        let volumeSeries = null;
-        let smaSeries = null;
-        let rsiSeries = null;
         let currentType = 'candle';
-        let currentShowSma = false;
-        let currentShowRsi = false;
-        let currentShowVolume = false;
         let currentShowFib = false;
         let isDrawingFib = false;
         let isFibSelected = false; // true: Edit Mode (large handles, dashed line), false: Non-Edit Mode (subtle dots)
@@ -2568,9 +2563,10 @@
         let originalFibSettings = null;
         let pendingFibSettings = null;
         let rawCandlesData = [];
-        let currentRsiData = [];
         let currentVolumeData = [];
-        let pendingData = null;
+        const VOLUME_BAR_OPACITY = 0.5;
+        let volumeUpColor = 'rgba(33, 192, 122, 0.5)';
+        let volumeDownColor = 'rgba(229, 57, 53, 0.5)';
 
         let horizontalLines = []; // Array of prices: [7650, 7820]
         let isDrawingHorizontalLine = false;
@@ -3613,6 +3609,71 @@
             }
         }
 
+        // ===== Komponen color picker bersama untuk popover di modal settings =====
+        // (palet 10x8 + recent colors + opacity). Dipakai popover "Trend line" Fibonacci
+        // dan popover warna level Fibonacci; markup & CSS keduanya memakai class tv-fib-*.
+
+        const FIB_TRENDLINE_COLOR_PICKER = {
+            grid: 'tv-fib-palette-grid',
+            recent: 'tv-fib-recent-colors',
+            slider: 'tv-fib-trendline-opacity-slider',
+            gradient: 'tv-fib-opacity-gradient',
+            badge: 'tv-fib-trendline-opacity-val',
+            maxRecent: 3,
+        };
+        const FIB_LEVEL_COLOR_PICKER = {
+            grid: 'tv-fib-cp-palette-grid',
+            recent: 'tv-fib-cp-recent-colors',
+            slider: 'tv-fib-cp-opacity-slider',
+            gradient: 'tv-fib-cp-opacity-gradient',
+            badge: 'tv-fib-cp-opacity-val',
+            maxRecent: 4,
+        };
+        const TV_PALETTE_FLAT = TV_PALETTE_COLORS.flat();
+
+        // Simpan warna di urutan pertama recent colors (tanpa duplikat, maksimal maxCount).
+        function rememberRecentColor(recentColors, color, maxCount) {
+            const upper = color.toUpperCase();
+            if (recentColors.some(c => c.toUpperCase() === upper)) return;
+            recentColors.unshift(upper);
+            if (recentColors.length > maxCount) recentColors.pop();
+        }
+
+        function renderColorSwatches(container, colors, className, selectedColor, onPick) {
+            if (!container) return;
+            const selected = selectedColor.toUpperCase();
+            container.innerHTML = '';
+            for (const color of colors) {
+                const swatch = document.createElement('div');
+                swatch.className = className + (color.toUpperCase() === selected ? ' selected' : '');
+                swatch.style.backgroundColor = color;
+                swatch.onclick = (e) => {
+                    e.stopPropagation();
+                    onPick(color);
+                };
+                container.appendChild(swatch);
+            }
+        }
+
+        function renderOpacityControls(picker, color, opacity) {
+            const pct = Math.round(opacity * 100);
+            const slider = document.getElementById(picker.slider);
+            const badge = document.getElementById(picker.badge);
+            const gradient = document.getElementById(picker.gradient);
+            if (slider) slider.value = String(pct);
+            if (badge) badge.textContent = `${pct}%`;
+            if (gradient) {
+                gradient.style.background = `linear-gradient(to right, ${hexToRgba(color, 0)}, ${hexToRgba(color, 1)})`;
+            }
+        }
+
+        function renderColorPickerPopover(picker, color, opacity, recentColors, onPick) {
+            rememberRecentColor(recentColors, color, picker.maxRecent);
+            renderColorSwatches(document.getElementById(picker.grid), TV_PALETTE_FLAT, 'tv-fib-palette-swatch', color, onPick);
+            renderColorSwatches(document.getElementById(picker.recent), recentColors, 'tv-fib-recent-swatch', color, onPick);
+            renderOpacityControls(picker, color, opacity);
+        }
+
         let fibRecentTrendlineColors = ['#AB47BC', '#2A2E39'];
 
         function closeFibTrendlinePopover() {
@@ -3653,81 +3714,20 @@
 
         function renderFibTrendlinePopoverUI() {
             if (!pendingFibSettings) return;
-            const curColor = (pendingFibSettings.trendlineColor || '#AB47BC').toUpperCase();
-            const curOpacity = pendingFibSettings.trendlineOpacity !== undefined ? pendingFibSettings.trendlineOpacity : 1.0;
-            const curWidth = pendingFibSettings.trendlineWidth || 1;
-            const curStyle = pendingFibSettings.trendlineStyle || 'dashed';
-
-            // 1. Palette Grid (8x10)
-            const paletteGrid = document.getElementById('tv-fib-palette-grid');
-            if (paletteGrid) {
-                paletteGrid.innerHTML = '';
-                TV_PALETTE_COLORS.forEach(row => {
-                    row.forEach(col => {
-                        const sw = document.createElement('div');
-                        sw.className = 'tv-fib-palette-swatch' + (col.toUpperCase() === curColor ? ' selected' : '');
-                        sw.style.backgroundColor = col;
-                        sw.onclick = (e) => {
-                            e.stopPropagation();
-                            selectTrendlineColor(col);
-                        };
-                        paletteGrid.appendChild(sw);
-                    });
-                });
-            }
-
-            // 2. Recent colors
-            renderFibRecentColorsUI();
-
-            // 3. Opacity Slider & Badge
-            const opacitySlider = document.getElementById('tv-fib-trendline-opacity-slider');
-            const opacityGrad = document.getElementById('tv-fib-opacity-gradient');
-            const opacityVal = document.getElementById('tv-fib-trendline-opacity-val');
-            const pct = Math.round(curOpacity * 100);
-            if (opacitySlider) opacitySlider.value = String(pct);
-            if (opacityVal) opacityVal.textContent = `${pct}%`;
-            if (opacityGrad) {
-                opacityGrad.style.background = `linear-gradient(to right, ${hexToRgba(curColor, 0)}, ${hexToRgba(curColor, 1)})`;
-            }
-
-            // 4. Thickness Segments
-            updateThicknessSegmentsUI(curWidth);
-
-            // 5. Line Style Segments
-            updateStyleSegmentsUI(curStyle);
-        }
-
-        function renderFibRecentColorsUI() {
-            const container = document.getElementById('tv-fib-recent-colors');
-            if (!container || !pendingFibSettings) return;
-            container.innerHTML = '';
-            const curColor = (pendingFibSettings.trendlineColor || '#AB47BC').toUpperCase();
-
-            if (!fibRecentTrendlineColors.map(c => c.toUpperCase()).includes(curColor)) {
-                fibRecentTrendlineColors.unshift(curColor);
-                if (fibRecentTrendlineColors.length > 3) fibRecentTrendlineColors.pop();
-            }
-
-            fibRecentTrendlineColors.forEach(col => {
-                const sw = document.createElement('div');
-                sw.className = 'tv-fib-recent-swatch' + (col.toUpperCase() === curColor ? ' selected' : '');
-                sw.style.backgroundColor = col;
-                sw.onclick = (e) => {
-                    e.stopPropagation();
-                    selectTrendlineColor(col);
-                };
-                container.appendChild(sw);
-            });
+            renderColorPickerPopover(
+                FIB_TRENDLINE_COLOR_PICKER,
+                pendingFibSettings.trendlineColor || '#AB47BC',
+                pendingFibSettings.trendlineOpacity !== undefined ? pendingFibSettings.trendlineOpacity : 1.0,
+                fibRecentTrendlineColors,
+                selectTrendlineColor,
+            );
+            updateThicknessSegmentsUI(pendingFibSettings.trendlineWidth || 1);
+            updateStyleSegmentsUI(pendingFibSettings.trendlineStyle || 'dashed');
         }
 
         function selectTrendlineColor(color) {
             if (!pendingFibSettings) return;
             pendingFibSettings.trendlineColor = color;
-            const curColor = color.toUpperCase();
-            if (!fibRecentTrendlineColors.map(c => c.toUpperCase()).includes(curColor)) {
-                fibRecentTrendlineColors.unshift(curColor);
-                if (fibRecentTrendlineColors.length > 3) fibRecentTrendlineColors.pop();
-            }
             renderFibTrendlinePopoverUI();
             updateTrendlinePillUI();
             commitFibSettings(pendingFibSettings);
@@ -3853,17 +3853,6 @@
         let currentFibColorPickerOpacity = 1.0;
         let fibRecentColorsList = ['#FFFFFF', '#000000', '#2A2E39', '#AB47BC'];
 
-        function colToHex(col) {
-            if (!col) return '';
-            if (col.startsWith('#')) return col;
-            const rgb = col.match(/\d+/g);
-            if (!rgb || rgb.length < 3) return col;
-            const r = parseInt(rgb[0], 10).toString(16).padStart(2, '0');
-            const g = parseInt(rgb[1], 10).toString(16).padStart(2, '0');
-            const b = parseInt(rgb[2], 10).toString(16).padStart(2, '0');
-            return '#' + r + g + b;
-        }
-
         function closeFibColorPickerPopover() {
             const pop = document.getElementById('tv-fib-color-picker-popover');
             if (pop) pop.style.display = 'none';
@@ -3895,39 +3884,7 @@
             currentFibColorPickerOpacity = initialOpacity !== undefined ? initialOpacity : 1.0;
             targetBtn.classList.add('active');
 
-            // 1. Render Palette Grid (10x8)
-            const grid = document.getElementById('tv-fib-cp-palette-grid');
-            if (grid) {
-                grid.innerHTML = '';
-                TV_PALETTE_COLORS.forEach(row => {
-                    row.forEach(col => {
-                        const sw = document.createElement('div');
-                        sw.className = 'tv-fib-palette-swatch' + (col.toUpperCase() === currentFibColorPickerColor ? ' selected' : '');
-                        sw.style.backgroundColor = col;
-                        sw.setAttribute('data-color', col);
-                        sw.onclick = (e) => {
-                            e.stopPropagation();
-                            selectFibColorPickerColor(col);
-                        };
-                        grid.appendChild(sw);
-                    });
-                });
-            }
-
-            // 2. Render Recent Colors
-            renderFibColorPickerRecentUI();
-
-            // 3. Opacity Slider & Badge
-            const opacitySlider = document.getElementById('tv-fib-cp-opacity-slider');
-            const opacityGrad = document.getElementById('tv-fib-cp-opacity-gradient');
-            const opacityVal = document.getElementById('tv-fib-cp-opacity-val');
-            const pct = Math.round(currentFibColorPickerOpacity * 100);
-            if (opacitySlider) opacitySlider.value = String(pct);
-            if (opacityVal) opacityVal.textContent = `${pct}%`;
-            if (opacityGrad) {
-                opacityGrad.style.background = `linear-gradient(to right, ${hexToRgba(currentFibColorPickerColor, 0)}, ${hexToRgba(currentFibColorPickerColor, 1)})`;
-            }
-
+            renderFibLevelColorPicker();
             pop.style.display = 'block';
 
             if (modal) {
@@ -3947,42 +3904,19 @@
             }
         }
 
-        function renderFibColorPickerRecentUI() {
-            const container = document.getElementById('tv-fib-cp-recent-colors');
-            if (!container) return;
-            container.innerHTML = '';
-            if (!fibRecentColorsList.map(c => c.toUpperCase()).includes(currentFibColorPickerColor)) {
-                fibRecentColorsList.unshift(currentFibColorPickerColor);
-                if (fibRecentColorsList.length > 4) fibRecentColorsList.pop();
-            }
-            fibRecentColorsList.forEach(col => {
-                const sw = document.createElement('div');
-                sw.className = 'tv-fib-recent-swatch' + (col.toUpperCase() === currentFibColorPickerColor ? ' selected' : '');
-                sw.style.backgroundColor = col;
-                sw.setAttribute('data-color', col);
-                sw.onclick = (e) => {
-                    e.stopPropagation();
-                    selectFibColorPickerColor(col);
-                };
-                container.appendChild(sw);
-            });
+        function renderFibLevelColorPicker() {
+            renderColorPickerPopover(
+                FIB_LEVEL_COLOR_PICKER,
+                currentFibColorPickerColor,
+                currentFibColorPickerOpacity,
+                fibRecentColorsList,
+                selectFibColorPickerColor,
+            );
         }
 
         function selectFibColorPickerColor(col) {
             currentFibColorPickerColor = col.toUpperCase();
-            if (!fibRecentColorsList.map(c => c.toUpperCase()).includes(currentFibColorPickerColor)) {
-                fibRecentColorsList.unshift(currentFibColorPickerColor);
-                if (fibRecentColorsList.length > 4) fibRecentColorsList.pop();
-            }
-            renderFibColorPickerRecentUI();
-            document.querySelectorAll('#tv-fib-cp-palette-grid .tv-fib-palette-swatch').forEach(sw => {
-                const dataCol = sw.getAttribute('data-color') || colToHex(sw.style.backgroundColor);
-                sw.classList.toggle('selected', !!dataCol && dataCol.toUpperCase() === currentFibColorPickerColor);
-            });
-            const opacityGrad = document.getElementById('tv-fib-cp-opacity-gradient');
-            if (opacityGrad) {
-                opacityGrad.style.background = `linear-gradient(to right, ${hexToRgba(currentFibColorPickerColor, 0)}, ${hexToRgba(currentFibColorPickerColor, 1)})`;
-            }
+            renderFibLevelColorPicker();
             if (typeof currentFibColorPickerCallback === 'function') {
                 currentFibColorPickerCallback(col, currentFibColorPickerOpacity);
             }
@@ -4313,8 +4247,7 @@
                     if (!pendingFibSettings) return;
                     const pct = parseInt(trendOpacitySlider.value, 10);
                     pendingFibSettings.trendlineOpacity = pct / 100;
-                    const opacityVal = document.getElementById('tv-fib-trendline-opacity-val');
-                    if (opacityVal) opacityVal.textContent = `${pct}%`;
+                    renderOpacityControls(FIB_TRENDLINE_COLOR_PICKER, pendingFibSettings.trendlineColor || '#AB47BC', pendingFibSettings.trendlineOpacity);
                     updateTrendlinePillUI();
                     commitFibSettings(pendingFibSettings);
                 };
@@ -4471,8 +4404,7 @@
                 cpOpacitySlider.oninput = () => {
                     const pct = parseInt(cpOpacitySlider.value, 10);
                     currentFibColorPickerOpacity = pct / 100;
-                    const opacityVal = document.getElementById('tv-fib-cp-opacity-val');
-                    if (opacityVal) opacityVal.textContent = `${pct}%`;
+                    renderOpacityControls(FIB_LEVEL_COLOR_PICKER, currentFibColorPickerColor, currentFibColorPickerOpacity);
                     if (typeof currentFibColorPickerCallback === 'function') {
                         currentFibColorPickerCallback(currentFibColorPickerColor, currentFibColorPickerOpacity);
                     }
@@ -9341,9 +9273,14 @@
         }
 
         function initChart(upColor, downColor, gridColor, interactive, crosshairColor) {
-            if (chart) return;
+            if (chart) {
+                applyThemeColors(upColor, downColor, gridColor);
+                return;
+            }
             upColor = upColor || '#21C07A';
             downColor = downColor || '#E53935';
+            volumeUpColor = hexToRgba(upColor, VOLUME_BAR_OPACITY);
+            volumeDownColor = hexToRgba(downColor, VOLUME_BAR_OPACITY);
             gridColor = gridColor || 'rgba(128, 128, 128, 0.15)';
             if (interactive === undefined || interactive === null) interactive = true;
             if (crosshairColor) currentCrosshairColor = crosshairColor;
@@ -9436,20 +9373,11 @@
                 lineWidth: 2,
             }, 0);
 
-            // Initialize SMA series in pane 0
-            smaSeries = chart.addSeries(LightweightCharts.LineSeries, {
-                color: '#2962FF',
-                lineWidth: 2,
-                title: '',
-                priceLineVisible: false,
-                lastValueVisible: false,
-                visible: currentShowSma,
-            }, 0);
-
             setSeriesType(currentType);
-            updatePanes();
 
             chart.subscribeCrosshairMove(param => {
+                isCrosshairActive = Boolean(param.time);
+                emitIndicatorValues(isCrosshairActive ? param : null);
                 if (!param.time) {
                     if (window.flutter_inappwebview?.callHandler) {
                         window.flutter_inappwebview.callHandler('onCrosshair', null);
@@ -9561,11 +9489,64 @@
 
             setTimeout(resizeFibCanvas, 100);
             initFibPointerEvents();
+        }
 
-            if (pendingData) {
-                const p = pendingData;
-                pendingData = null;
-                setDataWithIndicators(p);
+        // Warna tema app: naik/turun (hex) untuk candle, area & bar volume; grid (rgba).
+        function applyThemeColors(upColor, downColor, gridColor) {
+            if (!chart) return;
+            if (upColor && downColor) {
+                volumeUpColor = hexToRgba(upColor, VOLUME_BAR_OPACITY);
+                volumeDownColor = hexToRgba(downColor, VOLUME_BAR_OPACITY);
+                candleSeries.applyOptions({
+                    upColor: upColor,
+                    downColor: downColor,
+                    wickUpColor: upColor,
+                    wickDownColor: downColor,
+                });
+                areaSeries.applyOptions({
+                    lineColor: upColor,
+                    topColor: upColor + '55',
+                    bottomColor: upColor + '05',
+                });
+                if (rawCandlesData.length > 0) setVolumeData(rawCandlesData.map(toVolumeBar));
+            }
+            if (gridColor) {
+                chart.applyOptions({
+                    grid: {
+                        vertLines: { color: gridColor },
+                        horzLines: { color: gridColor },
+                    },
+                });
+            }
+        }
+
+        function toVolumeBar(candle) {
+            return {
+                time: candle.time,
+                value: candle.volume || 0,
+                color: candle.close >= candle.open ? volumeUpColor : volumeDownColor,
+            };
+        }
+
+        // Semua series indikator Volume yang aktif.
+        function getVolumeSeriesList() {
+            return Object.values(activeIndicatorSeriesMap)
+                .filter(entry => entry.type === 'vol')
+                .map(entry => entry.series);
+        }
+
+        function setVolumeData(volumeBars) {
+            currentVolumeData = volumeBars;
+            for (const series of getVolumeSeriesList()) series.setData(volumeBars);
+        }
+
+        // Ganti titik terakhir kalau waktunya sama, tambah kalau lebih baru (update bar live).
+        function upsertLastByTime(list, point) {
+            const lastIndex = list.length - 1;
+            if (lastIndex >= 0 && list[lastIndex].time === point.time) {
+                list[lastIndex] = point;
+            } else if (lastIndex < 0 || point.time > list[lastIndex].time) {
+                list.push(point);
             }
         }
 
@@ -9595,411 +9576,271 @@
             renderFib();
         }
 
-        function updatePanes() {
-            try {
-                if (!chart || !candleSeries) return;
 
-                // Remove series that are toggled off
-                if (!currentShowRsi && rsiSeries) {
-                    try { chart.removeSeries(rsiSeries); } catch (_) {}
-                    rsiSeries = null;
+        const DEFAULT_SMA_COLOR = '#2962FF';
+        const DEFAULT_SMOOTHING_COLOR = '#FFEB3B';
+        const DEFAULT_PRECISION_DIGITS = 2;
+        // id -> { type, series, smoothingSeries?, smaConfig?, rsiConfig?, calcKey? }
+        let activeIndicatorSeriesMap = {};
+        let isCrosshairActive = false;
+
+        // ===== SMA indicator =====
+
+        function normalizeSmaConfig(item) {
+            return {
+                period: item.period || 20,
+                source: item.source || 'Close',
+                offset: item.offset || 0,
+                smoothingType: item.smoothingType || 'None',
+                smoothingLength: item.smoothingLength || 14,
+            };
+        }
+
+        function updateSmaData(entry) {
+            const cfg = entry.smaConfig;
+            // Data SMA sebelum di-offset: dasar untuk garis utama & smoothing.
+            const baseData = Indicators.smaPoints(rawCandlesData, cfg.period, cfg.source);
+            entry.series.setData(Indicators.shiftPoints(baseData, cfg.offset, rawCandlesData));
+            entry.smoothingSeries.setData(cfg.smoothingType === 'None'
+                ? []
+                : Indicators.smoothPoints(baseData, cfg.smoothingType, cfg.smoothingLength, rawCandlesData));
+        }
+
+        function toLineStyle(style) {
+            if (style === 1) return LightweightCharts.LineStyle.Dashed;
+            if (style === 2) return LightweightCharts.LineStyle.Dotted;
+            return LightweightCharts.LineStyle.Solid;
+        }
+
+        function toLineType(plotType) {
+            const isStep = typeof plotType === 'string' && plotType.toLowerCase().includes('step');
+            return isStep ? LightweightCharts.LineType.WithSteps : LightweightCharts.LineType.Simple;
+        }
+
+        function buildPriceFormat(precisionDigits) {
+            const precision = Number.isInteger(precisionDigits) ? precisionDigits : DEFAULT_PRECISION_DIGITS;
+            return { type: 'price', precision: precision, minMove: Math.pow(10, -precision) };
+        }
+
+        function syncSmaIndicator(item, entry) {
+            const cfg = normalizeSmaConfig(item);
+            const isVisible = item.isVisible !== false;
+            const smoothingStyle = item.smoothingStyle || {};
+            const priceFormat = buildPriceFormat(item.precisionDigits);
+            const lastValueVisible = Boolean(item.labelsOnPriceScale);
+
+            const mainOptions = {
+                color: item.color || DEFAULT_SMA_COLOR,
+                lineWidth: item.lineWidth || 2,
+                lineStyle: toLineStyle(item.lineStyle),
+                lineType: toLineType(item.plotType),
+                title: '',
+                priceLineVisible: Boolean(item.priceLine),
+                lastValueVisible: lastValueVisible,
+                priceFormat: priceFormat,
+                visible: isVisible,
+            };
+            const smoothingOptions = {
+                color: smoothingStyle.color || DEFAULT_SMOOTHING_COLOR,
+                lineWidth: smoothingStyle.lineWidth || 1,
+                lineStyle: toLineStyle(smoothingStyle.lineStyle),
+                title: '',
+                priceLineVisible: false,
+                lastValueVisible: lastValueVisible,
+                priceFormat: priceFormat,
+                visible: isVisible && cfg.smoothingType !== 'None' && smoothingStyle.isVisible !== false,
+            };
+
+            if (entry) {
+                entry.series.applyOptions(mainOptions);
+                entry.smoothingSeries.applyOptions(smoothingOptions);
+            } else {
+                entry = {
+                    type: 'sma',
+                    series: chart.addSeries(LightweightCharts.LineSeries, mainOptions, 0),
+                    smoothingSeries: chart.addSeries(LightweightCharts.LineSeries, smoothingOptions, 0),
+                    smaConfig: null,
+                    calcKey: null,
+                };
+            }
+
+            // Hitung ulang hanya kalau input perhitungan berubah (bukan saat ganti style).
+            const calcKey = [cfg.period, cfg.source, cfg.offset, cfg.smoothingType, cfg.smoothingLength].join('|');
+            if (entry.calcKey !== calcKey) {
+                entry.calcKey = calcKey;
+                entry.smaConfig = cfg;
+                updateSmaData(entry);
+            }
+            return entry;
+        }
+
+        function normalizeRsiConfig(item) {
+            return {
+                period: item.period || 14,
+                source: item.source || 'Close',
+            };
+        }
+
+        function updateRsiData(entry) {
+            const cfg = entry.rsiConfig;
+            entry.series.setData(Indicators.rsiPoints(rawCandlesData, cfg.period, cfg.source));
+        }
+
+        // Pindahkan series ke pane tujuan (null = indikator disembunyikan, biarkan di pane-nya).
+        function moveSeriesToPane(series, paneIndex) {
+            if (paneIndex === null || !series.getPane || series.getPane().paneIndex() === paneIndex) return;
+            series.moveToPane(paneIndex);
+        }
+
+        function syncRsiIndicator(item, entry, paneIndex) {
+            const cfg = normalizeRsiConfig(item);
+            const options = {
+                color: item.color || '#E91E63',
+                title: item.title || 'RSI ' + cfg.period,
+                visible: item.isVisible !== false,
+            };
+
+            if (entry) {
+                entry.series.applyOptions(options);
+                moveSeriesToPane(entry.series, paneIndex);
+            } else {
+                const series = chart.addSeries(LightweightCharts.LineSeries, {
+                    ...options,
+                    lineWidth: 2,
+                    priceScaleId: 'rsi-scale-' + item.id,
+                    priceFormat: {
+                        type: 'custom',
+                        minMove: 0.01,
+                        formatter: (p) => p.toFixed(1),
+                    },
+                }, paneIndex ?? 1);
+                for (const level of [70, 30]) {
+                    series.createPriceLine({
+                        price: level,
+                        color: 'rgba(233, 30, 99, 0.4)',
+                        lineWidth: 1,
+                        lineStyle: LightweightCharts.LineStyle.Dashed,
+                        axisLabelVisible: true,
+                        title: String(level),
+                    });
                 }
-                if (!currentShowVolume && volumeSeries) {
-                    try { chart.removeSeries(volumeSeries); } catch (_) {}
-                    volumeSeries = null;
-                }
-
-                // Determine dynamic pane indices
-                let nextPaneIndex = 1;
-                let targetRsiPane = null;
-                let targetVolumePane = null;
-
-                if (currentShowRsi) {
-                    targetRsiPane = nextPaneIndex++;
-                }
-                if (currentShowVolume) {
-                    targetVolumePane = nextPaneIndex++;
-                }
-
-                // Create or position RSI series
-                if (currentShowRsi) {
-                    if (!rsiSeries) {
-                        rsiSeries = chart.addSeries(LightweightCharts.LineSeries, {
-                            color: '#E91E63',
-                            lineWidth: 2,
-                            title: 'RSI 14',
-                            priceScaleId: 'rsi-scale',
-                            priceFormat: {
-                                type: 'custom',
-                                minMove: 0.01,
-                                formatter: (p) => p.toFixed(1),
-                            },
-                        }, targetRsiPane);
-
-                        rsiSeries.createPriceLine({
-                            price: 70,
-                            color: 'rgba(233, 30, 99, 0.4)',
-                            lineWidth: 1,
-                            lineStyle: LightweightCharts.LineStyle.Dashed,
-                            axisLabelVisible: true,
-                            title: '70',
-                        });
-                        rsiSeries.createPriceLine({
-                            price: 30,
-                            color: 'rgba(233, 30, 99, 0.4)',
-                            lineWidth: 1,
-                            lineStyle: LightweightCharts.LineStyle.Dashed,
-                            axisLabelVisible: true,
-                            title: '30',
-                        });
-                        rsiSeries.priceScale().applyOptions({
-                            scaleMargins: { top: 0.1, bottom: 0.1 },
-                        });
-
-                        if (currentRsiData && currentRsiData.length > 0) {
-                            rsiSeries.setData(currentRsiData);
-                        }
-                    } else if (rsiSeries.getPane && rsiSeries.getPane().paneIndex() !== targetRsiPane) {
-                        rsiSeries.moveToPane(targetRsiPane);
-                    }
-                }
-
-                // Create or position Volume series
-                if (currentShowVolume) {
-                    if (!volumeSeries) {
-                        volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries, {
-                            priceFormat: { type: 'volume' },
-                            priceScaleId: 'volume-scale',
-                            title: 'VOL',
-                        }, targetVolumePane);
-
-                        volumeSeries.priceScale().applyOptions({
-                            scaleMargins: { top: 0.15, bottom: 0 },
-                        });
-
-                        if (currentVolumeData && currentVolumeData.length > 0) {
-                            volumeSeries.setData(currentVolumeData);
-                        }
-                    } else if (volumeSeries.getPane && volumeSeries.getPane().paneIndex() !== targetVolumePane) {
-                        volumeSeries.moveToPane(targetVolumePane);
-                    }
-                }
-
-                // Configure stretch factors based on active panes:
-                try {
-                    const panes = chart.panes();
-                    if (panes && panes.length === 1) {
-                        panes[0].setStretchFactor(1);
-                    } else if (panes && panes.length === 2) {
-                        panes[0].setStretchFactor(4);
-                        panes[1].setStretchFactor(1.2);
-                    } else if (panes && panes.length >= 3) {
-                        panes[0].setStretchFactor(5);
-                        panes[1].setStretchFactor(1.4);
-                        panes[2].setStretchFactor(1.2);
-                    }
-                } catch (paneErr) {
-                    console.warn("setStretchFactor warning:", paneErr);
-                }
-
-                candleSeries.priceScale().applyOptions({
-                    scaleMargins: { top: 0.08, bottom: 0.08 }
+                series.priceScale().applyOptions({
+                    scaleMargins: { top: 0.1, bottom: 0.1 },
                 });
-
-                renderFib();
-            } catch (err) {
-                console.error("updatePanes error:", err);
+                entry = { type: 'rsi', series: series, rsiConfig: null, calcKey: null };
             }
+
+            // Hitung ulang hanya kalau input perhitungan berubah (bukan saat ganti style/visibility).
+            const calcKey = [cfg.period, cfg.source].join('|');
+            if (entry.calcKey !== calcKey) {
+                entry.calcKey = calcKey;
+                entry.rsiConfig = cfg;
+                updateRsiData(entry);
+            }
+            return entry;
         }
 
-
-        const SMA_COLORS = ['#2962FF', '#FF6D00', '#9C27B0', '#00BCD4', '#4CAF50', '#E91E63', '#FFD600'];
-        let activeIndicatorConfigs = [];
-        let currentPayloadIndicators = null;
-        let activeIndicatorSeriesMap = {}; // id -> { series, type, period, color, paneIndex }
-
-        function getCandleSourceValue(c, src = 'close') {
-            const s = (src || 'close').toLowerCase().trim();
-            if (s === 'open') return c.open;
-            if (s === 'high') return c.high;
-            if (s === 'low') return c.low;
-            if (s === 'hl2' || s.includes('(h + l)/2') || s.includes('h + l')) return (c.high + c.low) / 2;
-            if (s === 'hlc3' || s.includes('(h + l + c)/3') || s.includes('h + l + c')) return (c.high + c.low + c.close) / 3;
-            if (s === 'ohlc4' || s.includes('(o + h + l + c)/4') || s.includes('o + h + l + c')) return (c.open + c.high + c.low + c.close) / 4;
-            return c.close;
+        function syncVolumeIndicator(item, entry, paneIndex) {
+            const visible = item.isVisible !== false;
+            if (entry) {
+                entry.series.applyOptions({ visible: visible });
+                moveSeriesToPane(entry.series, paneIndex);
+                return entry;
+            }
+            const series = chart.addSeries(LightweightCharts.HistogramSeries, {
+                priceFormat: { type: 'volume' },
+                priceScaleId: 'volume-scale-' + item.id,
+                title: item.title || 'VOL',
+                visible: visible,
+            }, paneIndex ?? 1);
+            series.priceScale().applyOptions({
+                scaleMargins: { top: 0.15, bottom: 0 },
+            });
+            if (currentVolumeData && currentVolumeData.length > 0) {
+                series.setData(currentVolumeData);
+            }
+            return { type: 'vol', series: series };
         }
 
-        function calculateSMAData(candles, period = 20, source = 'close', offset = 0) {
-            if (!candles || candles.length < period) return [];
-            const res = [];
-            let sum = 0;
-            const vals = candles.map(c => getCandleSourceValue(c, source));
-            for (let i = 0; i < candles.length; i++) {
-                sum += vals[i];
-                if (i >= period) {
-                    sum -= vals[i - period];
+        function removeIndicatorEntry(entry) {
+            for (const series of [entry.series, entry.smoothingSeries]) {
+                if (!series) continue;
+                try {
+                    chart.removeSeries(series);
+                } catch (e) {
+                    console.warn("Error removing series:", e);
                 }
-                if (i >= period - 1) {
-                    const targetIdx = i + (offset || 0);
-                    if (targetIdx >= 0 && targetIdx < candles.length) {
-                        res.push({ time: candles[targetIdx].time, value: sum / period });
-                    }
-                }
             }
-            return res;
         }
 
-        function calculateRSIData(candles, period = 14) {
-            if (!candles || candles.length <= period) return [];
-            const res = [];
-            let gains = 0, losses = 0;
-            for (let i = 1; i <= period; i++) {
-                const diff = candles[i].close - candles[i - 1].close;
-                if (diff >= 0) gains += diff;
-                else losses -= diff;
-            }
-            let avgGain = gains / period;
-            let avgLoss = losses / period;
-            let rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-            res.push({ time: candles[period].time, value: 100 - (100 / (1 + rs)) });
+        // ===== Nilai indikator untuk status line (legend) di Flutter =====
 
-            for (let i = period + 1; i < candles.length; i++) {
-                const diff = candles[i].close - candles[i - 1].close;
-                const gain = diff > 0 ? diff : 0;
-                const loss = diff < 0 ? -diff : 0;
-                avgGain = (avgGain * (period - 1) + gain) / period;
-                avgLoss = (avgLoss * (period - 1) + loss) / period;
-                rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-                res.push({ time: candles[i].time, value: 100 - (100 / (1 + rs)) });
+        function getSeriesValue(series, param) {
+            if (!series || !series.options().visible) return null;
+            const point = param
+                ? param.seriesData.get(series)
+                : series.dataByIndex(Number.MAX_SAFE_INTEGER, LightweightCharts.MismatchDirection.NearestLeft);
+            return (point && typeof point.value === 'number') ? point.value : null;
+        }
+
+        // param = event crosshair; null = pakai nilai bar terakhir.
+        function emitIndicatorValues(param) {
+            const ids = Object.keys(activeIndicatorSeriesMap);
+            if (ids.length === 0) return;
+            const values = {};
+            for (const id of ids) {
+                const entry = activeIndicatorSeriesMap[id];
+                values[id] = [entry.series, entry.smoothingSeries]
+                    .filter(Boolean)
+                    .map(series => getSeriesValue(series, param));
             }
-            return res;
+            const payload = JSON.stringify(values);
+            if (window.flutter_inappwebview?.callHandler) {
+                window.flutter_inappwebview.callHandler('onIndicatorValues', payload);
+            }
+            window.parent?.postMessage(JSON.stringify({ type: 'onIndicatorValues', payload: payload }), '*');
         }
 
         function refreshActiveIndicatorsData() {
             for (const id in activeIndicatorSeriesMap) {
                 const entry = activeIndicatorSeriesMap[id];
                 if (entry.type === 'sma') {
-                    let sData = [];
-                    const isDefaultCalc = (!entry.period || entry.period === 20) && (!entry.source || entry.source.toLowerCase() === 'close') && (!entry.offset || entry.offset === 0);
-                    if (isDefaultCalc && currentPayloadIndicators && currentPayloadIndicators.sma20 && currentPayloadIndicators.sma20.length > 0) {
-                        sData = currentPayloadIndicators.sma20;
-                    } else {
-                        sData = calculateSMAData(rawCandlesData, entry.period || 20, entry.source || 'close', entry.offset || 0);
-                    }
-                    if (sData && sData.length > 0) entry.series.setData(sData);
+                    updateSmaData(entry);
                 } else if (entry.type === 'rsi') {
-                    let rData = [];
-                    if ((!entry.period || entry.period === 14) && currentPayloadIndicators && currentPayloadIndicators.rsi14 && currentPayloadIndicators.rsi14.length > 0) {
-                        rData = currentPayloadIndicators.rsi14;
-                    } else if (currentRsiData && currentRsiData.length > 0) {
-                        rData = currentRsiData;
-                    } else {
-                        rData = calculateRSIData(rawCandlesData, entry.period || 14);
-                    }
-                    if (rData && rData.length > 0) entry.series.setData(rData);
-                } else if (entry.type === 'vol') {
-                    if (currentVolumeData && currentVolumeData.length > 0) {
-                        entry.series.setData(currentVolumeData);
-                    }
+                    updateRsiData(entry);
                 }
             }
+            if (!isCrosshairActive) emitIndicatorValues(null);
         }
 
         function setActiveIndicators(indicatorsInput) {
             if (!chart) return;
             const indicators = typeof indicatorsInput === 'string' ? JSON.parse(indicatorsInput) : indicatorsInput;
-            activeIndicatorConfigs = indicators || [];
+            const activeIndicatorConfigs = indicators || [];
 
             // 1. Remove series that are no longer active
             const currentIds = new Set(activeIndicatorConfigs.map(item => item.id));
             for (const id in activeIndicatorSeriesMap) {
                 if (!currentIds.has(id)) {
-                    try {
-                        chart.removeSeries(activeIndicatorSeriesMap[id].series);
-                    } catch (e) {
-                        console.warn("Error removing series:", e);
-                    }
+                    removeIndicatorEntry(activeIndicatorSeriesMap[id]);
                     delete activeIndicatorSeriesMap[id];
                 }
             }
 
-            // 2. Hide default single series when managing via activeIndicatorConfigs
-            if (smaSeries) smaSeries.applyOptions({ visible: false });
-            if (rsiSeries) rsiSeries.applyOptions({ visible: false });
-            if (volumeSeries) volumeSeries.applyOptions({ visible: false });
-
-            // 3. Allocate panes & sync series
+            // 2. Allocate panes & sync series (RSI & Volume masing-masing di pane sendiri di bawah harga)
             let nextPane = 1;
-            let smaCount = 0;
 
-            activeIndicatorConfigs.forEach((item) => {
-                let entry = activeIndicatorSeriesMap[item.id];
-                if (!entry) {
-                    if (item.type === 'sma') {
-                        const color = item.color || SMA_COLORS[smaCount % SMA_COLORS.length];
-                        smaCount++;
-                        let lineStyle = LightweightCharts.LineStyle.Solid;
-                        if (item.lineStyle === 1) lineStyle = LightweightCharts.LineStyle.Dashed;
-                        else if (item.lineStyle === 2) lineStyle = LightweightCharts.LineStyle.Dotted;
-
-                        let lineType = 0;
-                        if (item.plotType && (item.plotType.toLowerCase().indexOf('step') !== -1)) {
-                            lineType = (typeof LightweightCharts.LineType !== 'undefined' && LightweightCharts.LineType.WithSteps !== undefined) ? LightweightCharts.LineType.WithSteps : 1;
-                        }
-
-                        const s = chart.addSeries(LightweightCharts.LineSeries, {
-                            color: color,
-                            lineWidth: item.lineWidth || 2,
-                            lineStyle: lineStyle,
-                            lineType: lineType,
-                            title: '',
-                            priceLineVisible: Boolean(item.priceLine),
-                            lastValueVisible: Boolean(item.labelsOnPriceScale),
-                            visible: item.isVisible !== false,
-                        }, 0);
-                        let sData = [];
-                        const isDefaultCalc = (!item.period || item.period === 20) && (!item.source || item.source.toLowerCase() === 'close') && (!item.offset || item.offset === 0);
-                        if (isDefaultCalc && currentPayloadIndicators && currentPayloadIndicators.sma20 && currentPayloadIndicators.sma20.length > 0) {
-                            sData = currentPayloadIndicators.sma20;
-                        } else {
-                            sData = calculateSMAData(rawCandlesData, item.period || 20, item.source || 'close', item.offset || 0);
-                        }
-                        if (sData && sData.length > 0) s.setData(sData);
-                        activeIndicatorSeriesMap[item.id] = {
-                            series: s,
-                            type: 'sma',
-                            period: item.period || 20,
-                            source: item.source || 'close',
-                            offset: item.offset || 0,
-                            color: color,
-                            lineWidth: item.lineWidth || 2,
-                            lineStyle: item.lineStyle || 0,
-                            labelsOnPriceScale: Boolean(item.labelsOnPriceScale)
-                        };
-                    } else if (item.type === 'rsi') {
-                        const isVis = item.isVisible !== false;
-                        const targetPane = isVis ? nextPane++ : 1;
-                        const s = chart.addSeries(LightweightCharts.LineSeries, {
-                            color: item.color || '#E91E63',
-                            lineWidth: 2,
-                            title: item.title || 'RSI ' + (item.period || 14),
-                            priceScaleId: 'rsi-scale-' + item.id,
-                            visible: isVis,
-                            priceFormat: {
-                                type: 'custom',
-                                minMove: 0.01,
-                                formatter: (p) => p.toFixed(1),
-                            },
-                        }, targetPane);
-                        s.createPriceLine({
-                            price: 70,
-                            color: 'rgba(233, 30, 99, 0.4)',
-                            lineWidth: 1,
-                            lineStyle: LightweightCharts.LineStyle.Dashed,
-                            axisLabelVisible: true,
-                            title: '70',
-                        });
-                        s.createPriceLine({
-                            price: 30,
-                            color: 'rgba(233, 30, 99, 0.4)',
-                            lineWidth: 1,
-                            lineStyle: LightweightCharts.LineStyle.Dashed,
-                            axisLabelVisible: true,
-                            title: '30',
-                        });
-                        s.priceScale().applyOptions({
-                            scaleMargins: { top: 0.1, bottom: 0.1 },
-                        });
-                        let rData = [];
-                        if ((!item.period || item.period === 14) && currentPayloadIndicators && currentPayloadIndicators.rsi14 && currentPayloadIndicators.rsi14.length > 0) {
-                            rData = currentPayloadIndicators.rsi14;
-                        } else if (currentRsiData && currentRsiData.length > 0) {
-                            rData = currentRsiData;
-                        } else {
-                            rData = calculateRSIData(rawCandlesData, item.period || 14);
-                        }
-                        if (rData && rData.length > 0) s.setData(rData);
-                        activeIndicatorSeriesMap[item.id] = { series: s, type: 'rsi', period: item.period || 14, paneIndex: targetPane };
-                    } else if (item.type === 'vol') {
-                        const isVis = item.isVisible !== false;
-                        const targetPane = isVis ? nextPane++ : 1;
-                        const s = chart.addSeries(LightweightCharts.HistogramSeries, {
-                            priceFormat: { type: 'volume' },
-                            priceScaleId: 'volume-scale-' + item.id,
-                            title: item.title || 'VOL',
-                            visible: isVis,
-                        }, targetPane);
-                        s.priceScale().applyOptions({
-                            scaleMargins: { top: 0.15, bottom: 0 },
-                        });
-                        if (currentVolumeData && currentVolumeData.length > 0) {
-                            s.setData(currentVolumeData);
-                        }
-                        activeIndicatorSeriesMap[item.id] = { series: s, type: 'vol', paneIndex: targetPane };
-                    }
-                } else {
-                    // Update options
-                    const isVis = item.isVisible !== false;
-                    const opt = {
-                        visible: isVis,
-                    };
-                    if (item.type === 'sma') {
-                        opt.title = '';
-                        opt.priceLineVisible = Boolean(item.priceLine);
-                        opt.lastValueVisible = Boolean(item.labelsOnPriceScale);
-                        if (item.plotType !== undefined) {
-                            let lineType = 0;
-                            if (item.plotType && (item.plotType.toLowerCase().indexOf('step') !== -1)) {
-                                lineType = (typeof LightweightCharts.LineType !== 'undefined' && LightweightCharts.LineType.WithSteps !== undefined) ? LightweightCharts.LineType.WithSteps : 1;
-                            }
-                            opt.lineType = lineType;
-                        }
-                        if (item.color) {
-                            opt.color = item.color;
-                            entry.color = item.color;
-                        }
-                        if (item.lineWidth) {
-                            opt.lineWidth = item.lineWidth;
-                            entry.lineWidth = item.lineWidth;
-                        }
-                        if (item.lineStyle !== undefined) {
-                            let lineStyle = LightweightCharts.LineStyle.Solid;
-                            if (item.lineStyle === 1) lineStyle = LightweightCharts.LineStyle.Dashed;
-                            else if (item.lineStyle === 2) lineStyle = LightweightCharts.LineStyle.Dotted;
-                            opt.lineStyle = lineStyle;
-                            entry.lineStyle = item.lineStyle;
-                        }
-                        const curP = item.period || 20;
-                        const curSrc = item.source || 'close';
-                        const curOff = item.offset || 0;
-                        const needRecalc = entry.period !== curP || entry.source !== curSrc || entry.offset !== curOff;
-                        if (needRecalc) {
-                            entry.period = curP;
-                            entry.source = curSrc;
-                            entry.offset = curOff;
-                            const isDefaultCalc = (curP === 20) && (curSrc.toLowerCase() === 'close') && (curOff === 0);
-                            let sData = [];
-                            if (isDefaultCalc && currentPayloadIndicators && currentPayloadIndicators.sma20 && currentPayloadIndicators.sma20.length > 0) {
-                                sData = currentPayloadIndicators.sma20;
-                            } else {
-                                sData = calculateSMAData(rawCandlesData, curP, curSrc, curOff);
-                            }
-                            if (sData && sData.length > 0) entry.series.setData(sData);
-                        }
-                    }
-                    entry.series.applyOptions(opt);
-
-                    if (item.type === 'rsi' || item.type === 'vol') {
-                        if (isVis) {
-                            const targetPane = nextPane++;
-                            if (entry.series.getPane && entry.series.getPane().paneIndex() !== targetPane) {
-                                entry.series.moveToPane(targetPane);
-                                entry.paneIndex = targetPane;
-                            }
-                        }
-                    }
+            for (const item of activeIndicatorConfigs) {
+                const entry = activeIndicatorSeriesMap[item.id];
+                const paneIndex = (item.type !== 'sma' && item.isVisible !== false) ? nextPane++ : null;
+                if (item.type === 'sma') {
+                    activeIndicatorSeriesMap[item.id] = syncSmaIndicator(item, entry);
+                } else if (item.type === 'rsi') {
+                    activeIndicatorSeriesMap[item.id] = syncRsiIndicator(item, entry, paneIndex);
+                } else if (item.type === 'vol') {
+                    activeIndicatorSeriesMap[item.id] = syncVolumeIndicator(item, entry, paneIndex);
                 }
-            });
+            }
 
             // Update pane stretch factors
             try {
@@ -10020,124 +9861,35 @@
             }
 
             renderFib();
+            if (!isCrosshairActive) emitIndicatorValues(null);
         }
 
         window.setActiveIndicators = setActiveIndicators;
 
-        function setIndicators(showSma, showRsi, showVolume) {
-            currentShowSma = Boolean(showSma);
-            currentShowRsi = Boolean(showRsi);
-            if (showVolume !== undefined && showVolume !== null) {
-                currentShowVolume = Boolean(showVolume);
-            }
-
-            if (activeIndicatorConfigs && activeIndicatorConfigs.length > 0) {
-                if (smaSeries) smaSeries.applyOptions({ visible: false });
-                if (rsiSeries) rsiSeries.applyOptions({ visible: false });
-                if (volumeSeries) volumeSeries.applyOptions({ visible: false });
-                return;
-            }
-
-            if (smaSeries) {
-                smaSeries.applyOptions({
-                    visible: currentShowSma,
-                    title: '',
-                    priceLineVisible: false,
-                    lastValueVisible: false,
-                });
-            }
-
-            updatePanes();
-        }
-
-        function setData(candlesJson, volumesJson) {
+        function setData(candlesJson) {
             if (!chart) initChart();
             const candles = typeof candlesJson === 'string' ? JSON.parse(candlesJson) : candlesJson;
             rawCandlesData = candles;
             candleSeries.setData(candles);
             areaSeries.setData(candles.map(c => ({ time: c.time, value: c.close })));
-            if (volumesJson) {
-                const vols = typeof volumesJson === 'string' ? JSON.parse(volumesJson) : volumesJson;
-                currentVolumeData = vols;
-                if (volumeSeries) {
-                    volumeSeries.setData(vols);
-                }
-            }
+            setVolumeData(candles.map(toVolumeBar));
             if (currentShowFib && (!fibPoint1 || !fibPoint2)) {
                 startFibDrawing();
             }
-            updatePanes();
             refreshActiveIndicatorsData();
             chart.timeScale().fitContent();
             renderFib();
         }
 
-        function setDataWithIndicators(payloadInput) {
-            if (!chart) {
-                pendingData = payloadInput;
-                initChart();
-                return;
-            }
-
-            const payload = typeof payloadInput === 'string' ? JSON.parse(payloadInput) : payloadInput;
-
-            if (payload.candles && Array.isArray(payload.candles) && payload.candles.length > 0) {
-                rawCandlesData = payload.candles;
-                candleSeries.setData(payload.candles);
-                areaSeries.setData(payload.candles.map(c => ({ time: c.time, value: c.close })));
-
-                const volData = payload.candles.map(c => ({
-                    time: c.time,
-                    value: c.volume || 0,
-                    color: c.close >= c.open ? '#26a69a88' : '#ef535088'
-                }));
-                currentVolumeData = volData;
-                if (volumeSeries) {
-                    volumeSeries.setData(volData);
-                }
-            }
-
-            if (payload.indicators) {
-                currentPayloadIndicators = payload.indicators;
-                if (payload.indicators.sma20 && Array.isArray(payload.indicators.sma20)) {
-                    smaSeries.setData(payload.indicators.sma20);
-                }
-                if (payload.indicators.rsi14 && Array.isArray(payload.indicators.rsi14)) {
-                    currentRsiData = payload.indicators.rsi14;
-                    if (rsiSeries) {
-                        rsiSeries.setData(payload.indicators.rsi14);
-                    }
-                }
-            }
-
-            if (currentShowFib && (!fibPoint1 || !fibPoint2)) {
-                startFibDrawing();
-            }
-            setIndicators(currentShowSma, currentShowRsi, currentShowVolume);
-            refreshActiveIndicatorsData();
-            chart.timeScale().fitContent();
-            renderFib();
-        }
-
-        function updateBar(barInput, volBarInput) {
+        function updateBar(barInput) {
             if (!chart) return;
             const bar = typeof barInput === 'string' ? JSON.parse(barInput) : barInput;
+            const volumeBar = toVolumeBar(bar);
+            upsertLastByTime(rawCandlesData, bar);
+            upsertLastByTime(currentVolumeData, volumeBar);
             candleSeries.update(bar);
             areaSeries.update({ time: bar.time, value: bar.close });
-            if (volBarInput) {
-                const vol = typeof volBarInput === 'string' ? JSON.parse(volBarInput) : volBarInput;
-                if (currentVolumeData && currentVolumeData.length > 0) {
-                    const lastIdx = currentVolumeData.length - 1;
-                    if (currentVolumeData[lastIdx].time === vol.time) {
-                        currentVolumeData[lastIdx] = vol;
-                    } else {
-                        currentVolumeData.push(vol);
-                    }
-                }
-                if (volumeSeries) {
-                    volumeSeries.update(vol);
-                }
-            }
+            for (const series of getVolumeSeriesList()) series.update(volumeBar);
             refreshActiveIndicatorsData();
             renderFib();
         }
@@ -10160,10 +9912,8 @@
                 const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
                 if (!data || !data.type) return;
 
-                if (data.type === 'setDataWithIndicators') {
-                    setDataWithIndicators(data.payload);
-                } else if (data.type === 'setIndicators') {
-                    setIndicators(data.showSma, data.showRsi, data.showVolume);
+                if (data.type === 'setActiveIndicators') {
+                    setActiveIndicators(data.indicators);
                 } else if (data.type === 'setFibonacci') {
                     setFibonacci(data.showFib);
                 } else if (data.type === 'resetFibonacci') {
@@ -10199,11 +9949,11 @@
                 } else if (data.type === 'clearAllDrawings') {
                     clearAllDrawings();
                 } else if (data.type === 'setData') {
-                    setData(data.candles, data.volumes);
+                    setData(data.candles);
                 } else if (data.type === 'setSeriesType') {
                     setSeriesType(data.seriesType);
                 } else if (data.type === 'initChart') {
-                    initChart(data.upColor, data.downColor, data.gridColor, data.interactive);
+                    initChart(data.upColor, data.downColor, data.gridColor, data.interactive, data.crosshairColor);
                 }
             } catch (e) {
                 console.error("tv_chart message error:", e);

@@ -20,31 +20,15 @@ class IndicatorItem {
 
 /// Modal Sheet Indikator ala TradingView Mobile
 class IndicatorsModalSheet extends StatefulWidget {
-  final bool showSma;
-  final bool showRsi;
-  final bool showVolume;
-  final bool showFibonacci;
   final Set<String> favoriteIndicators;
   final ValueChanged<String> onToggleFavorite;
-  final ValueChanged<String>? onAddIndicator;
-  final ValueChanged<bool>? onToggleSma;
-  final ValueChanged<bool>? onToggleRsi;
-  final ValueChanged<bool>? onToggleVolume;
-  final ValueChanged<bool>? onToggleFibonacci;
+  final ValueChanged<String> onAddIndicator;
 
   const IndicatorsModalSheet({
     super.key,
-    this.showSma = false,
-    this.showRsi = false,
-    this.showVolume = false,
-    this.showFibonacci = false,
     required this.favoriteIndicators,
     required this.onToggleFavorite,
-    this.onAddIndicator,
-    this.onToggleSma,
-    this.onToggleRsi,
-    this.onToggleVolume,
-    this.onToggleFibonacci,
+    required this.onAddIndicator,
   });
 
   @override
@@ -111,11 +95,6 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
     ),
   ];
 
-  // Local active flags mirroring props
-  late bool _smaActive;
-  late bool _rsiActive;
-  late bool _volumeActive;
-  late bool _fibActive;
   late Set<String> _favs;
 
   Timer? _toastTimer;
@@ -124,10 +103,6 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
   @override
   void initState() {
     super.initState();
-    _smaActive = widget.showSma;
-    _rsiActive = widget.showRsi;
-    _volumeActive = widget.showVolume;
-    _fibActive = widget.showFibonacci;
     _favs = Set<String>.from(widget.favoriteIndicators);
   }
 
@@ -154,7 +129,7 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
     });
   }
 
-  void _toggleIndicator(IndicatorItem item) {
+  void _addIndicator(IndicatorItem item) {
     if (!item.isSupported) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -166,31 +141,7 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
       return;
     }
 
-    if (widget.onAddIndicator != null) {
-      widget.onAddIndicator!(item.id);
-    } else {
-      setState(() {
-        switch (item.id) {
-          case 'sma':
-            _smaActive = !_smaActive;
-            widget.onToggleSma?.call(_smaActive);
-            break;
-          case 'rsi':
-            _rsiActive = !_rsiActive;
-            widget.onToggleRsi?.call(_rsiActive);
-            break;
-          case 'vol':
-            _volumeActive = !_volumeActive;
-            widget.onToggleVolume?.call(_volumeActive);
-            break;
-          case 'fib':
-            _fibActive = !_fibActive;
-            widget.onToggleFibonacci?.call(_fibActive);
-            break;
-        }
-      });
-    }
-
+    widget.onAddIndicator(item.id);
     _showToast();
   }
 
@@ -662,11 +613,7 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
   }) {
     final String query = _favSearchCtrl.text.trim().toLowerCase();
     final List<IndicatorItem> favItems = _allIndicators.where((IndicatorItem item) {
-      final bool isFav = _favs.contains(item.name) ||
-          _favs.contains(item.id) ||
-          (_favs.contains('Moving Average (SMA)') && item.id == 'sma') ||
-          (_favs.contains('Relative Strength Index (RSI)') && item.id == 'rsi') ||
-          (_favs.contains('24-hour Volume') && item.id == 'vol');
+      final bool isFav = _favs.contains(item.name);
       final bool matchesQuery = query.isEmpty ||
           item.name.toLowerCase().contains(query) ||
           item.id.toLowerCase().contains(query);
@@ -752,7 +699,7 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
                     final IndicatorItem item = favItems[i];
 
                     return InkWell(
-                      onTap: () => _toggleIndicator(item),
+                      onTap: () => _addIndicator(item),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         child: Row(
@@ -911,7 +858,7 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
     final bool isFav = _favs.contains(item.name);
 
     return InkWell(
-      onTap: () => _toggleIndicator(item),
+      onTap: () => _addIndicator(item),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(

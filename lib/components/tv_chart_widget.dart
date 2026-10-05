@@ -8,18 +8,47 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../pages/screen/home_page.dart' show Ohlc, makeDummyCandles; 
 import '../data/model/chart_payload.dart';
 import '../data/model/active_chart_indicator.dart';
+import '../utils/css_color.dart';
 import 'web_message_listener.dart';
 
 const bool _kShowDebugReloadButton = false;
+
+/// Nilai OHLC bar di posisi crosshair. Null per field kalau series tidak punya
+/// nilai itu (mis. mode area hanya punya close/value).
+@immutable
+class CrosshairBar {
+  final double? open;
+  final double? high;
+  final double? low;
+  final double? close;
+
+  const CrosshairBar({this.open, this.high, this.low, this.close});
+
+  factory CrosshairBar.fromJson(Map<String, dynamic> json) => CrosshairBar(
+    open: (json['open'] as num?)?.toDouble(),
+    high: (json['high'] as num?)?.toDouble(),
+    low: (json['low'] as num?)?.toDouble(),
+    close: (json['close'] as num?)?.toDouble(),
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CrosshairBar &&
+          open == other.open &&
+          high == other.high &&
+          low == other.low &&
+          close == other.close;
+
+  @override
+  int get hashCode => Object.hash(open, high, low, close);
+}
 
 class TvChartWidget extends StatefulWidget {
   final List<Ohlc> candles;
   final ChartPayload? payload;
   final bool isCandle;
-  final List<ActiveChartIndicator>? activeIndicators;
-  final bool showSma;
-  final bool showRsi;
-  final bool showVolume;
+  final List<ActiveChartIndicator> activeIndicators;
   final bool showFibonacci;
   final bool isDrawingFib;
   final VoidCallback? onFibDrawn;
@@ -44,8 +73,9 @@ class TvChartWidget extends StatefulWidget {
   final Color? crosshairColor;
   final Ohlc? liveBar; // bar terakhir yg lagi jalan (dari WS)
   final bool interactive; // false di home (preview doang)
-  final ValueChanged<Map<String, dynamic>?>? onCrosshairMove;
+  final ValueChanged<CrosshairBar?>? onCrosshairMove;
   final ValueChanged<bool>? onChartModalStateChanged;
+  final ValueChanged<IndicatorPlotValues>? onIndicatorValues;
 
   const TvChartWidget({
     super.key,
@@ -54,10 +84,7 @@ class TvChartWidget extends StatefulWidget {
     required this.candles,
     this.payload,
     required this.isCandle,
-    this.activeIndicators,
-    this.showSma = false,
-    this.showRsi = false,
-    this.showVolume = false,
+    required this.activeIndicators,
     this.showFibonacci = false,
     this.isDrawingFib = false,
     this.onFibDrawn,
@@ -82,6 +109,7 @@ class TvChartWidget extends StatefulWidget {
     this.interactive = true,
     this.onCrosshairMove,
     this.onChartModalStateChanged,
+    this.onIndicatorValues,
   });
 
   static String? _cachedHtml;
@@ -103,6 +131,14 @@ class _TvChartWidgetState extends State<TvChartWidget> {
   List<Map<String, dynamic>>? _lastReceivedHorizLines;
   List<Map<String, dynamic>>? _lastReceivedTrendlines;
   List<Map<String, dynamic>>? _lastReceivedRectangles;
+
+  /// True setelah state awal pernah dikirim ke chart; sebelum itu perubahan cukup
+  /// ditunggu karena [_pushAll] selalu mengirim state terbaru.
+  bool _isSynced = false;
+  bool _isPushing = false;
+
+  /// Pengukuran waktu buka chart (debug/profile saja), dimulai saat widget dibuat.
+  final Stopwatch _openTimer = Stopwatch()..start();
 
   @override
   void initState() {
@@ -164,21 +200,41 @@ class _TvChartWidgetState extends State<TvChartWidget> {
           widget.onRectanglesChanged?.call(updated);
         }
       } else if (type == 'onCrosshair') {
-        if (payload is Map) {
-          widget.onCrosshairMove?.call(Map<String, dynamic>.from(payload));
-        } else if (payload == null) {
-          widget.onCrosshairMove?.call(null);
-        }
+        _emitCrosshair(payload);
       } else if (type == 'onChartModalStateChanged') {
         if (payload is bool) {
           widget.onChartModalStateChanged?.call(payload);
         }
+      } else if (type == 'onIndicatorValues') {
+        _emitIndicatorValues(payload);
       }
     });
   }
 
-  String _hex(Color c) =>
-      '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+  /// Payload JS: JSON `{ "<id>": [nilaiPlot1, nilaiPlot2, ...] }`.
+  void _emitIndicatorValues(Object? payload) {
+    final ValueChanged<IndicatorPlotValues>? callback = widget.onIndicatorValues;
+    if (callback == null || payload is! String) return;
+    final Map<String, dynamic> decoded =
+        jsonDecode(payload) as Map<String, dynamic>;
+    callback(<String, List<double?>>{
+      for (final MapEntry<String, dynamic>(:String key, :dynamic value)
+          in decoded.entries)
+        key: <double?>[
+          for (final dynamic v in value as List<dynamic>) (v as num?)?.toDouble(),
+        ],
+    });
+  }
+
+  /// Payload JS: JSON string `{ time, open, high, low, close }`, atau null saat crosshair keluar.
+  void _emitCrosshair(Object? payload) {
+    final ValueChanged<CrosshairBar?>? callback = widget.onCrosshairMove;
+    if (callback == null) return;
+    final Object? json = payload is String ? jsonDecode(payload) : payload;
+    callback(
+      json is Map ? CrosshairBar.fromJson(Map<String, dynamic>.from(json)) : null,
+    );
+  }
 
   int _sec(DateTime t) =>
       t.toUtc().add(const Duration(hours: 7)).millisecondsSinceEpoch ~/ 1000;
@@ -192,301 +248,159 @@ class _TvChartWidgetState extends State<TvChartWidget> {
     'volume': c.volume,
   };
 
-  String _rgba(Color c, double opacity) {
-    final int argb = c.toARGB32();
-    final int r = (argb >> 16) & 0xFF;
-    final int g = (argb >> 8) & 0xFF;
-    final int b = argb & 0xFF;
-    return 'rgba($r, $g, $b, $opacity)';
-  }
-
-  Map<String, dynamic> _volJson(Ohlc c) => <String, dynamic>{
-    'time': _sec(c.time),
-    'value': c.volume,
-    'color': c.close >= c.open
-        ? _rgba(widget.upColor, .5)
-        : _rgba(widget.downColor, .5),
-  };
-
-  Future<void> _pushAll() async {
-    if (_ctrl == null) return;
-    debugPrint("TV_CHART_DART: _pushAll called, candles=${widget.candles.length}, hasPayload=${widget.payload != null}");
-
-    final Color crosshair = widget.crosshairColor ??
+  /// Warna crosshair (default mengikuti brightness tema) dalam format CSS.
+  String get _crosshairCss {
+    final Color crosshair =
+        widget.crosshairColor ??
         (Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFFD1D4DC)
             : const Color(0xFF4A4E5A));
+    return crosshair.withValues(alpha: 0.85).toCssRgba();
+  }
 
-    // Pastikan initChart terpanggil dengan parameter warna tema
-    await _ctrl!.evaluateJavascript(
-      source:
-          "if (typeof initChart === 'function') initChart('${_hex(widget.upColor)}', '${_hex(widget.downColor)}', '${_hex(widget.gridColor)}', ${widget.interactive}, '${_rgba(crosshair, 0.85)}');",
+  /// Argumen warna tema untuk JS: naik/turun dalam hex (JS menambah suffix alpha), grid dalam rgba.
+  String get _themeColorArgs =>
+      "'${widget.upColor.toCssHex()}', '${widget.downColor.toCssHex()}', '${widget.gridColor.toCssRgba()}'";
+
+  // ===== Script JS per bagian state chart =====
+
+  String get _chartInfoScript =>
+      "setChartInfo(${jsonEncode(widget.symbol)}, ${jsonEncode(widget.timeframe)});";
+
+  String get _setDataScript {
+    final List<Ohlc> payloadCandles = widget.payload?.candles ?? const <Ohlc>[];
+    final List<Ohlc> candles = payloadCandles.isNotEmpty
+        ? payloadCandles
+        : widget.candles.isNotEmpty
+        ? widget.candles
+        : makeDummyCandles(60);
+    return 'setData(${jsonEncode(candles.map(_barJson).toList())});';
+  }
+
+  String get _seriesTypeScript =>
+      "setSeriesType('${widget.isCandle ? 'candle' : 'area'}');";
+
+  String get _activeIndicatorsScript => 'setActiveIndicators(${jsonEncode(
+    widget.activeIndicators.map((ActiveChartIndicator e) => e.toJson()).toList(),
+  )});';
+
+  String get _fibonacciScript => 'setFibonacci(${widget.showFibonacci});';
+  String get _horizontalLinesScript =>
+      'setHorizontalLines(${jsonEncode(widget.horizontalLines)});';
+  String get _trendlinesScript =>
+      'setTrendlines(${jsonEncode(widget.trendlines)});';
+  String get _rectanglesScript =>
+      'setRectangles(${jsonEncode(widget.rectangles)});';
+
+  static String _drawingModeScript(String tool, {required bool isDrawing}) =>
+      isDrawing ? 'start${tool}Drawing();' : 'cancel${tool}Drawing();';
+
+  /// Log fase buka chart: `TV_CHART_TIMING: <fase> <ms sejak widget dibuat> ms`.
+  void _logTiming(String phase, [String detail = '']) {
+    if (kReleaseMode) return;
+    debugPrint(
+      'TV_CHART_TIMING: $phase ${_openTimer.elapsedMilliseconds} ms$detail',
     );
-    await _ctrl!.evaluateJavascript(
-      source:
-          "if (typeof setChartInfo === 'function') setChartInfo('${widget.symbol}', '${widget.timeframe}');",
-    );
+  }
 
-    if (widget.payload != null && widget.payload!.candles.isNotEmpty) {
-      final List<Map<String, dynamic>> candlesJson =
-          widget.payload!.candles.map(_barJson).toList();
-      final Map<String, List<Map<String, dynamic>>> indicatorsJson =
-          <String, List<Map<String, dynamic>>>{};
+  /// Jalankan beberapa perintah JS dalam satu panggilan bridge.
+  Future<void> _run(List<String> scripts) async {
+    final InAppWebViewController? ctrl = _ctrl;
+    if (ctrl == null || scripts.isEmpty) return;
+    await ctrl.evaluateJavascript(source: scripts.join('\n'));
+  }
 
-      widget.payload!.indicators.forEach((String key, List<IndicatorValue> value) {
-        indicatorsJson[key] = value.map((IndicatorValue e) => <String, dynamic>{
-          'time': e.time + (7 * 3600), // Sinkronkan ke WIB (+7)
-          'value': e.value,
-        }).toList();
-      });
-
-      final String payloadStr = jsonEncode(<String, dynamic>{
-        'candles': candlesJson,
-        'indicators': indicatorsJson,
-      });
-
-      await _ctrl!.evaluateJavascript(
-        source: "setDataWithIndicators(${jsonEncode(payloadStr)});",
-      );
-
-      final String volsJson = jsonEncode(
-        widget.payload!.candles.map(_volJson).toList(),
-      );
-      await _ctrl!.evaluateJavascript(
-        source: "if (window.setVolumeData) setVolumeData(${jsonEncode(volsJson)});",
-      );
-    } else {
-      final List<Ohlc> activeCandles = widget.candles.isNotEmpty
-          ? widget.candles
-          : makeDummyCandles(60);
-      final String candlesJson = jsonEncode(
-        activeCandles.map(_barJson).toList(),
-      );
-      final String volsJson = jsonEncode(
-        activeCandles.map(_volJson).toList(),
-      );
-      await _ctrl!.evaluateJavascript(
-        source: "setData(${jsonEncode(candlesJson)}, ${jsonEncode(volsJson)});",
-      );
-    }
-
-    await _ctrl!.evaluateJavascript(
-      source: "setSeriesType('${widget.isCandle ? 'candle' : 'area'}');",
-    );
-
-    if (widget.activeIndicators != null) {
-      final String indJson = jsonEncode(
-        widget.activeIndicators!.map((ActiveChartIndicator e) => e.toJson()).toList(),
-      );
-      await _ctrl!.evaluateJavascript(
-        source: "if (typeof setActiveIndicators === 'function') setActiveIndicators($indJson);",
-      );
-    } else {
-      await _ctrl!.evaluateJavascript(
+  /// Kirim seluruh state ke chart, sekali per halaman dimuat. Penanda sinkron disimpan
+  /// di halaman JS (`window.__cuanChartSynced`), jadi reload WebView otomatis memicu push ulang.
+  Future<void> _pushAll() async {
+    final InAppWebViewController? ctrl = _ctrl;
+    if (ctrl == null || _isPushing) return;
+    _isPushing = true;
+    try {
+      final Object? needsSync = await ctrl.evaluateJavascript(
         source:
-            "setIndicators(${widget.showSma}, ${widget.showRsi}, ${widget.showVolume});",
+            "typeof setActiveIndicators === 'function' && !window.__cuanChartSynced",
       );
-    }
+      if (needsSync != true || !mounted) return;
 
-    await _ctrl!.evaluateJavascript(
-      source: "setFibonacci(${widget.showFibonacci});",
-    );
-
-    if (widget.isDrawingFib) {
-      await _ctrl!.evaluateJavascript(
-        source: "startFibDrawing();",
-      );
-    }
-
-    final String horizJson = jsonEncode(widget.horizontalLines);
-    await _ctrl!.evaluateJavascript(
-      source: "setHorizontalLines($horizJson);",
-    );
-
-    if (widget.isDrawingHorizontalLine) {
-      await _ctrl!.evaluateJavascript(
-        source: "startHorizontalLineDrawing();",
-      );
-    }
-
-    final String trendJson = jsonEncode(widget.trendlines);
-    await _ctrl!.evaluateJavascript(
-      source: "setTrendlines($trendJson);",
-    );
-
-    if (widget.isDrawingTrendline) {
-      await _ctrl!.evaluateJavascript(
-        source: "startTrendlineDrawing();",
-      );
-    }
-
-    final String rectJson = jsonEncode(widget.rectangles);
-    await _ctrl!.evaluateJavascript(
-      source: "if (typeof setRectangles === 'function') setRectangles($rectJson);",
-    );
-
-    if (widget.isDrawingRectangle) {
-      await _ctrl!.evaluateJavascript(
-        source: "if (typeof startRectangleDrawing === 'function') startRectangleDrawing();",
-      );
+      await _run(<String>[
+        "initChart($_themeColorArgs, ${widget.interactive}, '$_crosshairCss');",
+        _chartInfoScript,
+        _setDataScript,
+        _seriesTypeScript,
+        _activeIndicatorsScript,
+        _fibonacciScript,
+        if (widget.isDrawingFib) 'startFibDrawing();',
+        _horizontalLinesScript,
+        if (widget.isDrawingHorizontalLine) 'startHorizontalLineDrawing();',
+        _trendlinesScript,
+        if (widget.isDrawingTrendline) 'startTrendlineDrawing();',
+        _rectanglesScript,
+        if (widget.isDrawingRectangle) 'startRectangleDrawing();',
+        'window.__cuanChartSynced = true;',
+      ]);
+      if (!_isSynced) _logTiming('first_render');
+      _isSynced = true;
+    } finally {
+      _isPushing = false;
     }
   }
 
   @override
   void didUpdateWidget(covariant TvChartWidget old) {
     super.didUpdateWidget(old);
-    final bool dataChanged = old.candles.length != widget.candles.length ||
-        old.isCandle != widget.isCandle ||
-        old.payload != widget.payload;
+    if (!_isSynced) return;
 
-    final String oldIndJson = old.activeIndicators == null
-        ? ''
-        : jsonEncode(old.activeIndicators!.map((ActiveChartIndicator e) => e.toJson()).toList());
-    final String newIndJson = widget.activeIndicators == null
-        ? ''
-        : jsonEncode(widget.activeIndicators!.map((ActiveChartIndicator e) => e.toJson()).toList());
-    final bool activeIndicatorsChanged = oldIndJson != newIndJson;
-
-    final bool indicatorsChanged = old.showSma != widget.showSma ||
-        old.showRsi != widget.showRsi ||
-        old.showVolume != widget.showVolume;
-
-    final bool fibChanged = old.showFibonacci != widget.showFibonacci;
-    final bool drawFibChanged = old.isDrawingFib != widget.isDrawingFib;
-
-    final bool horizLinesChanged =
-        !listEquals(old.horizontalLines, widget.horizontalLines);
-    final bool drawHorizChanged =
-        old.isDrawingHorizontalLine != widget.isDrawingHorizontalLine;
-
-    final bool trendlinesChanged =
-        !listEquals(old.trendlines, widget.trendlines);
-    final bool drawTrendlineChanged =
-        old.isDrawingTrendline != widget.isDrawingTrendline;
-
-    final bool rectanglesChanged =
-        !listEquals(old.rectangles, widget.rectangles);
-    final bool drawRectangleChanged =
-        old.isDrawingRectangle != widget.isDrawingRectangle;
-
-    final bool crosshairChanged = old.crosshairColor != widget.crosshairColor;
-    final bool chartInfoChanged =
-        old.symbol != widget.symbol || old.timeframe != widget.timeframe;
-
-    if (dataChanged) {
-      _pushAll();
-    } else {
-      if (chartInfoChanged) {
-        _ctrl?.evaluateJavascript(
-          source:
-              "if (typeof setChartInfo === 'function') setChartInfo('${widget.symbol}', '${widget.timeframe}');",
-        );
-      }
-      if (widget.activeIndicators != null) {
-        if (activeIndicatorsChanged) {
-          _ctrl?.evaluateJavascript(
-            source:
-                "if (typeof setActiveIndicators === 'function') setActiveIndicators($newIndJson);",
-          );
-        }
-      } else if (indicatorsChanged) {
-        _ctrl?.evaluateJavascript(
-          source:
-              "setIndicators(${widget.showSma}, ${widget.showRsi}, ${widget.showVolume});",
-        );
-      }
-      if (fibChanged) {
-        _ctrl?.evaluateJavascript(
-          source: "setFibonacci(${widget.showFibonacci});",
-        );
-      }
-      if (drawFibChanged) {
-        if (widget.isDrawingFib) {
-          _ctrl?.evaluateJavascript(
-            source: "startFibDrawing();",
-          );
-        } else {
-          _ctrl?.evaluateJavascript(
-            source: "cancelFibDrawing();",
-          );
-        }
-      }
-      if (horizLinesChanged) {
-        if (!listEquals(widget.horizontalLines, _lastReceivedHorizLines)) {
-          final String horizJson = jsonEncode(widget.horizontalLines);
-          _ctrl?.evaluateJavascript(
-            source: "setHorizontalLines($horizJson);",
-          );
-        }
-      }
-      if (drawHorizChanged) {
-        if (widget.isDrawingHorizontalLine) {
-          _ctrl?.evaluateJavascript(
-            source: "startHorizontalLineDrawing();",
-          );
-        } else {
-          _ctrl?.evaluateJavascript(
-            source: "cancelHorizontalLineDrawing();",
-          );
-        }
-      }
-      if (trendlinesChanged) {
-        if (!listEquals(widget.trendlines, _lastReceivedTrendlines)) {
-          final String trendJson = jsonEncode(widget.trendlines);
-          _ctrl?.evaluateJavascript(
-            source: "setTrendlines($trendJson);",
-          );
-        }
-      }
-      if (drawTrendlineChanged) {
-        if (widget.isDrawingTrendline) {
-          _ctrl?.evaluateJavascript(
-            source: "startTrendlineDrawing();",
-          );
-        } else {
-          _ctrl?.evaluateJavascript(
-            source: "cancelTrendlineDrawing();",
-          );
-        }
-      }
-      if (rectanglesChanged) {
-        if (!listEquals(widget.rectangles, _lastReceivedRectangles)) {
-          final String rectJson = jsonEncode(widget.rectangles);
-          _ctrl?.evaluateJavascript(
-            source: "if (typeof setRectangles === 'function') setRectangles($rectJson);",
-          );
-        }
-      }
-      if (drawRectangleChanged) {
-        if (widget.isDrawingRectangle) {
-          _ctrl?.evaluateJavascript(
-            source: "if (typeof startRectangleDrawing === 'function') startRectangleDrawing();",
-          );
-        } else {
-          _ctrl?.evaluateJavascript(
-            source: "if (typeof cancelRectangleDrawing === 'function') cancelRectangleDrawing();",
-          );
-        }
-      }
-      if (crosshairChanged) {
-        final Color crosshair = widget.crosshairColor ??
-            (Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFFD1D4DC)
-                : const Color(0xFF4A4E5A));
-        _ctrl?.evaluateJavascript(
-          source:
-              "if (typeof setCrosshairColor === 'function') setCrosshairColor('${_rgba(crosshair, 0.85)}');",
-        );
-      }
-      if (widget.liveBar != null &&
-          (old.liveBar?.close != widget.liveBar?.close)) {
-        final String bar = jsonEncode(_barJson(widget.liveBar!));
-        final String vol = jsonEncode(_volJson(widget.liveBar!));
-        _ctrl?.evaluateJavascript(
-          source: "updateBar(${jsonEncode(bar)}, ${jsonEncode(vol)});",
-        );
-      }
+    final bool candlesChanged =
+        !identical(old.payload, widget.payload) ||
+        old.candles.length != widget.candles.length;
+    final Ohlc? liveBar = widget.liveBar;
+    if (candlesChanged) {
+      _logTiming(
+        'data_render',
+        ' (${widget.payload?.candles.length ?? widget.candles.length} candle)',
+      );
     }
+
+    // Hanya bagian yang berubah yang dikirim; urutan sama dengan _pushAll.
+    _run(<String>[
+      if (old.symbol != widget.symbol || old.timeframe != widget.timeframe)
+        _chartInfoScript,
+      if (candlesChanged) _setDataScript,
+      if (old.isCandle != widget.isCandle) _seriesTypeScript,
+      if (!listEquals(old.activeIndicators, widget.activeIndicators))
+        _activeIndicatorsScript,
+      if (old.upColor != widget.upColor ||
+          old.downColor != widget.downColor ||
+          old.gridColor != widget.gridColor)
+        'applyThemeColors($_themeColorArgs);',
+      if (old.crosshairColor != widget.crosshairColor)
+        "setCrosshairColor('$_crosshairCss');",
+      if (old.showFibonacci != widget.showFibonacci) _fibonacciScript,
+      if (old.isDrawingFib != widget.isDrawingFib)
+        _drawingModeScript('Fib', isDrawing: widget.isDrawingFib),
+      // Perubahan yang berasal dari chart sendiri (_lastReceived*) tidak dikirim balik.
+      if (!listEquals(old.horizontalLines, widget.horizontalLines) &&
+          !listEquals(widget.horizontalLines, _lastReceivedHorizLines))
+        _horizontalLinesScript,
+      if (old.isDrawingHorizontalLine != widget.isDrawingHorizontalLine)
+        _drawingModeScript(
+          'HorizontalLine',
+          isDrawing: widget.isDrawingHorizontalLine,
+        ),
+      if (!listEquals(old.trendlines, widget.trendlines) &&
+          !listEquals(widget.trendlines, _lastReceivedTrendlines))
+        _trendlinesScript,
+      if (old.isDrawingTrendline != widget.isDrawingTrendline)
+        _drawingModeScript('Trendline', isDrawing: widget.isDrawingTrendline),
+      if (!listEquals(old.rectangles, widget.rectangles) &&
+          !listEquals(widget.rectangles, _lastReceivedRectangles))
+        _rectanglesScript,
+      if (old.isDrawingRectangle != widget.isDrawingRectangle)
+        _drawingModeScript('Rectangle', isDrawing: widget.isDrawingRectangle),
+      if (liveBar != null && old.liveBar?.close != liveBar.close)
+        'updateBar(${jsonEncode(_barJson(liveBar))});',
+    ]);
   }
 
   @override
@@ -524,10 +438,7 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         c.addJavaScriptHandler(
           handlerName: 'onCrosshair',
           callback: (List<dynamic> args) {
-            final String? raw = args.isNotEmpty ? args[0] as String? : null;
-            widget.onCrosshairMove?.call(
-              raw == null ? null : jsonDecode(raw) as Map<String, dynamic>,
-            );
+            _emitCrosshair(args.isNotEmpty ? args[0] : null);
             return null;
           },
         );
@@ -625,6 +536,13 @@ class _TvChartWidgetState extends State<TvChartWidget> {
           },
         );
         c.addJavaScriptHandler(
+          handlerName: 'onIndicatorValues',
+          callback: (List<dynamic> args) {
+            if (args.isNotEmpty) _emitIndicatorValues(args[0]);
+            return null;
+          },
+        );
+        c.addJavaScriptHandler(
           handlerName: 'onChartModalStateChanged',
           callback: (List<dynamic> args) {
             if (args.isNotEmpty && args[0] is bool) {
@@ -653,7 +571,13 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         debugPrint("TV_CHART_DART: onLoadStart: $url");
       },
       onLoadStop: (InAppWebViewController c, WebUri? url) async {
-        debugPrint("TV_CHART_DART: onLoadStop: $url");
+        if (!kReleaseMode) {
+          // performance.now() = ms sejak halaman mulai dimuat (parse HTML + eksekusi script).
+          final Object? pageMs = await c.evaluateJavascript(
+            source: 'Math.round(performance.now())',
+          );
+          _logTiming('html_loaded', ' (di WebView: $pageMs ms)');
+        }
         await _pushAll();
       },
       onReceivedError: (InAppWebViewController controller, WebResourceRequest request, WebResourceError error) {

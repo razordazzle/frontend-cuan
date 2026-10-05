@@ -1,6 +1,18 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/css_color.dart';
+import 'indicator_line_style.dart';
+
+/// Nilai plot indikator per id indikator (mis. SMA: [MA, Smoothing MA]); null = tidak ada nilai.
+typedef IndicatorPlotValues = Map<String, List<double?>>;
+
 class ActiveChartIndicator {
+  /// Jumlah desimal saat precision = 'Default'.
+  static const int defaultPrecisionDigits = 2;
+  static const IndicatorLineStyle defaultSmoothingStyle = IndicatorLineStyle(
+    color: Color(0xFFFFEB3B),
+  );
+
   final String id;
   final String type; // 'sma', 'rsi', 'vol'
   String title;
@@ -17,9 +29,8 @@ class ActiveChartIndicator {
   int? _offset;
   String? _smoothingType; // 'None', 'SMA', 'EMA', 'RMA', 'WMA', 'VWMA'
   int? _smoothingLength;
+  IndicatorLineStyle? _smoothingStyle;
   double? _bbStdDev;
-  String? _timeframe; // 'Chart', etc.
-  bool? _waitForClose;
   String? _precision; // 'Default', '0', '1', etc.
   bool? _labelsOnPriceScale;
   bool? _valuesInStatusLine;
@@ -45,17 +56,20 @@ class ActiveChartIndicator {
   int get smoothingLength => _smoothingLength ?? 14;
   set smoothingLength(int val) => _smoothingLength = val;
 
+  IndicatorLineStyle get smoothingStyle =>
+      _smoothingStyle ?? defaultSmoothingStyle;
+  set smoothingStyle(IndicatorLineStyle val) => _smoothingStyle = val;
+
+  bool get hasSmoothing => smoothingType != 'None';
+
   double get bbStdDev => _bbStdDev ?? 2.0;
   set bbStdDev(double val) => _bbStdDev = val;
 
-  String get timeframe => _timeframe ?? 'Chart';
-  set timeframe(String val) => _timeframe = val;
-
-  bool get waitForClose => _waitForClose ?? true;
-  set waitForClose(bool val) => _waitForClose = val;
-
   String get precision => _precision ?? 'Default';
   set precision(String val) => _precision = val;
+
+  /// Jumlah desimal nilai indikator di price scale & status line.
+  int get precisionDigits => int.tryParse(precision) ?? defaultPrecisionDigits;
 
   bool get labelsOnPriceScale => _labelsOnPriceScale ?? false;
   set labelsOnPriceScale(bool val) => _labelsOnPriceScale = val;
@@ -72,6 +86,14 @@ class ActiveChartIndicator {
   bool get priceLine => _priceLine ?? false;
   set priceLine(bool val) => _priceLine = val;
 
+  /// Nama indikator tanpa input (dipakai di status line saat inputs disembunyikan).
+  String get shortTitle => switch (type) {
+    'sma' => 'SMA',
+    'rsi' => 'RSI',
+    'vol' => 'Vol',
+    _ => title,
+  };
+
   ActiveChartIndicator({
     required this.id,
     required this.type,
@@ -85,31 +107,29 @@ class ActiveChartIndicator {
     int? offset,
     String? smoothingType,
     int? smoothingLength,
+    IndicatorLineStyle? smoothingStyle,
     double? bbStdDev,
-    String? timeframe,
-    bool? waitForClose,
     String? precision,
     bool? labelsOnPriceScale,
     bool? valuesInStatusLine,
     bool? inputsInStatusLine,
     String? plotType,
     bool? priceLine,
-  })  : _period = period ?? 20,
-        _lineWidth = lineWidth ?? 2,
-        _lineStyle = lineStyle ?? 0,
-        _source = source ?? 'Close',
-        _offset = offset ?? 0,
-        _smoothingType = smoothingType ?? 'None',
-        _smoothingLength = smoothingLength ?? 14,
-        _bbStdDev = bbStdDev ?? 2.0,
-        _timeframe = timeframe ?? 'Chart',
-        _waitForClose = waitForClose ?? true,
-        _precision = precision ?? 'Default',
-        _labelsOnPriceScale = labelsOnPriceScale ?? false,
-        _valuesInStatusLine = valuesInStatusLine ?? true,
-        _inputsInStatusLine = inputsInStatusLine ?? true,
-        _plotType = plotType ?? 'Line',
-        _priceLine = priceLine ?? false;
+  }) : _period = period ?? 20,
+       _lineWidth = lineWidth ?? 2,
+       _lineStyle = lineStyle ?? 0,
+       _source = source ?? 'Close',
+       _offset = offset ?? 0,
+       _smoothingType = smoothingType ?? 'None',
+       _smoothingLength = smoothingLength ?? 14,
+       _smoothingStyle = smoothingStyle ?? defaultSmoothingStyle,
+       _bbStdDev = bbStdDev ?? 2.0,
+       _precision = precision ?? 'Default',
+       _labelsOnPriceScale = labelsOnPriceScale ?? false,
+       _valuesInStatusLine = valuesInStatusLine ?? true,
+       _inputsInStatusLine = inputsInStatusLine ?? true,
+       _plotType = plotType ?? 'Line',
+       _priceLine = priceLine ?? false;
 
   ActiveChartIndicator copyWith({
     String? id,
@@ -124,9 +144,8 @@ class ActiveChartIndicator {
     int? offset,
     String? smoothingType,
     int? smoothingLength,
+    IndicatorLineStyle? smoothingStyle,
     double? bbStdDev,
-    String? timeframe,
-    bool? waitForClose,
     String? precision,
     bool? labelsOnPriceScale,
     bool? valuesInStatusLine,
@@ -147,9 +166,8 @@ class ActiveChartIndicator {
       offset: offset ?? this.offset,
       smoothingType: smoothingType ?? this.smoothingType,
       smoothingLength: smoothingLength ?? this.smoothingLength,
+      smoothingStyle: smoothingStyle ?? this.smoothingStyle,
       bbStdDev: bbStdDev ?? this.bbStdDev,
-      timeframe: timeframe ?? this.timeframe,
-      waitForClose: waitForClose ?? this.waitForClose,
       precision: precision ?? this.precision,
       labelsOnPriceScale: labelsOnPriceScale ?? this.labelsOnPriceScale,
       valuesInStatusLine: valuesInStatusLine ?? this.valuesInStatusLine,
@@ -176,9 +194,8 @@ class ActiveChartIndicator {
           offset == other.offset &&
           smoothingType == other.smoothingType &&
           smoothingLength == other.smoothingLength &&
+          smoothingStyle == other.smoothingStyle &&
           bbStdDev == other.bbStdDev &&
-          timeframe == other.timeframe &&
-          waitForClose == other.waitForClose &&
           precision == other.precision &&
           labelsOnPriceScale == other.labelsOnPriceScale &&
           valuesInStatusLine == other.valuesInStatusLine &&
@@ -188,52 +205,46 @@ class ActiveChartIndicator {
 
   @override
   int get hashCode => Object.hashAll(<Object?>[
-        id,
-        type,
-        title,
-        isVisible,
-        period,
-        color,
-        lineWidth,
-        lineStyle,
-        source,
-        offset,
-        smoothingType,
-        smoothingLength,
-        bbStdDev,
-        timeframe,
-        waitForClose,
-        precision,
-        labelsOnPriceScale,
-        valuesInStatusLine,
-        inputsInStatusLine,
-        plotType,
-        priceLine,
-      ]);
+    id,
+    type,
+    title,
+    isVisible,
+    period,
+    color,
+    lineWidth,
+    lineStyle,
+    source,
+    offset,
+    smoothingType,
+    smoothingLength,
+    smoothingStyle,
+    bbStdDev,
+    precision,
+    labelsOnPriceScale,
+    valuesInStatusLine,
+    inputsInStatusLine,
+    plotType,
+    priceLine,
+  ]);
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'type': type,
-        'title': title,
-        'isVisible': isVisible,
-        'period': period,
-        'color': color != null
-            ? '#${(color!.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}'
-            : null,
-        'lineWidth': lineWidth,
-        'lineStyle': lineStyle,
-        'source': source,
-        'offset': offset,
-        'smoothingType': smoothingType,
-        'smoothingLength': smoothingLength,
-        'bbStdDev': bbStdDev,
-        'timeframe': timeframe,
-        'waitForClose': waitForClose,
-        'precision': precision,
-        'labelsOnPriceScale': labelsOnPriceScale,
-        'valuesInStatusLine': valuesInStatusLine,
-        'inputsInStatusLine': inputsInStatusLine,
-        'plotType': plotType,
-        'priceLine': priceLine,
-      };
+    'id': id,
+    'type': type,
+    'title': title,
+    'isVisible': isVisible,
+    'period': period,
+    'color': color?.toCssRgba(),
+    'lineWidth': lineWidth,
+    'lineStyle': lineStyle,
+    'source': source,
+    'offset': offset,
+    'smoothingType': smoothingType,
+    'smoothingLength': smoothingLength,
+    'smoothingStyle': smoothingStyle.toJson(),
+    'bbStdDev': bbStdDev,
+    'precisionDigits': precisionDigits,
+    'labelsOnPriceScale': labelsOnPriceScale,
+    'plotType': plotType,
+    'priceLine': priceLine,
+  };
 }
