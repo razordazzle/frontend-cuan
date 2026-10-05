@@ -6347,6 +6347,54 @@
             const HITBOX_RECT_CORNER = 30; // 30px radius for rectangle corner handles
             const HITBOX_RECT_DEL = 28;    // 28px radius for rectangle delete button
 
+            // Drawing yang belum terseleksi tidak boleh langsung di-drag: sentuhannya diteruskan ke chart
+            // (pan tetap jalan) dan drawing baru terseleksi kalau gesturnya tap, dicek saat pointerup.
+            const TAP_MAX_DISTANCE = 10;     // px
+            const TAP_MAX_DURATION_MS = 500;
+            let pendingTapSelection = null;  // () => void, seleksi yang dijalankan kalau gesturnya tap
+
+            function selectFibonacciAt(index) {
+                selectedFibIndex = index;
+                syncActiveFibFromIndex();
+                selectedTrendlineIndex = -1;
+                selectedHorizontalLineIndex = -1;
+                selectedRectangleIndex = -1;
+                showFibToolbar();
+                renderFib();
+            }
+
+            function selectHorizontalLineAt(index) {
+                selectedHorizontalLineIndex = index;
+                selectedTrendlineIndex = -1;
+                selectedRectangleIndex = -1;
+                isFibSelected = false;
+                showHorizontalLineToolbar(index);
+                renderFib();
+            }
+
+            function selectTrendlineAt(index) {
+                selectedTrendlineIndex = index;
+                selectedRectangleIndex = -1;
+                selectedHorizontalLineIndex = -1;
+                isFibSelected = false;
+                showTrendlineToolbar(index);
+                renderFib();
+            }
+
+            function selectRectangleAt(index) {
+                selectedRectangleIndex = index;
+                selectedTrendlineIndex = -1;
+                selectedHorizontalLineIndex = -1;
+                isFibSelected = false;
+                showRectangleToolbar(index);
+                renderFib();
+            }
+
+            // Simpan calon seleksi pertama yang kena; drawing terseleksi tetap diprioritaskan karena scan berlanjut.
+            function queueTapSelection(select) {
+                if (!pendingTapSelection) pendingTapSelection = select;
+            }
+
             // Hover detection to allow grabbing existing anchor handles, trendlines, & horizontal lines on desktop
             function updateHoverState(e) {
                 if (isDrawingHorizontalLine || isDrawingTrendline || isDrawingRectangle || isDrawingFib || fibDrawState !== 0 || trendlineDrawState !== 0 || rectangleDrawState !== 0 || isPointerDown || dragHorizontalLineIndex !== -1 || dragTrendlineIndex !== -1 || dragRectangleIndex !== -1 || dragMode !== 0) {
@@ -6516,6 +6564,7 @@
 
                     pointerDownPos = { x, y };
                     pointerDownTime = Date.now();
+                    pendingTapSelection = null;
 
                     const activeSeries = candleSeries || areaSeries;
                     if (!activeSeries || !chart) return;
@@ -6540,16 +6589,17 @@
                             const hitInsideBox = (x1 !== null && y1 !== null && x2 !== null && y2 !== null) &&
                                 (x >= minX - 10 && x <= maxX + 10 && y >= minY - 10 && y <= maxY + 10);
 
+                            if (!(hit1 || hit2 || hitDiagonal || hitInsideBox)) continue;
+                            if (!isFibSelected || selectedFibIndex !== i) {
+                                queueTapSelection(() => selectFibonacciAt(i));
+                                continue;
+                            }
+
                             if (hit1 || hit2) {
                                 e.stopPropagation();
                                 e.stopImmediatePropagation();
                                 e.preventDefault();
 
-                                selectedFibIndex = i;
-                                syncActiveFibFromIndex();
-                                selectedTrendlineIndex = -1;
-                                selectedHorizontalLineIndex = -1;
-                                selectedRectangleIndex = -1;
                                 if (!fib.isLocked) {
                                     dragMode = hit1 ? 1 : 2;
                                     isPointerDown = true;
@@ -6559,16 +6609,11 @@
                                 showFibToolbar();
                                 renderFib();
                                 return;
-                            } else if (hitDiagonal || hitInsideBox) {
+                            } else {
                                 e.stopPropagation();
                                 e.stopImmediatePropagation();
                                 e.preventDefault();
 
-                                selectedFibIndex = i;
-                                syncActiveFibFromIndex();
-                                selectedTrendlineIndex = -1;
-                                selectedHorizontalLineIndex = -1;
-                                selectedRectangleIndex = -1;
                                 if (!fib.isLocked) {
                                     dragMode = 3;
                                     fibDragStartPos = {
@@ -6595,14 +6640,13 @@
                             const price = typeof h === 'object' ? h.price : h;
                             const lineY = activeSeries.priceToCoordinate(price);
                             if (lineY !== null && Math.abs(y - lineY) <= HITBOX_HLINE) {
+                                if (i !== selectedHorizontalLineIndex) {
+                                    queueTapSelection(() => selectHorizontalLineAt(i));
+                                    continue;
+                                }
                                 e.stopPropagation();
                                 e.stopImmediatePropagation();
                                 e.preventDefault();
-
-                                selectedHorizontalLineIndex = i;
-                                selectedTrendlineIndex = -1;
-                                selectedRectangleIndex = -1;
-                                isFibSelected = false;
 
                                 if (!h.isLocked) {
                                     dragHorizontalLineIndex = i;
@@ -6678,31 +6722,8 @@
                                         renderFib();
                                         return;
                                     }
-                                } else {
-                                    if (distToSegment(x, y, x1, y1, x2, y2) <= HITBOX_TL_BODY) {
-                                        e.stopPropagation();
-                                        e.stopImmediatePropagation();
-                                        e.preventDefault();
-                                        selectedTrendlineIndex = i;
-                                        selectedRectangleIndex = -1;
-                                        selectedHorizontalLineIndex = -1;
-                                        isFibSelected = false;
-                                        if (!t.isLocked) {
-                                            dragTrendlineIndex = i;
-                                            dragTrendlinePart = 3;
-                                            dragTrendlineStartPos = {
-                                                x, y,
-                                                origP1: { time: t.p1.time, price: t.p1.price },
-                                                origP2: { time: t.p2.time, price: t.p2.price }
-                                            };
-                                            isPointerDown = true;
-                                            try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
-                                            chart.applyOptions({ handleScroll: false, handleScale: false });
-                                        }
-                                        showTrendlineToolbar(i);
-                                        renderFib();
-                                        return;
-                                    }
+                                } else if (distToSegment(x, y, x1, y1, x2, y2) <= HITBOX_TL_BODY) {
+                                    queueTapSelection(() => selectTrendlineAt(i));
                                 }
                             }
                         }
@@ -6823,32 +6844,15 @@
                                         renderFib();
                                         return;
                                     }
-                                } else {
-                                    // In non-edit mode: tap inside or on border to select into Edit Mode!
-                                    if (x >= left - 6 && x <= right + 6 && y >= top - 6 && y <= bottom + 6) {
-                                        e.stopPropagation();
-                                        e.stopImmediatePropagation();
-                                        e.preventDefault();
-                                        selectedRectangleIndex = i;
-                                        selectedTrendlineIndex = -1;
-                                        selectedHorizontalLineIndex = -1;
-                                        isFibSelected = false;
-                                        if (!r.isLocked) {
-                                            dragRectangleIndex = i;
-                                            dragRectanglePart = 3;
-                                            dragRectangleStartPos = startPosData;
-                                            isPointerDown = true;
-                                            try { chartContainer.setPointerCapture?.(e.pointerId); } catch (_) {}
-                                            chart.applyOptions({ handleScroll: false, handleScale: false });
-                                        }
-                                        showRectangleToolbar(i);
-                                        renderFib();
-                                        return;
-                                    }
+                                } else if (x >= left - 6 && x <= right + 6 && y >= top - 6 && y <= bottom + 6) {
+                                    // Belum terseleksi: tap untuk masuk Edit Mode, drag tetap menggeser chart.
+                                    queueTapSelection(() => selectRectangleAt(i));
                                 }
                             }
                         }
                     }
+
+                    if (pendingTapSelection) return;
 
                     // If tapped empty space on chart while a trendline, fib, horizontal line, or rectangle was selected, deselect it
                     let needsDeselect = false;
@@ -6884,6 +6888,7 @@
                 const clampedX = Math.max(0, Math.min(x, maxContentX));
                 pointerDownPos = { x: clampedX, y };
                 pointerDownTime = Date.now();
+                pendingTapSelection = null;
 
                 // 0. Horizontal Line Placement (One-Tap S/R)
                 if (isDrawingHorizontalLine) {
@@ -6935,10 +6940,10 @@
                         const price = typeof h === 'object' ? h.price : h;
                         const lineY = activeSeries.priceToCoordinate(price);
                         if (lineY !== null && Math.abs(y - lineY) <= HITBOX_HLINE) {
-                            selectedHorizontalLineIndex = i;
-                            selectedTrendlineIndex = -1;
-                            selectedRectangleIndex = -1;
-                            isFibSelected = false;
+                            if (i !== selectedHorizontalLineIndex) {
+                                queueTapSelection(() => selectHorizontalLineAt(i));
+                                continue;
+                            }
                             if (!h.isLocked) {
                                 dragHorizontalLineIndex = i;
                                 isPointerDown = true;
@@ -7195,26 +7200,9 @@
                                     renderFib();
                                     return;
                                 }
-                            } else {
-                                // Tap to enter Edit Mode
-                                if (x >= left - 6 && x <= right + 6 && y >= top - 6 && y <= bottom + 6) {
-                                    selectedRectangleIndex = i;
-                                    selectedTrendlineIndex = -1;
-                                    selectedHorizontalLineIndex = -1;
-                                    isFibSelected = false;
-                                    if (!r.isLocked) {
-                                        dragRectangleIndex = i;
-                                        dragRectanglePart = 3;
-                                        dragRectangleStartPos = startPosData;
-                                        isPointerDown = true;
-                                        canvas.setPointerCapture?.(e.pointerId);
-                                        if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
-                                        canvas.style.cursor = 'move';
-                                    }
-                                    showRectangleToolbar(i);
-                                    renderFib();
-                                    return;
-                                }
+                            } else if (x >= left - 6 && x <= right + 6 && y >= top - 6 && y <= bottom + 6) {
+                                // Belum terseleksi: tap untuk masuk Edit Mode (tanpa drag).
+                                queueTapSelection(() => selectRectangleAt(i));
                             }
                         }
                     }
@@ -7273,37 +7261,16 @@
                                     showTrendlineToolbar(i);
                                     return;
                                 }
-                            } else {
-                                // Click on unselected trendline body to select into Edit Mode!
-                                if (distToSegment(x, y, x1, y1, x2, y2) <= HITBOX_TL_BODY) {
-                                    selectedTrendlineIndex = i;
-                                    selectedRectangleIndex = -1;
-                                    selectedHorizontalLineIndex = -1;
-                                    isFibSelected = false;
-                                    if (!t.isLocked) {
-                                        dragTrendlineIndex = i;
-                                        dragTrendlinePart = 3;
-                                        dragTrendlineStartPos = {
-                                            x, y,
-                                            origP1: { time: t.p1.time, price: t.p1.price },
-                                            origP2: { time: t.p2.time, price: t.p2.price }
-                                        };
-                                        isPointerDown = true;
-                                        canvas.setPointerCapture?.(e.pointerId);
-                                        if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
-                                        canvas.style.cursor = 'move';
-                                    }
-                                    showTrendlineToolbar(i);
-                                    renderFib();
-                                    return;
-                                }
+                            } else if (distToSegment(x, y, x1, y1, x2, y2) <= HITBOX_TL_BODY) {
+                                // Belum terseleksi: tap untuk masuk Edit Mode (tanpa drag).
+                                queueTapSelection(() => selectTrendlineAt(i));
                             }
                         }
                     }
                 }
 
-                // 1. Check if clicking on an existing anchor handle to reposition (Fib)
-                if (fibDrawState === 0 && fibPoint1 && fibPoint2) {
+                // 1. Check if clicking on an existing anchor handle to reposition (Fib, hanya saat terseleksi)
+                if (fibDrawState === 0 && isFibSelected && fibPoint1 && fibPoint2) {
                     const x1 = chart.timeScale().timeToCoordinate(fibPoint1.time);
                     const y1 = candleSeries.priceToCoordinate(fibPoint1.price);
                     const x2 = chart.timeScale().timeToCoordinate(fibPoint2.time);
@@ -7381,6 +7348,8 @@
                     }
                     return;
                 }
+
+                if (pendingTapSelection) return;
 
                 // If tapped on empty canvas space outside all drawings:
                 let canvasNeedsDeselect = false;
@@ -7788,6 +7757,16 @@
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
                 const dist = Math.hypot(x - pointerDownPos.x, y - pointerDownPos.y);
+
+                if (pendingTapSelection) {
+                    const select = pendingTapSelection;
+                    pendingTapSelection = null;
+                    const isTap = e.type === 'pointerup'
+                        && dist <= TAP_MAX_DISTANCE
+                        && Date.now() - pointerDownTime <= TAP_MAX_DURATION_MS;
+                    if (isTap) select();
+                    return;
+                }
 
                 if (dragTrendlineIndex >= 0) {
                     dragTrendlineIndex = -1;
