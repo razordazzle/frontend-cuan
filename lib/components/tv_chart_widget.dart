@@ -137,6 +137,9 @@ class _TvChartWidgetState extends State<TvChartWidget> {
   bool _isSynced = false;
   bool _isPushing = false;
 
+  /// Pengukuran waktu buka chart (debug/profile saja), dimulai saat widget dibuat.
+  final Stopwatch _openTimer = Stopwatch()..start();
+
   @override
   void initState() {
     super.initState();
@@ -292,6 +295,14 @@ class _TvChartWidgetState extends State<TvChartWidget> {
   static String _drawingModeScript(String tool, {required bool isDrawing}) =>
       isDrawing ? 'start${tool}Drawing();' : 'cancel${tool}Drawing();';
 
+  /// Log fase buka chart: `TV_CHART_TIMING: <fase> <ms sejak widget dibuat> ms`.
+  void _logTiming(String phase, [String detail = '']) {
+    if (kReleaseMode) return;
+    debugPrint(
+      'TV_CHART_TIMING: $phase ${_openTimer.elapsedMilliseconds} ms$detail',
+    );
+  }
+
   /// Jalankan beberapa perintah JS dalam satu panggilan bridge.
   Future<void> _run(List<String> scripts) async {
     final InAppWebViewController? ctrl = _ctrl;
@@ -328,6 +339,7 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         if (widget.isDrawingRectangle) 'startRectangleDrawing();',
         'window.__cuanChartSynced = true;',
       ]);
+      if (!_isSynced) _logTiming('first_render');
       _isSynced = true;
     } finally {
       _isPushing = false;
@@ -343,6 +355,12 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         !identical(old.payload, widget.payload) ||
         old.candles.length != widget.candles.length;
     final Ohlc? liveBar = widget.liveBar;
+    if (candlesChanged) {
+      _logTiming(
+        'data_render',
+        ' (${widget.payload?.candles.length ?? widget.candles.length} candle)',
+      );
+    }
 
     // Hanya bagian yang berubah yang dikirim; urutan sama dengan _pushAll.
     _run(<String>[
@@ -553,7 +571,13 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         debugPrint("TV_CHART_DART: onLoadStart: $url");
       },
       onLoadStop: (InAppWebViewController c, WebUri? url) async {
-        debugPrint("TV_CHART_DART: onLoadStop: $url");
+        if (!kReleaseMode) {
+          // performance.now() = ms sejak halaman mulai dimuat (parse HTML + eksekusi script).
+          final Object? pageMs = await c.evaluateJavascript(
+            source: 'Math.round(performance.now())',
+          );
+          _logTiming('html_loaded', ' (di WebView: $pageMs ms)');
+        }
         await _pushAll();
       },
       onReceivedError: (InAppWebViewController controller, WebResourceRequest request, WebResourceError error) {
