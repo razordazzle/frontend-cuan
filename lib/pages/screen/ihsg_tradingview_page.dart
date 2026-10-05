@@ -30,7 +30,11 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
   ]);
   bool _isCandle = true;
   bool _isChartModalOpen = false;
-  Map<String, dynamic>? _crosshair;
+
+  /// OHLC di posisi crosshair; dipisah dari setState supaya geser jari hanya me-rebuild label OHLC.
+  final ValueNotifier<CrosshairBar?> _crosshair = ValueNotifier<CrosshairBar?>(
+    null,
+  );
 
   @override
   void initState() {
@@ -44,6 +48,7 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
   void dispose() {
     _indicators.dispose();
     _drawings.dispose();
+    _crosshair.dispose();
     super.dispose();
   }
 
@@ -148,10 +153,16 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                     horizontal: 16,
                     vertical: 8,
                   ),
-                  child: _Legend(
-                    crosshair: _crosshair,
-                    fallback:
-                        liveBar ?? (candles.isNotEmpty ? candles.last : null),
+                  child: ValueListenableBuilder<CrosshairBar?>(
+                    valueListenable: _crosshair,
+                    builder:
+                        (BuildContext context, CrosshairBar? crosshair, _) =>
+                            _Legend(
+                              crosshair: crosshair,
+                              fallback:
+                                  liveBar ??
+                                  (candles.isNotEmpty ? candles.last : null),
+                            ),
                   ),
                 ),
                 // Clean Top Bar: Timeframe (Kiri) + Action Buttons [fx] & [✏️] (Kanan)
@@ -303,8 +314,8 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
                             : const Color(0xFF4A4E5A),
                         liveBar: liveBar,
                         interactive: true,
-                        onCrosshairMove: (Map<String, dynamic>? v) =>
-                            setState(() => _crosshair = v),
+                        onCrosshairMove: (CrosshairBar? bar) =>
+                            _crosshair.value = bar,
                         onChartModalStateChanged: (bool isOpen) =>
                             setState(() => _isChartModalOpen = isOpen),
                         onIndicatorValues: (IndicatorPlotValues values) =>
@@ -492,19 +503,19 @@ class _ActionButton extends StatelessWidget {
 }
 
 class _Legend extends StatelessWidget {
-  final Map<String, dynamic>? crosshair;
+  final CrosshairBar? crosshair;
   final Ohlc? fallback;
   const _Legend({required this.crosshair, required this.fallback});
 
   @override
   Widget build(BuildContext context) {
-    final num? o = crosshair?['open'] as num? ?? fallback?.open;
-    final num? h = crosshair?['high'] as num? ?? fallback?.high;
-    final num? l = crosshair?['low'] as num? ?? fallback?.low;
-    final num? c = crosshair?['close'] as num? ?? fallback?.close;
+    final double? o = crosshair?.open ?? fallback?.open;
     if (o == null) return const SizedBox.shrink();
+    final double? h = crosshair?.high ?? fallback?.high;
+    final double? l = crosshair?.low ?? fallback?.low;
+    final double? c = crosshair?.close ?? fallback?.close;
 
-    Widget kv(String k, num? v) => Padding(
+    Widget kv(String k, double? v) => Padding(
       padding: const EdgeInsets.only(right: 12),
       child: Text(
         '$k ${v != null ? v.toStringAsFixed(0) : '-'}',

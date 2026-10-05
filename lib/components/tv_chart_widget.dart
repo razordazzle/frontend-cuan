@@ -13,6 +13,37 @@ import 'web_message_listener.dart';
 
 const bool _kShowDebugReloadButton = false;
 
+/// Nilai OHLC bar di posisi crosshair. Null per field kalau series tidak punya
+/// nilai itu (mis. mode area hanya punya close/value).
+@immutable
+class CrosshairBar {
+  final double? open;
+  final double? high;
+  final double? low;
+  final double? close;
+
+  const CrosshairBar({this.open, this.high, this.low, this.close});
+
+  factory CrosshairBar.fromJson(Map<String, dynamic> json) => CrosshairBar(
+    open: (json['open'] as num?)?.toDouble(),
+    high: (json['high'] as num?)?.toDouble(),
+    low: (json['low'] as num?)?.toDouble(),
+    close: (json['close'] as num?)?.toDouble(),
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CrosshairBar &&
+          open == other.open &&
+          high == other.high &&
+          low == other.low &&
+          close == other.close;
+
+  @override
+  int get hashCode => Object.hash(open, high, low, close);
+}
+
 class TvChartWidget extends StatefulWidget {
   final List<Ohlc> candles;
   final ChartPayload? payload;
@@ -42,7 +73,7 @@ class TvChartWidget extends StatefulWidget {
   final Color? crosshairColor;
   final Ohlc? liveBar; // bar terakhir yg lagi jalan (dari WS)
   final bool interactive; // false di home (preview doang)
-  final ValueChanged<Map<String, dynamic>?>? onCrosshairMove;
+  final ValueChanged<CrosshairBar?>? onCrosshairMove;
   final ValueChanged<bool>? onChartModalStateChanged;
   final ValueChanged<IndicatorPlotValues>? onIndicatorValues;
 
@@ -100,6 +131,11 @@ class _TvChartWidgetState extends State<TvChartWidget> {
   List<Map<String, dynamic>>? _lastReceivedHorizLines;
   List<Map<String, dynamic>>? _lastReceivedTrendlines;
   List<Map<String, dynamic>>? _lastReceivedRectangles;
+
+  /// True setelah state awal pernah dikirim ke chart; sebelum itu perubahan cukup
+  /// ditunggu karena [_pushAll] selalu mengirim state terbaru.
+  bool _isSynced = false;
+  bool _isPushing = false;
 
   @override
   void initState() {
@@ -161,11 +197,7 @@ class _TvChartWidgetState extends State<TvChartWidget> {
           widget.onRectanglesChanged?.call(updated);
         }
       } else if (type == 'onCrosshair') {
-        if (payload is Map) {
-          widget.onCrosshairMove?.call(Map<String, dynamic>.from(payload));
-        } else if (payload == null) {
-          widget.onCrosshairMove?.call(null);
-        }
+        _emitCrosshair(payload);
       } else if (type == 'onChartModalStateChanged') {
         if (payload is bool) {
           widget.onChartModalStateChanged?.call(payload);
@@ -189,6 +221,16 @@ class _TvChartWidgetState extends State<TvChartWidget> {
           for (final dynamic v in value as List<dynamic>) (v as num?)?.toDouble(),
         ],
     });
+  }
+
+  /// Payload JS: JSON string `{ time, open, high, low, close }`, atau null saat crosshair keluar.
+  void _emitCrosshair(Object? payload) {
+    final ValueChanged<CrosshairBar?>? callback = widget.onCrosshairMove;
+    if (callback == null) return;
+    final Object? json = payload is String ? jsonDecode(payload) : payload;
+    callback(
+      json is Map ? CrosshairBar.fromJson(Map<String, dynamic>.from(json)) : null,
+    );
   }
 
   int _sec(DateTime t) =>
@@ -217,236 +259,130 @@ class _TvChartWidgetState extends State<TvChartWidget> {
   String get _themeColorArgs =>
       "'${widget.upColor.toCssHex()}', '${widget.downColor.toCssHex()}', '${widget.gridColor.toCssRgba()}'";
 
-  String get _activeIndicatorsJson => jsonEncode(
-    widget.activeIndicators
-        .map((ActiveChartIndicator e) => e.toJson())
-        .toList(),
-  );
+  // ===== Script JS per bagian state chart =====
 
-  Future<void> _pushAll() async {
-    if (_ctrl == null) return;
-    debugPrint("TV_CHART_DART: _pushAll called, candles=${widget.candles.length}, hasPayload=${widget.payload != null}");
+  String get _chartInfoScript =>
+      "setChartInfo(${jsonEncode(widget.symbol)}, ${jsonEncode(widget.timeframe)});";
 
-    // Pastikan initChart terpanggil dengan parameter warna tema
-    await _ctrl!.evaluateJavascript(
-      source:
-          "if (typeof initChart === 'function') initChart($_themeColorArgs, ${widget.interactive}, '$_crosshairCss');",
-    );
-    await _ctrl!.evaluateJavascript(
-      source:
-          "if (typeof setChartInfo === 'function') setChartInfo('${widget.symbol}', '${widget.timeframe}');",
-    );
-
+  String get _setDataScript {
     final List<Ohlc> payloadCandles = widget.payload?.candles ?? const <Ohlc>[];
     final List<Ohlc> candles = payloadCandles.isNotEmpty
         ? payloadCandles
         : widget.candles.isNotEmpty
         ? widget.candles
         : makeDummyCandles(60);
-    final String candlesJson = jsonEncode(candles.map(_barJson).toList());
-    await _ctrl!.evaluateJavascript(
-      source: "setData(${jsonEncode(candlesJson)});",
-    );
+    return 'setData(${jsonEncode(candles.map(_barJson).toList())});';
+  }
 
-    await _ctrl!.evaluateJavascript(
-      source: "setSeriesType('${widget.isCandle ? 'candle' : 'area'}');",
-    );
+  String get _seriesTypeScript =>
+      "setSeriesType('${widget.isCandle ? 'candle' : 'area'}');";
 
-    await _ctrl!.evaluateJavascript(
-      source: "setActiveIndicators($_activeIndicatorsJson);",
-    );
+  String get _activeIndicatorsScript => 'setActiveIndicators(${jsonEncode(
+    widget.activeIndicators.map((ActiveChartIndicator e) => e.toJson()).toList(),
+  )});';
 
-    await _ctrl!.evaluateJavascript(
-      source: "setFibonacci(${widget.showFibonacci});",
-    );
+  String get _fibonacciScript => 'setFibonacci(${widget.showFibonacci});';
+  String get _horizontalLinesScript =>
+      'setHorizontalLines(${jsonEncode(widget.horizontalLines)});';
+  String get _trendlinesScript =>
+      'setTrendlines(${jsonEncode(widget.trendlines)});';
+  String get _rectanglesScript =>
+      'setRectangles(${jsonEncode(widget.rectangles)});';
 
-    if (widget.isDrawingFib) {
-      await _ctrl!.evaluateJavascript(
-        source: "startFibDrawing();",
+  static String _drawingModeScript(String tool, {required bool isDrawing}) =>
+      isDrawing ? 'start${tool}Drawing();' : 'cancel${tool}Drawing();';
+
+  /// Jalankan beberapa perintah JS dalam satu panggilan bridge.
+  Future<void> _run(List<String> scripts) async {
+    final InAppWebViewController? ctrl = _ctrl;
+    if (ctrl == null || scripts.isEmpty) return;
+    await ctrl.evaluateJavascript(source: scripts.join('\n'));
+  }
+
+  /// Kirim seluruh state ke chart, sekali per halaman dimuat. Penanda sinkron disimpan
+  /// di halaman JS (`window.__cuanChartSynced`), jadi reload WebView otomatis memicu push ulang.
+  Future<void> _pushAll() async {
+    final InAppWebViewController? ctrl = _ctrl;
+    if (ctrl == null || _isPushing) return;
+    _isPushing = true;
+    try {
+      final Object? needsSync = await ctrl.evaluateJavascript(
+        source:
+            "typeof setActiveIndicators === 'function' && !window.__cuanChartSynced",
       );
-    }
+      if (needsSync != true || !mounted) return;
 
-    final String horizJson = jsonEncode(widget.horizontalLines);
-    await _ctrl!.evaluateJavascript(
-      source: "setHorizontalLines($horizJson);",
-    );
-
-    if (widget.isDrawingHorizontalLine) {
-      await _ctrl!.evaluateJavascript(
-        source: "startHorizontalLineDrawing();",
-      );
-    }
-
-    final String trendJson = jsonEncode(widget.trendlines);
-    await _ctrl!.evaluateJavascript(
-      source: "setTrendlines($trendJson);",
-    );
-
-    if (widget.isDrawingTrendline) {
-      await _ctrl!.evaluateJavascript(
-        source: "startTrendlineDrawing();",
-      );
-    }
-
-    final String rectJson = jsonEncode(widget.rectangles);
-    await _ctrl!.evaluateJavascript(
-      source: "if (typeof setRectangles === 'function') setRectangles($rectJson);",
-    );
-
-    if (widget.isDrawingRectangle) {
-      await _ctrl!.evaluateJavascript(
-        source: "if (typeof startRectangleDrawing === 'function') startRectangleDrawing();",
-      );
+      await _run(<String>[
+        "initChart($_themeColorArgs, ${widget.interactive}, '$_crosshairCss');",
+        _chartInfoScript,
+        _setDataScript,
+        _seriesTypeScript,
+        _activeIndicatorsScript,
+        _fibonacciScript,
+        if (widget.isDrawingFib) 'startFibDrawing();',
+        _horizontalLinesScript,
+        if (widget.isDrawingHorizontalLine) 'startHorizontalLineDrawing();',
+        _trendlinesScript,
+        if (widget.isDrawingTrendline) 'startTrendlineDrawing();',
+        _rectanglesScript,
+        if (widget.isDrawingRectangle) 'startRectangleDrawing();',
+        'window.__cuanChartSynced = true;',
+      ]);
+      _isSynced = true;
+    } finally {
+      _isPushing = false;
     }
   }
 
   @override
   void didUpdateWidget(covariant TvChartWidget old) {
     super.didUpdateWidget(old);
-    final bool dataChanged = old.candles.length != widget.candles.length ||
-        old.isCandle != widget.isCandle ||
-        old.payload != widget.payload;
+    if (!_isSynced) return;
 
-    final String newIndJson = _activeIndicatorsJson;
-    final bool activeIndicatorsChanged =
-        jsonEncode(
-          old.activeIndicators
-              .map((ActiveChartIndicator e) => e.toJson())
-              .toList(),
-        ) !=
-        newIndJson;
+    final bool candlesChanged =
+        !identical(old.payload, widget.payload) ||
+        old.candles.length != widget.candles.length;
+    final Ohlc? liveBar = widget.liveBar;
 
-    final bool fibChanged = old.showFibonacci != widget.showFibonacci;
-    final bool drawFibChanged = old.isDrawingFib != widget.isDrawingFib;
-
-    final bool horizLinesChanged =
-        !listEquals(old.horizontalLines, widget.horizontalLines);
-    final bool drawHorizChanged =
-        old.isDrawingHorizontalLine != widget.isDrawingHorizontalLine;
-
-    final bool trendlinesChanged =
-        !listEquals(old.trendlines, widget.trendlines);
-    final bool drawTrendlineChanged =
-        old.isDrawingTrendline != widget.isDrawingTrendline;
-
-    final bool rectanglesChanged =
-        !listEquals(old.rectangles, widget.rectangles);
-    final bool drawRectangleChanged =
-        old.isDrawingRectangle != widget.isDrawingRectangle;
-
-    final bool crosshairChanged = old.crosshairColor != widget.crosshairColor;
-    final bool themeColorsChanged =
-        old.upColor != widget.upColor ||
-        old.downColor != widget.downColor ||
-        old.gridColor != widget.gridColor;
-    final bool chartInfoChanged =
-        old.symbol != widget.symbol || old.timeframe != widget.timeframe;
-
-    if (dataChanged) {
-      _pushAll();
-    } else {
-      if (chartInfoChanged) {
-        _ctrl?.evaluateJavascript(
-          source:
-              "if (typeof setChartInfo === 'function') setChartInfo('${widget.symbol}', '${widget.timeframe}');",
-        );
-      }
-      if (activeIndicatorsChanged) {
-        _ctrl?.evaluateJavascript(
-          source: "setActiveIndicators($newIndJson);",
-        );
-      }
-      if (themeColorsChanged) {
-        _ctrl?.evaluateJavascript(
-          source: "applyThemeColors($_themeColorArgs);",
-        );
-      }
-      if (fibChanged) {
-        _ctrl?.evaluateJavascript(
-          source: "setFibonacci(${widget.showFibonacci});",
-        );
-      }
-      if (drawFibChanged) {
-        if (widget.isDrawingFib) {
-          _ctrl?.evaluateJavascript(
-            source: "startFibDrawing();",
-          );
-        } else {
-          _ctrl?.evaluateJavascript(
-            source: "cancelFibDrawing();",
-          );
-        }
-      }
-      if (horizLinesChanged) {
-        if (!listEquals(widget.horizontalLines, _lastReceivedHorizLines)) {
-          final String horizJson = jsonEncode(widget.horizontalLines);
-          _ctrl?.evaluateJavascript(
-            source: "setHorizontalLines($horizJson);",
-          );
-        }
-      }
-      if (drawHorizChanged) {
-        if (widget.isDrawingHorizontalLine) {
-          _ctrl?.evaluateJavascript(
-            source: "startHorizontalLineDrawing();",
-          );
-        } else {
-          _ctrl?.evaluateJavascript(
-            source: "cancelHorizontalLineDrawing();",
-          );
-        }
-      }
-      if (trendlinesChanged) {
-        if (!listEquals(widget.trendlines, _lastReceivedTrendlines)) {
-          final String trendJson = jsonEncode(widget.trendlines);
-          _ctrl?.evaluateJavascript(
-            source: "setTrendlines($trendJson);",
-          );
-        }
-      }
-      if (drawTrendlineChanged) {
-        if (widget.isDrawingTrendline) {
-          _ctrl?.evaluateJavascript(
-            source: "startTrendlineDrawing();",
-          );
-        } else {
-          _ctrl?.evaluateJavascript(
-            source: "cancelTrendlineDrawing();",
-          );
-        }
-      }
-      if (rectanglesChanged) {
-        if (!listEquals(widget.rectangles, _lastReceivedRectangles)) {
-          final String rectJson = jsonEncode(widget.rectangles);
-          _ctrl?.evaluateJavascript(
-            source: "if (typeof setRectangles === 'function') setRectangles($rectJson);",
-          );
-        }
-      }
-      if (drawRectangleChanged) {
-        if (widget.isDrawingRectangle) {
-          _ctrl?.evaluateJavascript(
-            source: "if (typeof startRectangleDrawing === 'function') startRectangleDrawing();",
-          );
-        } else {
-          _ctrl?.evaluateJavascript(
-            source: "if (typeof cancelRectangleDrawing === 'function') cancelRectangleDrawing();",
-          );
-        }
-      }
-      if (crosshairChanged) {
-        _ctrl?.evaluateJavascript(
-          source: "setCrosshairColor('$_crosshairCss');",
-        );
-      }
-      if (widget.liveBar != null &&
-          (old.liveBar?.close != widget.liveBar?.close)) {
-        final String bar = jsonEncode(_barJson(widget.liveBar!));
-        _ctrl?.evaluateJavascript(
-          source: "updateBar(${jsonEncode(bar)});",
-        );
-      }
-    }
+    // Hanya bagian yang berubah yang dikirim; urutan sama dengan _pushAll.
+    _run(<String>[
+      if (old.symbol != widget.symbol || old.timeframe != widget.timeframe)
+        _chartInfoScript,
+      if (candlesChanged) _setDataScript,
+      if (old.isCandle != widget.isCandle) _seriesTypeScript,
+      if (!listEquals(old.activeIndicators, widget.activeIndicators))
+        _activeIndicatorsScript,
+      if (old.upColor != widget.upColor ||
+          old.downColor != widget.downColor ||
+          old.gridColor != widget.gridColor)
+        'applyThemeColors($_themeColorArgs);',
+      if (old.crosshairColor != widget.crosshairColor)
+        "setCrosshairColor('$_crosshairCss');",
+      if (old.showFibonacci != widget.showFibonacci) _fibonacciScript,
+      if (old.isDrawingFib != widget.isDrawingFib)
+        _drawingModeScript('Fib', isDrawing: widget.isDrawingFib),
+      // Perubahan yang berasal dari chart sendiri (_lastReceived*) tidak dikirim balik.
+      if (!listEquals(old.horizontalLines, widget.horizontalLines) &&
+          !listEquals(widget.horizontalLines, _lastReceivedHorizLines))
+        _horizontalLinesScript,
+      if (old.isDrawingHorizontalLine != widget.isDrawingHorizontalLine)
+        _drawingModeScript(
+          'HorizontalLine',
+          isDrawing: widget.isDrawingHorizontalLine,
+        ),
+      if (!listEquals(old.trendlines, widget.trendlines) &&
+          !listEquals(widget.trendlines, _lastReceivedTrendlines))
+        _trendlinesScript,
+      if (old.isDrawingTrendline != widget.isDrawingTrendline)
+        _drawingModeScript('Trendline', isDrawing: widget.isDrawingTrendline),
+      if (!listEquals(old.rectangles, widget.rectangles) &&
+          !listEquals(widget.rectangles, _lastReceivedRectangles))
+        _rectanglesScript,
+      if (old.isDrawingRectangle != widget.isDrawingRectangle)
+        _drawingModeScript('Rectangle', isDrawing: widget.isDrawingRectangle),
+      if (liveBar != null && old.liveBar?.close != liveBar.close)
+        'updateBar(${jsonEncode(_barJson(liveBar))});',
+    ]);
   }
 
   @override
@@ -484,10 +420,7 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         c.addJavaScriptHandler(
           handlerName: 'onCrosshair',
           callback: (List<dynamic> args) {
-            final String? raw = args.isNotEmpty ? args[0] as String? : null;
-            widget.onCrosshairMove?.call(
-              raw == null ? null : jsonDecode(raw) as Map<String, dynamic>,
-            );
+            _emitCrosshair(args.isNotEmpty ? args[0] : null);
             return null;
           },
         );
