@@ -2135,33 +2135,7 @@
                     </div>
                 </div>
 
-                <!-- 11. Text row -->
-                <div class="tv-fib-setting-row">
-                    <label class="tv-fib-checkbox-label">
-                        <input type="checkbox" id="tv-fib-text-check" class="tv-checkbox" checked>
-                        <span>Text</span>
-                    </label>
-                    <div class="tv-fib-setting-right">
-                        <div id="tv-fib-text-halign-btn" class="tv-fib-select-btn" title="Horizontal align" tabindex="0">
-                            <span id="tv-fib-text-halign-val">Center</span>
-                            <div id="tv-fib-text-halign-chevron" class="tv-size-chevron">
-                                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-                                    <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
-                                </svg>
-                            </div>
-                        </div>
-                        <div id="tv-fib-text-valign-btn" class="tv-fib-select-btn" title="Vertical align" tabindex="0">
-                            <span id="tv-fib-text-valign-val">Middle</span>
-                            <div id="tv-fib-text-valign-chevron" class="tv-size-chevron">
-                                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-                                    <path d="M3.5 6l4.5 4.5L12.5 6H3.5z" />
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 12. Font size row -->
+                <!-- 11. Font size row -->
                 <div class="tv-fib-setting-row">
                     <span class="tv-fib-setting-left">Font size</span>
                     <div class="tv-fib-setting-right">
@@ -2342,18 +2316,6 @@
                 <div class="tv-size-item tv-fib-lvalign-item" data-value="top">Top</div>
                 <div class="tv-size-item tv-fib-lvalign-item" data-value="middle">Middle</div>
                 <div class="tv-size-item tv-fib-lvalign-item" data-value="bottom">Bottom</div>
-            </div>
-
-            <!-- Fib Text Align Dropdowns (Image 3) -->
-            <div id="tv-fib-text-halign-dropdown" class="tv-size-dropdown-overlay" style="display: none;">
-                <div class="tv-size-item tv-fib-thalign-item" data-value="left">Left</div>
-                <div class="tv-size-item tv-fib-thalign-item" data-value="center">Center</div>
-                <div class="tv-size-item tv-fib-thalign-item" data-value="right">Right</div>
-            </div>
-            <div id="tv-fib-text-valign-dropdown" class="tv-size-dropdown-overlay" style="display: none;">
-                <div class="tv-size-item tv-fib-tvalign-item" data-value="top">Top</div>
-                <div class="tv-size-item tv-fib-tvalign-item" data-value="middle">Middle</div>
-                <div class="tv-size-item tv-fib-tvalign-item" data-value="bottom">Bottom</div>
             </div>
 
             <!-- Fib Font Size Dropdown Overlay (Image 4) -->
@@ -2550,9 +2512,6 @@
             levelsFormat: 'percents', // 'values' or 'percents'
             labelsHAlign: 'left',
             labelsVAlign: 'top',
-            showText: true,
-            textHAlign: 'center',
-            textVAlign: 'middle',
             fontSize: 12,
             logScale: false
         };
@@ -3930,8 +3889,6 @@
                 { id: 'tv-fib-levels-format-dropdown', chevron: 'tv-fib-levels-format-chevron', btn: 'tv-fib-levels-format-btn' },
                 { id: 'tv-fib-labels-halign-dropdown', chevron: 'tv-fib-labels-halign-chevron', btn: 'tv-fib-labels-halign-btn' },
                 { id: 'tv-fib-labels-valign-dropdown', chevron: 'tv-fib-labels-valign-chevron', btn: 'tv-fib-labels-valign-btn' },
-                { id: 'tv-fib-text-halign-dropdown', chevron: 'tv-fib-text-halign-chevron', btn: 'tv-fib-text-halign-btn' },
-                { id: 'tv-fib-text-valign-dropdown', chevron: 'tv-fib-text-valign-chevron', btn: 'tv-fib-text-valign-btn' },
                 { id: 'tv-fib-fontsize-dropdown', chevron: 'tv-fib-fontsize-chevron', btn: 'tv-fib-fontsize-btn' },
             ];
             overlays.forEach(o => {
@@ -4001,22 +3958,6 @@
                 item.classList.toggle('selected', item.getAttribute('data-value') === hVal);
             });
             document.querySelectorAll('#tv-fib-labels-valign-dropdown .tv-fib-lvalign-item').forEach(item => {
-                item.classList.toggle('selected', item.getAttribute('data-value') === vVal);
-            });
-        }
-
-        function updateTextAlignBtnUI() {
-            if (!pendingFibSettings) return;
-            const hVal = pendingFibSettings.textHAlign || 'center';
-            const vVal = pendingFibSettings.textVAlign || 'middle';
-            const hEl = document.getElementById('tv-fib-text-halign-val');
-            const vEl = document.getElementById('tv-fib-text-valign-val');
-            if (hEl) hEl.textContent = hVal.charAt(0).toUpperCase() + hVal.slice(1);
-            if (vEl) vEl.textContent = vVal.charAt(0).toUpperCase() + vVal.slice(1);
-            document.querySelectorAll('#tv-fib-text-halign-dropdown .tv-fib-thalign-item').forEach(item => {
-                item.classList.toggle('selected', item.getAttribute('data-value') === hVal);
-            });
-            document.querySelectorAll('#tv-fib-text-valign-dropdown .tv-fib-tvalign-item').forEach(item => {
                 item.classList.toggle('selected', item.getAttribute('data-value') === vVal);
             });
         }
@@ -4190,9 +4131,6 @@
             updateLabelsAlignBtnUI();
 
             // Populate Text
-            const textCheck = document.getElementById('tv-fib-text-check');
-            if (textCheck) textCheck.checked = !!pendingFibSettings.showText;
-            updateTextAlignBtnUI();
 
             // Populate Font size
             updateFontSizeBtnUI(pendingFibSettings.fontSize || 12);
@@ -4520,53 +4458,7 @@
                 };
             });
 
-            // 9. Text check, HAlign & VAlign comboboxes (Image 3 & Item 8)
-            const textCheck = document.getElementById('tv-fib-text-check');
-            if (textCheck) {
-                textCheck.onchange = () => {
-                    if (pendingFibSettings) pendingFibSettings.showText = textCheck.checked;
-                    commitFibSettings(pendingFibSettings);
-                };
-            }
-            const textHAlignBtn = document.getElementById('tv-fib-text-halign-btn');
-            if (textHAlignBtn) {
-                textHAlignBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    toggleFibOverlay('tv-fib-text-halign-dropdown', 'tv-fib-text-halign-chevron', 'tv-fib-text-halign-btn');
-                };
-            }
-            document.querySelectorAll('#tv-fib-text-halign-dropdown .tv-fib-thalign-item').forEach(item => {
-                item.onclick = (e) => {
-                    e.stopPropagation();
-                    if (!pendingFibSettings) return;
-                    const val = item.getAttribute('data-value') || 'center';
-                    pendingFibSettings.textHAlign = val;
-                    updateTextAlignBtnUI();
-                    closeAllFibDropdownOverlays();
-                    commitFibSettings(pendingFibSettings);
-                };
-            });
-
-            const textVAlignBtn = document.getElementById('tv-fib-text-valign-btn');
-            if (textVAlignBtn) {
-                textVAlignBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    toggleFibOverlay('tv-fib-text-valign-dropdown', 'tv-fib-text-valign-chevron', 'tv-fib-text-valign-btn');
-                };
-            }
-            document.querySelectorAll('#tv-fib-text-valign-dropdown .tv-fib-tvalign-item').forEach(item => {
-                item.onclick = (e) => {
-                    e.stopPropagation();
-                    if (!pendingFibSettings) return;
-                    const val = item.getAttribute('data-value') || 'middle';
-                    pendingFibSettings.textVAlign = val;
-                    updateTextAlignBtnUI();
-                    closeAllFibDropdownOverlays();
-                    commitFibSettings(pendingFibSettings);
-                };
-            });
-
-            // 10. Font size combobox (Image 4)
+            // 9. Font size combobox (Image 4)
             const fontSizeBtn = document.getElementById('tv-fib-fontsize-btn');
             if (fontSizeBtn) {
                 fontSizeBtn.onclick = (e) => {
@@ -4587,14 +4479,12 @@
                 };
             });
 
-            // 11. Stop propagation on all overlays
+            // 10. Stop propagation on all overlays
             const allOverlays = [
                 'tv-fib-extend-dropdown',
                 'tv-fib-levels-format-dropdown',
                 'tv-fib-labels-halign-dropdown',
                 'tv-fib-labels-valign-dropdown',
-                'tv-fib-text-halign-dropdown',
-                'tv-fib-text-valign-dropdown',
                 'tv-fib-fontsize-dropdown'
             ];
             allOverlays.forEach(id => {
