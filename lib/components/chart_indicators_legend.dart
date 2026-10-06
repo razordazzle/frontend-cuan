@@ -953,10 +953,12 @@ class _PlotValuesText extends StatelessWidget {
     required this.fallbackColor,
   });
 
+  /// Urutan plot dari chart: [garis utama, smoothing MA, Bollinger atas, Bollinger bawah].
   Color _plotColor(int plotIndex) => switch ((indicator.type, plotIndex)) {
     ('vol', _) => fallbackColor,
     (_, 0) => indicator.color ?? fallbackColor,
-    _ => indicator.smoothingStyle.color,
+    (_, 1) => indicator.smoothingStyle.color,
+    _ => indicator.bollingerStyle.color,
   };
 
   String _format(double value) => indicator.type == 'vol'

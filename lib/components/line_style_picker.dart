@@ -8,6 +8,9 @@ class LineStyleSwatchButton extends StatelessWidget {
 
   /// Highlight biru saat picker milik tombol ini sedang terbuka.
   final bool isActive;
+
+  /// False untuk swatch warna saja (mis. isian background), tanpa preview garis.
+  final bool showLinePreview;
   final VoidCallback onTap;
 
   const LineStyleSwatchButton({
@@ -15,22 +18,35 @@ class LineStyleSwatchButton extends StatelessWidget {
     required this.value,
     required this.onTap,
     this.isActive = false,
+    this.showLinePreview = true,
   });
+
+  static const double _colorBoxSize = 22;
+  static const double _borderWidth = 1.5;
+  static const double _padding = 5.5;
+
+  /// Tinggi & lebar mode warna saja. Border ikut dihitung karena Container
+  /// memperlakukan lebar border sebagai padding tambahan.
+  static const double _compactSize =
+      _colorBoxSize + 2 * (_padding + _borderWidth);
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 82,
-        height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        width: showLinePreview ? 82 : _compactSize,
+        height: _compactSize,
+        padding: EdgeInsets.symmetric(
+          horizontal: showLinePreview ? 8 : _padding,
+          vertical: _padding,
+        ),
         decoration: BoxDecoration(
           color: const Color(0xFF2A2A2A),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isActive ? const Color(0xFF2962FF) : const Color(0xFF3A3A3C),
-            width: 1.5,
+            width: _borderWidth,
           ),
           boxShadow: isActive
               ? const <BoxShadow>[
@@ -44,29 +60,73 @@ class LineStyleSwatchButton extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                color: value.color,
-                borderRadius: BorderRadius.circular(5),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Center(
-                child: LineStylePreview(
-                  color: value.color,
-                  width: value.lineWidth.toDouble().clamp(1.0, 4.0),
-                  lineStyle: value.lineStyle,
+            _ColorBox(color: value.color, size: _colorBoxSize),
+            if (showLinePreview) ...<Widget>[
+              const SizedBox(width: 6),
+              Expanded(
+                child: Center(
+                  child: LineStylePreview(
+                    color: value.color,
+                    width: value.lineWidth.toDouble().clamp(1.0, 4.0),
+                    lineStyle: value.lineStyle,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),
     );
   }
+}
+
+/// Kotak warna; warna transparan ditampilkan di atas pola kotak-kotak (ala TradingView).
+class _ColorBox extends StatelessWidget {
+  final Color color;
+  final double size;
+
+  const _ColorBox({required this.color, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(5),
+      child: SizedBox.square(
+        dimension: size,
+        child: CustomPaint(
+          painter: color.a < 1 ? const _CheckerboardPainter() : null,
+          child: ColoredBox(color: color),
+        ),
+      ),
+    );
+  }
+}
+
+class _CheckerboardPainter extends CustomPainter {
+  static const double _cellSize = 5.5;
+  static const Color _darkCell = Color(0xFF1E222D);
+  static const Color _lightCell = Color(0xFF2A2E39);
+
+  const _CheckerboardPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(Offset.zero & size, Paint()..color = _darkCell);
+    final Paint light = Paint()..color = _lightCell;
+    for (double y = 0; y < size.height; y += _cellSize) {
+      final bool oddRow = (y / _cellSize).round().isOdd;
+      for (
+        double x = oddRow ? _cellSize : 0;
+        x < size.width;
+        x += _cellSize * 2
+      ) {
+        canvas.drawRect(Rect.fromLTWH(x, y, _cellSize, _cellSize), light);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CheckerboardPainter oldDelegate) => false;
 }
 
 /// Preview garis solid / dashed / dotted.
@@ -99,12 +159,14 @@ class LineStylePreview extends StatelessWidget {
 /// ketebalan, jenis garis) tepat di bawah widget [anchorKey].
 ///
 /// [onChanged] dipanggil setiap kali user mengubah nilai (live preview).
+/// [showLineOptions] false = hanya warna & opacity (mis. untuk isian background).
 /// Future selesai saat popover ditutup.
 Future<void> showLineStylePicker({
   required BuildContext context,
   required GlobalKey anchorKey,
   required IndicatorLineStyle initialValue,
   required ValueChanged<IndicatorLineStyle> onChanged,
+  bool showLineOptions = true,
 }) {
   final RenderBox? anchor =
       anchorKey.currentContext?.findRenderObject() as RenderBox?;
@@ -174,6 +236,7 @@ Future<void> showLineStylePicker({
               child: _LineStylePickerPopover(
                 initialValue: initialValue,
                 onChanged: onChanged,
+                showLineOptions: showLineOptions,
                 maxHeight: maxHeight.clamp(200.0, 520.0),
               ),
             ),
@@ -185,11 +248,13 @@ Future<void> showLineStylePicker({
 class _LineStylePickerPopover extends StatefulWidget {
   final IndicatorLineStyle initialValue;
   final ValueChanged<IndicatorLineStyle> onChanged;
+  final bool showLineOptions;
   final double maxHeight;
 
   const _LineStylePickerPopover({
     required this.initialValue,
     required this.onChanged,
+    required this.showLineOptions,
     required this.maxHeight,
   });
 
@@ -322,37 +387,39 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
               _buildLabel('Opacity', fontSize: 12),
               const SizedBox(height: 6),
               _buildOpacitySlider(baseColor),
-              const SizedBox(height: 12),
-              _buildLabel('Thickness'),
-              const SizedBox(height: 6),
-              _buildSegmentedControl<int>(
-                options: _lineWidths,
-                selected: _value.lineWidth,
-                onSelected: (int width) =>
-                    _update(_value.copyWith(lineWidth: width)),
-                builder: (int width, bool isSelected) => Container(
-                  width: 26,
-                  height: width.toDouble(),
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.black : Colors.white,
-                    borderRadius: BorderRadius.circular(1),
+              if (widget.showLineOptions) ...<Widget>[
+                const SizedBox(height: 12),
+                _buildLabel('Thickness'),
+                const SizedBox(height: 6),
+                _buildSegmentedControl<int>(
+                  options: _lineWidths,
+                  selected: _value.lineWidth,
+                  onSelected: (int width) =>
+                      _update(_value.copyWith(lineWidth: width)),
+                  builder: (int width, bool isSelected) => Container(
+                    width: 26,
+                    height: width.toDouble(),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.black : Colors.white,
+                      borderRadius: BorderRadius.circular(1),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _buildLabel('Line style'),
-              const SizedBox(height: 6),
-              _buildSegmentedControl<int>(
-                options: _lineStyles,
-                selected: _value.lineStyle,
-                onSelected: (int style) =>
-                    _update(_value.copyWith(lineStyle: style)),
-                builder: (int style, bool isSelected) => LineStylePreview(
-                  color: isSelected ? Colors.black : Colors.white,
-                  width: 2.0,
-                  lineStyle: style,
+                const SizedBox(height: 12),
+                _buildLabel('Line style'),
+                const SizedBox(height: 6),
+                _buildSegmentedControl<int>(
+                  options: _lineStyles,
+                  selected: _value.lineStyle,
+                  onSelected: (int style) =>
+                      _update(_value.copyWith(lineStyle: style)),
+                  builder: (int style, bool isSelected) => LineStylePreview(
+                    color: isSelected ? Colors.black : Colors.white,
+                    width: 2.0,
+                    lineStyle: style,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

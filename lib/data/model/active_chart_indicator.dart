@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/css_color.dart';
+import 'indicator_level.dart';
 import 'indicator_line_style.dart';
 
 /// Nilai plot indikator per id indikator (mis. SMA: [MA, Smoothing MA]); null = tidak ada nilai.
@@ -12,6 +13,40 @@ class ActiveChartIndicator {
   static const IndicatorLineStyle defaultSmoothingStyle = IndicatorLineStyle(
     color: Color(0xFFFFEB3B),
   );
+
+  // Default RSI mengikuti TradingView.
+  static const Color _defaultLevelColor = Color(0xFF787B86);
+  static const IndicatorLevel defaultUpperLevel = IndicatorLevel(
+    value: 70,
+    style: IndicatorLineStyle(color: _defaultLevelColor, lineStyle: 1),
+  );
+  static const IndicatorLevel defaultMiddleLevel = IndicatorLevel(
+    value: 50,
+    style: IndicatorLineStyle(color: Color(0x80787B86), lineStyle: 2),
+  );
+  static const IndicatorLevel defaultLowerLevel = IndicatorLevel(
+    value: 30,
+    style: IndicatorLineStyle(color: _defaultLevelColor, lineStyle: 1),
+  );
+  static const IndicatorFill defaultBandsFill = IndicatorFill(
+    color: Color(0x1A7E57C2),
+  );
+  static const IndicatorGradientFill defaultOverboughtFill =
+      IndicatorGradientFill(
+        topColor: Color(0xFF4CAF50),
+        bottomColor: Color(0x004CAF50),
+      );
+  static const IndicatorGradientFill defaultOversoldFill =
+      IndicatorGradientFill(
+        topColor: Color(0x00F23645),
+        bottomColor: Color(0xFFF23645),
+      );
+  static const IndicatorLineStyle defaultBollingerStyle = IndicatorLineStyle(
+    color: Color(0xFF4CAF50),
+  );
+
+  /// Tipe smoothing yang menambah Bollinger Bands di sekitar garis MA (khusus RSI).
+  static const String bollingerSmoothingType = 'SMA + Bollinger Bands';
 
   final String id;
   final String type; // 'sma', 'rsi', 'vol'
@@ -30,6 +65,13 @@ class ActiveChartIndicator {
   String? _smoothingType; // 'None', 'SMA', 'EMA', 'RMA', 'WMA', 'VWMA'
   int? _smoothingLength;
   IndicatorLineStyle? _smoothingStyle;
+  IndicatorLevel? _upperLevel;
+  IndicatorLevel? _middleLevel;
+  IndicatorLevel? _lowerLevel;
+  IndicatorFill? _bandsFill;
+  IndicatorGradientFill? _overboughtFill;
+  IndicatorGradientFill? _oversoldFill;
+  IndicatorLineStyle? _bollingerStyle;
   double? _bbStdDev;
   String? _precision; // 'Default', '0', '1', etc.
   bool? _labelsOnPriceScale;
@@ -61,6 +103,34 @@ class ActiveChartIndicator {
   set smoothingStyle(IndicatorLineStyle val) => _smoothingStyle = val;
 
   bool get hasSmoothing => smoothingType != 'None';
+  bool get hasBollingerBands => smoothingType == bollingerSmoothingType;
+
+  IndicatorLevel get upperLevel => _upperLevel ?? defaultUpperLevel;
+  set upperLevel(IndicatorLevel val) => _upperLevel = val;
+
+  IndicatorLevel get middleLevel => _middleLevel ?? defaultMiddleLevel;
+  set middleLevel(IndicatorLevel val) => _middleLevel = val;
+
+  IndicatorLevel get lowerLevel => _lowerLevel ?? defaultLowerLevel;
+  set lowerLevel(IndicatorLevel val) => _lowerLevel = val;
+
+  /// Isian background di antara level atas & bawah.
+  IndicatorFill get bandsFill => _bandsFill ?? defaultBandsFill;
+  set bandsFill(IndicatorFill val) => _bandsFill = val;
+
+  /// Gradien di antara garis RSI & level atas saat RSI di atas level atas.
+  IndicatorGradientFill get overboughtFill =>
+      _overboughtFill ?? defaultOverboughtFill;
+  set overboughtFill(IndicatorGradientFill val) => _overboughtFill = val;
+
+  /// Gradien di antara garis RSI & level bawah saat RSI di bawah level bawah.
+  IndicatorGradientFill get oversoldFill =>
+      _oversoldFill ?? defaultOversoldFill;
+  set oversoldFill(IndicatorGradientFill val) => _oversoldFill = val;
+
+  IndicatorLineStyle get bollingerStyle =>
+      _bollingerStyle ?? defaultBollingerStyle;
+  set bollingerStyle(IndicatorLineStyle val) => _bollingerStyle = val;
 
   double get bbStdDev => _bbStdDev ?? 2.0;
   set bbStdDev(double val) => _bbStdDev = val;
@@ -94,6 +164,17 @@ class ActiveChartIndicator {
     _ => title,
   };
 
+  /// Judul dengan input, mis. "SMA 20 close" / "RSI 14 close SMA 14".
+  String get inputsTitle => switch (type) {
+    'sma' || 'rsi' => <String>[
+      shortTitle,
+      '$period',
+      source.toLowerCase(),
+      if (hasSmoothing) '$smoothingType $smoothingLength',
+    ].join(' '),
+    _ => shortTitle,
+  };
+
   ActiveChartIndicator({
     required this.id,
     required this.type,
@@ -108,6 +189,13 @@ class ActiveChartIndicator {
     String? smoothingType,
     int? smoothingLength,
     IndicatorLineStyle? smoothingStyle,
+    IndicatorLevel? upperLevel,
+    IndicatorLevel? middleLevel,
+    IndicatorLevel? lowerLevel,
+    IndicatorFill? bandsFill,
+    IndicatorGradientFill? overboughtFill,
+    IndicatorGradientFill? oversoldFill,
+    IndicatorLineStyle? bollingerStyle,
     double? bbStdDev,
     String? precision,
     bool? labelsOnPriceScale,
@@ -123,6 +211,13 @@ class ActiveChartIndicator {
        _smoothingType = smoothingType ?? 'None',
        _smoothingLength = smoothingLength ?? 14,
        _smoothingStyle = smoothingStyle ?? defaultSmoothingStyle,
+       _upperLevel = upperLevel ?? defaultUpperLevel,
+       _middleLevel = middleLevel ?? defaultMiddleLevel,
+       _lowerLevel = lowerLevel ?? defaultLowerLevel,
+       _bandsFill = bandsFill ?? defaultBandsFill,
+       _overboughtFill = overboughtFill ?? defaultOverboughtFill,
+       _oversoldFill = oversoldFill ?? defaultOversoldFill,
+       _bollingerStyle = bollingerStyle ?? defaultBollingerStyle,
        _bbStdDev = bbStdDev ?? 2.0,
        _precision = precision ?? 'Default',
        _labelsOnPriceScale = labelsOnPriceScale ?? false,
@@ -145,6 +240,13 @@ class ActiveChartIndicator {
     String? smoothingType,
     int? smoothingLength,
     IndicatorLineStyle? smoothingStyle,
+    IndicatorLevel? upperLevel,
+    IndicatorLevel? middleLevel,
+    IndicatorLevel? lowerLevel,
+    IndicatorFill? bandsFill,
+    IndicatorGradientFill? overboughtFill,
+    IndicatorGradientFill? oversoldFill,
+    IndicatorLineStyle? bollingerStyle,
     double? bbStdDev,
     String? precision,
     bool? labelsOnPriceScale,
@@ -167,6 +269,13 @@ class ActiveChartIndicator {
       smoothingType: smoothingType ?? this.smoothingType,
       smoothingLength: smoothingLength ?? this.smoothingLength,
       smoothingStyle: smoothingStyle ?? this.smoothingStyle,
+      upperLevel: upperLevel ?? this.upperLevel,
+      middleLevel: middleLevel ?? this.middleLevel,
+      lowerLevel: lowerLevel ?? this.lowerLevel,
+      bandsFill: bandsFill ?? this.bandsFill,
+      overboughtFill: overboughtFill ?? this.overboughtFill,
+      oversoldFill: oversoldFill ?? this.oversoldFill,
+      bollingerStyle: bollingerStyle ?? this.bollingerStyle,
       bbStdDev: bbStdDev ?? this.bbStdDev,
       precision: precision ?? this.precision,
       labelsOnPriceScale: labelsOnPriceScale ?? this.labelsOnPriceScale,
@@ -195,6 +304,13 @@ class ActiveChartIndicator {
           smoothingType == other.smoothingType &&
           smoothingLength == other.smoothingLength &&
           smoothingStyle == other.smoothingStyle &&
+          upperLevel == other.upperLevel &&
+          middleLevel == other.middleLevel &&
+          lowerLevel == other.lowerLevel &&
+          bandsFill == other.bandsFill &&
+          overboughtFill == other.overboughtFill &&
+          oversoldFill == other.oversoldFill &&
+          bollingerStyle == other.bollingerStyle &&
           bbStdDev == other.bbStdDev &&
           precision == other.precision &&
           labelsOnPriceScale == other.labelsOnPriceScale &&
@@ -218,6 +334,13 @@ class ActiveChartIndicator {
     smoothingType,
     smoothingLength,
     smoothingStyle,
+    upperLevel,
+    middleLevel,
+    lowerLevel,
+    bandsFill,
+    overboughtFill,
+    oversoldFill,
+    bollingerStyle,
     bbStdDev,
     precision,
     labelsOnPriceScale,
@@ -246,5 +369,16 @@ class ActiveChartIndicator {
     'labelsOnPriceScale': labelsOnPriceScale,
     'plotType': plotType,
     'priceLine': priceLine,
+    if (type == 'rsi') ...<String, dynamic>{
+      'levels': <String, dynamic>{
+        'upper': upperLevel.toJson(),
+        'middle': middleLevel.toJson(),
+        'lower': lowerLevel.toJson(),
+      },
+      'bandsFill': bandsFill.toJson(),
+      'overboughtFill': overboughtFill.toJson(),
+      'oversoldFill': oversoldFill.toJson(),
+      'bollingerStyle': bollingerStyle.toJson(),
+    },
   };
 }

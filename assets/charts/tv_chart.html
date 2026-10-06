@@ -9561,7 +9561,18 @@
         const DEFAULT_SMA_COLOR = '#2962FF';
         const DEFAULT_SMOOTHING_COLOR = '#FFEB3B';
         const DEFAULT_PRECISION_DIGITS = 2;
-        // id -> { type, series, smoothingSeries?, smaConfig?, rsiConfig?, calcKey? }
+        const DEFAULT_RSI_COLOR = '#E91E63';
+        const RSI_BOLLINGER_SMOOTHING = 'SMA + Bollinger Bands';
+        const RSI_DEFAULT_LEVELS = {
+            upper: { value: 70, color: '#787B86', lineWidth: 1, lineStyle: 1, isVisible: true },
+            middle: { value: 50, color: 'rgba(120, 123, 134, 0.5)', lineWidth: 1, lineStyle: 2, isVisible: true },
+            lower: { value: 30, color: '#787B86', lineWidth: 1, lineStyle: 1, isVisible: true },
+        };
+        const RSI_DEFAULT_FILL = { color: 'rgba(126, 87, 194, 0.1)', isVisible: true };
+        const RSI_DEFAULT_OVERBOUGHT_FILL = { topColor: 'rgba(76, 175, 80, 1)', bottomColor: 'rgba(76, 175, 80, 0)', isVisible: true };
+        const RSI_DEFAULT_OVERSOLD_FILL = { topColor: 'rgba(242, 54, 69, 0)', bottomColor: 'rgba(242, 54, 69, 1)', isVisible: true };
+        const RSI_DEFAULT_BOLLINGER = { color: '#4CAF50', lineWidth: 1, lineStyle: 0, isVisible: true };
+        // id -> { type, series, plots: series[] (urutan nilai legend), ...state per tipe }
         let activeIndicatorSeriesMap = {};
         let isCrosshairActive = false;
 
@@ -9603,6 +9614,19 @@
             return { type: 'price', precision: precision, minMove: Math.pow(10, -precision) };
         }
 
+        function lineSeriesOptions(style, visible, priceFormat, lastValueVisible) {
+            return {
+                color: style.color,
+                lineWidth: style.lineWidth || 1,
+                lineStyle: toLineStyle(style.lineStyle),
+                title: '',
+                priceLineVisible: false,
+                lastValueVisible: lastValueVisible,
+                priceFormat: priceFormat,
+                visible: visible,
+            };
+        }
+
         function syncSmaIndicator(item, entry) {
             const cfg = normalizeSmaConfig(item);
             const isVisible = item.isVisible !== false;
@@ -9621,25 +9645,24 @@
                 priceFormat: priceFormat,
                 visible: isVisible,
             };
-            const smoothingOptions = {
-                color: smoothingStyle.color || DEFAULT_SMOOTHING_COLOR,
-                lineWidth: smoothingStyle.lineWidth || 1,
-                lineStyle: toLineStyle(smoothingStyle.lineStyle),
-                title: '',
-                priceLineVisible: false,
-                lastValueVisible: lastValueVisible,
-                priceFormat: priceFormat,
-                visible: isVisible && cfg.smoothingType !== 'None' && smoothingStyle.isVisible !== false,
-            };
+            const smoothingOptions = lineSeriesOptions(
+                { color: DEFAULT_SMOOTHING_COLOR, ...smoothingStyle },
+                isVisible && cfg.smoothingType !== 'None' && smoothingStyle.isVisible !== false,
+                priceFormat,
+                lastValueVisible,
+            );
 
             if (entry) {
                 entry.series.applyOptions(mainOptions);
                 entry.smoothingSeries.applyOptions(smoothingOptions);
             } else {
+                const series = chart.addSeries(LightweightCharts.LineSeries, mainOptions, 0);
+                const smoothingSeries = chart.addSeries(LightweightCharts.LineSeries, smoothingOptions, 0);
                 entry = {
                     type: 'sma',
-                    series: chart.addSeries(LightweightCharts.LineSeries, mainOptions, 0),
-                    smoothingSeries: chart.addSeries(LightweightCharts.LineSeries, smoothingOptions, 0),
+                    series: series,
+                    smoothingSeries: smoothingSeries,
+                    plots: [series, smoothingSeries],
                     smaConfig: null,
                     calcKey: null,
                 };
@@ -9659,12 +9682,188 @@
             return {
                 period: item.period || 14,
                 source: item.source || 'Close',
+                smoothingType: item.smoothingType || 'None',
+                smoothingLength: item.smoothingLength || 14,
+                bbStdDev: item.bbStdDev || 2,
             };
         }
 
         function updateRsiData(entry) {
             const cfg = entry.rsiConfig;
-            entry.series.setData(Indicators.rsiPoints(rawCandlesData, cfg.period, cfg.source));
+            const rsi = Indicators.rsiPoints(rawCandlesData, cfg.period, cfg.source);
+            let ma = [];
+            let upper = [];
+            let lower = [];
+            if (cfg.smoothingType === RSI_BOLLINGER_SMOOTHING) {
+                ({ basis: ma, upper, lower } = Indicators.bollingerPoints(rsi, cfg.smoothingLength, cfg.bbStdDev));
+            } else if (cfg.smoothingType !== 'None') {
+                ma = Indicators.smoothPoints(rsi, cfg.smoothingType, cfg.smoothingLength, rawCandlesData);
+            }
+            entry.series.setData(rsi);
+            entry.overboughtFill.setData(rsi);
+            entry.oversoldFill.setData(rsi);
+            entry.maSeries.setData(ma);
+            entry.upperBandSeries.setData(upper);
+            entry.lowerBandSeries.setData(lower);
+        }
+
+        // Isian area horizontal di antara dua harga (background RSI di antara level atas & bawah),
+        // digambar di belakang garis lewat series primitive Lightweight Charts.
+        class PriceBandFill {
+            constructor() {
+                this._series = null;
+                this._requestUpdate = null;
+                this._options = { top: 0, bottom: 0, color: 'transparent', visible: false };
+                const renderer = { draw: (target) => this._draw(target) };
+                this._paneViews = [{ zOrder: () => 'bottom', renderer: () => renderer }];
+            }
+
+            attached({ series, requestUpdate }) {
+                this._series = series;
+                this._requestUpdate = requestUpdate;
+            }
+
+            detached() {
+                this._series = null;
+                this._requestUpdate = null;
+            }
+
+            paneViews() {
+                return this._paneViews;
+            }
+
+            applyOptions(options) {
+                this._options = options;
+                if (this._requestUpdate) this._requestUpdate();
+            }
+
+            _draw(target) {
+                const { top, bottom, color, visible } = this._options;
+                if (!visible || !this._series) return;
+                const y1 = this._series.priceToCoordinate(top);
+                const y2 = this._series.priceToCoordinate(bottom);
+                if (y1 === null || y2 === null) return;
+                target.useBitmapCoordinateSpace(({ context, bitmapSize, verticalPixelRatio }) => {
+                    context.fillStyle = color;
+                    context.fillRect(
+                        0,
+                        Math.round(Math.min(y1, y2) * verticalPixelRatio),
+                        bitmapSize.width,
+                        Math.round(Math.abs(y2 - y1) * verticalPixelRatio),
+                    );
+                });
+            }
+        }
+
+        // Gradien vertikal di antara garis series & sebuah level, hanya di sisi `extreme`
+        // (mis. RSI di atas 70 -> area 70..100). Sama dengan fill(rsi, mid, 100, 70, top, bottom) di Pine.
+        class LevelGradientFill {
+            constructor(extreme) {
+                this._extreme = extreme;
+                this._series = null;
+                this._chart = null;
+                this._requestUpdate = null;
+                this._points = [];
+                this._options = { level: extreme, topColor: 'transparent', bottomColor: 'transparent', visible: false };
+                const renderer = { draw: (target) => this._draw(target) };
+                this._paneViews = [{ zOrder: () => 'bottom', renderer: () => renderer }];
+            }
+
+            attached({ chart, series, requestUpdate }) {
+                this._chart = chart;
+                this._series = series;
+                this._requestUpdate = requestUpdate;
+            }
+
+            detached() {
+                this._chart = null;
+                this._series = null;
+                this._requestUpdate = null;
+            }
+
+            paneViews() {
+                return this._paneViews;
+            }
+
+            setData(points) {
+                this._points = points;
+                if (this._requestUpdate) this._requestUpdate();
+            }
+
+            applyOptions(options) {
+                this._options = options;
+                if (this._requestUpdate) this._requestUpdate();
+            }
+
+            _draw(target) {
+                const { level, topColor, bottomColor, visible } = this._options;
+                const points = this._points;
+                if (!visible || !this._series || !this._chart || points.length < 2) return;
+                const levelY = this._series.priceToCoordinate(level);
+                const extremeY = this._series.priceToCoordinate(this._extreme);
+                if (levelY === null || extremeY === null) return;
+                const timeScale = this._chart.timeScale();
+
+                target.useBitmapCoordinateSpace(({ context, bitmapSize, horizontalPixelRatio, verticalPixelRatio }) => {
+                    const top = Math.min(levelY, extremeY) * verticalPixelRatio;
+                    const bottom = Math.max(levelY, extremeY) * verticalPixelRatio;
+                    const baseline = levelY * verticalPixelRatio;
+
+                    // Poligon garis series <-> baseline level; clip menyisakan sisi `extreme` saja.
+                    context.save();
+                    context.beginPath();
+                    context.rect(0, top, bitmapSize.width, bottom - top);
+                    context.clip();
+
+                    context.beginPath();
+                    let firstX = null;
+                    let lastX = null;
+                    for (const point of points) {
+                        const x = timeScale.timeToCoordinate(point.time);
+                        const y = this._series.priceToCoordinate(point.value);
+                        if (x === null || y === null) continue;
+                        const bx = x * horizontalPixelRatio;
+                        if (firstX === null) {
+                            firstX = bx;
+                            context.moveTo(bx, baseline);
+                        }
+                        context.lineTo(bx, y * verticalPixelRatio);
+                        lastX = bx;
+                    }
+                    if (firstX !== null) {
+                        context.lineTo(lastX, baseline);
+                        context.closePath();
+                        const gradient = context.createLinearGradient(0, top, 0, bottom);
+                        gradient.addColorStop(0, topColor);
+                        gradient.addColorStop(1, bottomColor);
+                        context.fillStyle = gradient;
+                        context.fill();
+                    }
+                    context.restore();
+                });
+            }
+        }
+
+        function gradientFillOptions(fill, level, visible) {
+            return {
+                level: level,
+                topColor: fill.topColor,
+                bottomColor: fill.bottomColor,
+                visible: visible && fill.isVisible !== false,
+            };
+        }
+
+        function levelLineOptions(level, visible, axisLabelVisible) {
+            const isShown = visible && level.isVisible !== false;
+            return {
+                price: level.value,
+                color: level.color,
+                lineWidth: level.lineWidth || 1,
+                lineStyle: toLineStyle(level.lineStyle),
+                lineVisible: isShown,
+                axisLabelVisible: isShown && axisLabelVisible,
+                title: '',
+            };
         }
 
         // Pindahkan series ke pane tujuan (null = indikator disembunyikan, biarkan di pane-nya).
@@ -9675,44 +9874,89 @@
 
         function syncRsiIndicator(item, entry, paneIndex) {
             const cfg = normalizeRsiConfig(item);
-            const options = {
-                color: item.color || '#E91E63',
-                title: item.title || 'RSI ' + cfg.period,
-                visible: item.isVisible !== false,
-            };
+            const isVisible = item.isVisible !== false;
+            const priceFormat = buildPriceFormat(item.precisionDigits);
+            const labels = Boolean(item.labelsOnPriceScale);
+            const levels = item.levels || RSI_DEFAULT_LEVELS;
+            const bandsFill = item.bandsFill || RSI_DEFAULT_FILL;
+            const overboughtFill = item.overboughtFill || RSI_DEFAULT_OVERBOUGHT_FILL;
+            const oversoldFill = item.oversoldFill || RSI_DEFAULT_OVERSOLD_FILL;
+            const smoothingStyle = { color: DEFAULT_SMOOTHING_COLOR, ...item.smoothingStyle };
+            const bollingerStyle = { ...RSI_DEFAULT_BOLLINGER, ...item.bollingerStyle };
+            const hasBands = cfg.smoothingType === RSI_BOLLINGER_SMOOTHING;
+
+            const rsiOptions = lineSeriesOptions(
+                { color: item.color || DEFAULT_RSI_COLOR, lineWidth: item.lineWidth || 2, lineStyle: item.lineStyle },
+                isVisible,
+                priceFormat,
+                labels,
+            );
+            const maOptions = lineSeriesOptions(
+                smoothingStyle,
+                isVisible && cfg.smoothingType !== 'None' && smoothingStyle.isVisible !== false,
+                priceFormat,
+                labels,
+            );
+            const bandOptions = lineSeriesOptions(
+                bollingerStyle,
+                isVisible && hasBands && bollingerStyle.isVisible !== false,
+                priceFormat,
+                labels,
+            );
 
             if (entry) {
-                entry.series.applyOptions(options);
-                moveSeriesToPane(entry.series, paneIndex);
-            } else {
-                const series = chart.addSeries(LightweightCharts.LineSeries, {
-                    ...options,
-                    lineWidth: 2,
-                    priceScaleId: 'rsi-scale-' + item.id,
-                    priceFormat: {
-                        type: 'custom',
-                        minMove: 0.01,
-                        formatter: (p) => p.toFixed(1),
-                    },
-                }, paneIndex ?? 1);
-                for (const level of [70, 30]) {
-                    series.createPriceLine({
-                        price: level,
-                        color: 'rgba(233, 30, 99, 0.4)',
-                        lineWidth: 1,
-                        lineStyle: LightweightCharts.LineStyle.Dashed,
-                        axisLabelVisible: true,
-                        title: String(level),
-                    });
+                entry.series.applyOptions(rsiOptions);
+                entry.maSeries.applyOptions(maOptions);
+                entry.upperBandSeries.applyOptions(bandOptions);
+                entry.lowerBandSeries.applyOptions(bandOptions);
+                for (const series of entry.plots) moveSeriesToPane(series, paneIndex);
+                for (const key of ['upper', 'middle', 'lower']) {
+                    entry.levelLines[key].applyOptions(levelLineOptions(levels[key], isVisible, labels));
                 }
-                series.priceScale().applyOptions({
-                    scaleMargins: { top: 0.1, bottom: 0.1 },
-                });
-                entry = { type: 'rsi', series: series, rsiConfig: null, calcKey: null };
+            } else {
+                const pane = paneIndex ?? 1;
+                const priceScaleId = 'rsi-scale-' + item.id;
+                const addLine = (options) =>
+                    chart.addSeries(LightweightCharts.LineSeries, { ...options, priceScaleId: priceScaleId }, pane);
+                const series = addLine(rsiOptions);
+                series.priceScale().applyOptions({ scaleMargins: { top: 0.1, bottom: 0.1 } });
+                const bandFill = new PriceBandFill();
+                const overbought = new LevelGradientFill(100);
+                const oversold = new LevelGradientFill(0);
+                series.attachPrimitive(bandFill);
+                series.attachPrimitive(overbought);
+                series.attachPrimitive(oversold);
+                entry = {
+                    type: 'rsi',
+                    series: series,
+                    maSeries: addLine(maOptions),
+                    upperBandSeries: addLine(bandOptions),
+                    lowerBandSeries: addLine(bandOptions),
+                    levelLines: {
+                        upper: series.createPriceLine(levelLineOptions(levels.upper, isVisible, labels)),
+                        middle: series.createPriceLine(levelLineOptions(levels.middle, isVisible, labels)),
+                        lower: series.createPriceLine(levelLineOptions(levels.lower, isVisible, labels)),
+                    },
+                    bandFill: bandFill,
+                    overboughtFill: overbought,
+                    oversoldFill: oversold,
+                    rsiConfig: null,
+                    calcKey: null,
+                };
+                entry.plots = [entry.series, entry.maSeries, entry.upperBandSeries, entry.lowerBandSeries];
             }
 
+            entry.bandFill.applyOptions({
+                top: levels.upper.value,
+                bottom: levels.lower.value,
+                color: bandsFill.color,
+                visible: isVisible && bandsFill.isVisible !== false,
+            });
+            entry.overboughtFill.applyOptions(gradientFillOptions(overboughtFill, levels.upper.value, isVisible));
+            entry.oversoldFill.applyOptions(gradientFillOptions(oversoldFill, levels.lower.value, isVisible));
+
             // Hitung ulang hanya kalau input perhitungan berubah (bukan saat ganti style/visibility).
-            const calcKey = [cfg.period, cfg.source].join('|');
+            const calcKey = [cfg.period, cfg.source, cfg.smoothingType, cfg.smoothingLength, cfg.bbStdDev].join('|');
             if (entry.calcKey !== calcKey) {
                 entry.calcKey = calcKey;
                 entry.rsiConfig = cfg;
@@ -9740,12 +9984,11 @@
             if (currentVolumeData && currentVolumeData.length > 0) {
                 series.setData(currentVolumeData);
             }
-            return { type: 'vol', series: series };
+            return { type: 'vol', series: series, plots: [series] };
         }
 
         function removeIndicatorEntry(entry) {
-            for (const series of [entry.series, entry.smoothingSeries]) {
-                if (!series) continue;
+            for (const series of entry.plots) {
                 try {
                     chart.removeSeries(series);
                 } catch (e) {
@@ -9771,9 +10014,7 @@
             const values = {};
             for (const id of ids) {
                 const entry = activeIndicatorSeriesMap[id];
-                values[id] = [entry.series, entry.smoothingSeries]
-                    .filter(Boolean)
-                    .map(series => getSeriesValue(series, param));
+                values[id] = entry.plots.map(series => getSeriesValue(series, param));
             }
             const payload = JSON.stringify(values);
             if (window.flutter_inappwebview?.callHandler) {

@@ -157,6 +157,37 @@
     }
 
     /**
+     * Standar deviasi populasi bergulir (sama dengan `ta.stdev` TradingView), O(n).
+     * Memakai Welford versi jendela geser supaya stabil secara numerik
+     * (rumus E[x²] − E[x]² kehilangan presisi untuk harga besar).
+     * @param {readonly number[]} values
+     * @param {number} length
+     * @returns {Series}
+     */
+    function stdev(values, length) {
+        /** @type {Series} */
+        const out = new Array(values.length).fill(null);
+        let mean = 0;
+        let sumSquaredDiff = 0; // M2: jumlah kuadrat selisih terhadap mean
+        for (let i = 0; i < values.length; i++) {
+            const value = values[i];
+            if (i < length) {
+                const delta = value - mean;
+                mean += delta / (i + 1);
+                sumSquaredDiff += delta * (value - mean);
+            } else {
+                const removed = values[i - length];
+                const previousMean = mean;
+                mean += (value - removed) / length;
+                sumSquaredDiff += (value - removed) * (value - mean + removed - previousMean);
+            }
+            // max(0, …) menahan nilai negatif super kecil akibat pembulatan floating point.
+            if (i >= length - 1) out[i] = Math.sqrt(Math.max(0, sumSquaredDiff) / length);
+        }
+        return out;
+    }
+
+    /**
      * @param {MovingAverageType} type
      * @param {readonly number[]} values
      * @param {number} length
@@ -262,6 +293,31 @@
     }
 
     /**
+     * Bollinger Bands dari Point series lain (mis. "SMA + Bollinger Bands" di atas RSI):
+     * basis = SMA(length), band = basis ± multiplier × stdev(length).
+     * @param {readonly Point[]} points
+     * @param {number} length
+     * @param {number} multiplier
+     * @returns {{ basis: Point[], upper: Point[], lower: Point[] }}
+     */
+    function bollingerPoints(points, length, multiplier) {
+        const times = points.map((p) => p.time);
+        const values = points.map((p) => p.value);
+        const basis = sma(values, length);
+        const deviation = stdev(values, length);
+        /** @param {number} sign @returns {Series} */
+        const band = (sign) => basis.map((b, i) => {
+            const d = deviation[i];
+            return b === null || d === null ? null : b + sign * multiplier * d;
+        });
+        return {
+            basis: toPoints(times, basis),
+            upper: toPoints(times, band(1)),
+            lower: toPoints(times, band(-1)),
+        };
+    }
+
+    /**
      * Geser Point sejumlah `offset` bar (input "Offset"); titik yang keluar dari rentang candle dibuang.
      * @param {readonly Point[]} points
      * @param {number} offset positif = ke kanan, negatif = ke kiri
@@ -291,10 +347,12 @@
         rma,
         wma,
         vwma,
+        stdev,
         movingAverage,
         smaPoints,
         rsiPoints,
         smoothPoints,
+        bollingerPoints,
         shiftPoints,
     });
 
