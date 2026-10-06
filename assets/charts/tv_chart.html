@@ -9874,6 +9874,14 @@
             maColor: '#2962FF',
         });
 
+        // Format volume ringkas 3 digit signifikan (44.9B, 4.75K) seperti TradingView; precision tidak berlaku.
+        const VOLUME_NUMBER_FORMAT = new Intl.NumberFormat('en-US', { notation: 'compact', maximumSignificantDigits: 3 });
+        const VOLUME_PRICE_FORMAT = Object.freeze({
+            type: 'custom',
+            minMove: 1,
+            formatter: (value) => VOLUME_NUMBER_FORMAT.format(value),
+        });
+
         function normalizeVolumeConfig(item) {
             const volume = item.volume || {};
             return {
@@ -9899,9 +9907,7 @@
             const cfg = normalizeVolumeConfig(item);
             const isVisible = item.isVisible !== false;
             const maStyle = item.smoothingStyle || {};
-            const priceFormat = item.volume?.compactFormat === false
-                ? buildPriceFormat(item.precisionDigits)
-                : { type: 'volume' };
+            const priceFormat = VOLUME_PRICE_FORMAT;
             const lastValueVisible = Boolean(item.labelsOnPriceScale);
             const priceScaleId = 'volume-scale-' + item.id;
 
@@ -9968,22 +9974,28 @@
 
         // ===== Nilai indikator untuk status line (legend) di Flutter =====
 
-        function getSeriesValue(series, param) {
+        function getSeriesPoint(series, param) {
             if (!series || !series.options().visible) return null;
             const point = param
                 ? param.seriesData.get(series)
                 : series.dataByIndex(Number.MAX_SAFE_INTEGER, LightweightCharts.MismatchDirection.NearestLeft);
-            return (point && typeof point.value === 'number') ? point.value : null;
+            return (point && typeof point.value === 'number') ? point : null;
         }
 
         // param = event crosshair; null = pakai nilai bar terakhir.
+        // Payload per id: { values: [...], isGrowing?: bool } (isGrowing khusus Volume, untuk warna legend).
         function emitIndicatorValues(param) {
             const ids = Object.keys(activeIndicatorSeriesMap);
             if (ids.length === 0) return;
             const values = {};
             for (const id of ids) {
                 const entry = activeIndicatorSeriesMap[id];
-                values[id] = entry.plots.map(series => getSeriesValue(series, param));
+                const points = entry.plots.map(series => getSeriesPoint(series, param));
+                const snapshot = { values: points.map(point => point ? point.value : null) };
+                if (entry.type === 'vol' && points[0]) {
+                    snapshot.isGrowing = points[0].color === entry.volumeConfig.growingColor;
+                }
+                values[id] = snapshot;
             }
             const payload = JSON.stringify(values);
             if (window.flutter_inappwebview?.callHandler) {

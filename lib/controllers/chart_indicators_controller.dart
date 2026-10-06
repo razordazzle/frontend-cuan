@@ -35,7 +35,9 @@ class ChartIndicatorsController extends ChangeNotifier {
   /// Nilai plot terkini dari chart (ikut crosshair). Dipisah dari [notifyListeners]
   /// karena update-nya sangat sering dan cukup me-rebuild legend saja.
   final ValueNotifier<IndicatorPlotValues> plotValues =
-      ValueNotifier<IndicatorPlotValues>(const <String, List<double?>>{});
+      ValueNotifier<IndicatorPlotValues>(
+        const <String, IndicatorPlotSnapshot>{},
+      );
 
   List<ActiveChartIndicator> _indicators = const <ActiveChartIndicator>[];
   String? _selectedId;

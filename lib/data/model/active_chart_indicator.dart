@@ -4,8 +4,29 @@ import '../../utils/css_color.dart';
 import 'indicator_level.dart';
 import 'indicator_line_style.dart';
 
-/// Nilai plot indikator per id indikator (mis. SMA: [MA, Smoothing MA]); null = tidak ada nilai.
-typedef IndicatorPlotValues = Map<String, List<double?>>;
+/// Nilai plot satu indikator pada bar crosshair (atau bar terakhir).
+class IndicatorPlotSnapshot {
+  /// Urutan sesuai plot di chart (mis. SMA: [MA, Smoothing MA]); null = tidak ada nilai.
+  final List<double?> values;
+
+  /// Khusus Volume: arah bar (true naik, false turun); null untuk indikator lain.
+  final bool? isGrowing;
+
+  const IndicatorPlotSnapshot({required this.values, this.isGrowing});
+
+  /// JSON dari chart: `{ "values": [num|null, ...], "isGrowing"?: bool }`.
+  factory IndicatorPlotSnapshot.fromJson(Map<String, dynamic> json) =>
+      IndicatorPlotSnapshot(
+        values: <double?>[
+          for (final dynamic value in json['values'] as List<dynamic>)
+            (value as num?)?.toDouble(),
+        ],
+        isGrowing: json['isGrowing'] as bool?,
+      );
+}
+
+/// Snapshot plot per id indikator.
+typedef IndicatorPlotValues = Map<String, IndicatorPlotSnapshot>;
 
 class ActiveChartIndicator {
   /// Jumlah desimal saat precision = 'Default'.
@@ -193,6 +214,7 @@ class ActiveChartIndicator {
   /// Input smoothing sengaja tidak dimasukkan supaya legend tetap ringkas.
   String get inputsTitle => switch (type) {
     'sma' || 'rsi' => '$shortTitle $period ${source.toLowerCase()}',
+    'vol' => '$shortTitle $period',
     _ => shortTitle,
   };
 
