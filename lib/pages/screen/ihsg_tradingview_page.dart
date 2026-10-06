@@ -333,9 +333,11 @@ class _IhsgTradingViewPageState extends State<IhsgTradingViewPage> {
 
                       // Active Indicators Legend di Pojok Kiri Atas Chart (ala TradingView)
                       if (!_isChartModalOpen)
+                        // right membatasi lebar legend supaya judul panjang terpotong, bukan keluar layar.
                         Positioned(
                           top: 10,
                           left: 10,
+                          right: 10,
                           child: ChartIndicatorsLegend(
                             selectedId: _indicators.selectedId,
                             onSelectionChanged: _indicators.select,

@@ -407,13 +407,17 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Text(
-              title,
-              style: TextStyle(
-                color: isHidden ? mutedColor : textColor,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w500,
-                decoration: TextDecoration.none,
+            Flexible(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isHidden ? mutedColor : textColor,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500,
+                  decoration: TextDecoration.none,
+                ),
               ),
             ),
             if (values != null) ...<Widget>[const SizedBox(width: 6), values],
@@ -479,14 +483,18 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            // Nama Indikator
-            Text(
-              title,
-              style: TextStyle(
-                color: isHidden ? mutedColor : textColor,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                decoration: TextDecoration.none,
+            // Nama Indikator (dipotong kalau panjang supaya tombol aksi selalu terlihat)
+            Flexible(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isHidden ? mutedColor : textColor,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.none,
+                ),
               ),
             ),
             if (values != null) ...<Widget>[const SizedBox(width: 6), values],

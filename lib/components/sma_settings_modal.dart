@@ -58,7 +58,7 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
       color: ind.color ?? const Color(0xFF2962FF),
       lineWidth: ind.lineWidth,
       lineStyle: ind.lineStyle,
-      isVisible: ind.isVisible,
+      isVisible: ind.isLineVisible,
     );
     _smoothingStyle = ind.smoothingStyle;
     _output = IndicatorOutputSettings.of(ind);
@@ -85,7 +85,7 @@ class _SmaSettingsModalState extends State<SmaSettingsModal> {
           ind.smoothingLength,
         ),
         smoothingStyle: _smoothingStyle,
-        isVisible: _maStyle.isVisible,
+        isLineVisible: _maStyle.isVisible,
         color: _maStyle.color,
         lineWidth: _maStyle.lineWidth,
         lineStyle: _maStyle.lineStyle,

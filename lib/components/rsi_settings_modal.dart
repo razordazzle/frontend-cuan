@@ -98,7 +98,7 @@ class _RsiSettingsModalState extends State<RsiSettingsModal> {
       color: ind.color ?? const Color(0xFFE91E63),
       lineWidth: ind.lineWidth,
       lineStyle: ind.lineStyle,
-      isVisible: ind.isVisible,
+      isVisible: ind.isLineVisible,
     );
     _smoothingStyle = ind.smoothingStyle;
     _bollingerStyle = ind.bollingerStyle;
@@ -135,7 +135,7 @@ class _RsiSettingsModalState extends State<RsiSettingsModal> {
           ind.smoothingLength,
         ),
         bbStdDev: bbStdDev > 0 ? bbStdDev : ind.bbStdDev,
-        isVisible: _rsiStyle.isVisible,
+        isLineVisible: _rsiStyle.isVisible,
         color: _rsiStyle.color,
         lineWidth: _rsiStyle.lineWidth,
         lineStyle: _rsiStyle.lineStyle,

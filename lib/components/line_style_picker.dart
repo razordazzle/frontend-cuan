@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../data/model/indicator_line_style.dart';
@@ -156,7 +158,7 @@ class LineStylePreview extends StatelessWidget {
 }
 
 /// Buka popover color picker ala TradingView (palet 10x8, recent colors, opacity,
-/// ketebalan, jenis garis) tepat di bawah widget [anchorKey].
+/// ketebalan, jenis garis) menempel ke widget [anchorKey].
 ///
 /// [onChanged] dipanggil setiap kali user mengubah nilai (live preview).
 /// [showLineOptions] false = hanya warna & opacity (mis. untuk isian background).
@@ -171,34 +173,11 @@ Future<void> showLineStylePicker({
   final RenderBox? anchor =
       anchorKey.currentContext?.findRenderObject() as RenderBox?;
   final MediaQueryData mediaQuery = MediaQuery.of(context);
-  final Size screen = mediaQuery.size;
-  const double verticalGap = 6.0;
-
+  final Rect anchorRect = anchor != null
+      ? anchor.localToGlobal(Offset.zero) & anchor.size
+      : Rect.fromLTWH(mediaQuery.size.width - 16, 180, 0, 0);
   // Lebar persis tv-trendline-style-popover di tv_chart.html (310px).
-  final double popoverWidth = 310.0.clamp(280.0, screen.width - 24.0);
-  final Offset anchorOrigin = anchor?.localToGlobal(Offset.zero) ?? Offset.zero;
-
-  // Tepat di bawah swatch + 6px, rata kanan dengan swatch.
-  double top = anchor != null
-      ? anchorOrigin.dy + anchor.size.height + verticalGap
-      : 180.0;
-  final double anchorRightInset = anchor != null
-      ? screen.width - (anchorOrigin.dx + anchor.size.width)
-      : 16.0;
-  final double right = anchorRightInset.clamp(
-    12.0,
-    screen.width - popoverWidth - 12.0,
-  );
-
-  // Kalau ruang di bawah sempit, tampilkan di atas swatch.
-  double maxHeight = screen.height - top - (mediaQuery.padding.bottom + 16.0);
-  if (maxHeight < 280 && anchor != null && anchorOrigin.dy > maxHeight) {
-    top = (anchorOrigin.dy - verticalGap - 480).clamp(
-      mediaQuery.padding.top + 16.0,
-      anchorOrigin.dy - verticalGap,
-    );
-    maxHeight = anchorOrigin.dy - verticalGap - top;
-  }
+  final double popoverWidth = 310.0.clamp(280.0, mediaQuery.size.width - 24.0);
 
   return showGeneralDialog<void>(
     context: context,
@@ -229,15 +208,18 @@ Future<void> showLineStylePicker({
                 onTap: () => Navigator.of(dialogContext).pop(),
               ),
             ),
-            Positioned(
-              top: top,
-              right: right,
-              width: popoverWidth,
-              child: _LineStylePickerPopover(
-                initialValue: initialValue,
-                onChanged: onChanged,
-                showLineOptions: showLineOptions,
-                maxHeight: maxHeight.clamp(200.0, 520.0),
+            Positioned.fill(
+              child: CustomSingleChildLayout(
+                delegate: _AnchoredPopoverLayout(
+                  anchor: anchorRect,
+                  safeArea: mediaQuery.padding,
+                  width: popoverWidth,
+                ),
+                child: _LineStylePickerPopover(
+                  initialValue: initialValue,
+                  onChanged: onChanged,
+                  showLineOptions: showLineOptions,
+                ),
               ),
             ),
           ],
@@ -245,17 +227,67 @@ Future<void> showLineStylePicker({
   );
 }
 
+/// Posisi popover setelah ukurannya diketahui (pola yang sama dengan PopupMenu Flutter):
+/// di bawah anchor kalau muat, kalau tidak di atasnya, kalau tetap tidak muat digeser
+/// supaya utuh di dalam layar. Rata kanan dengan anchor.
+class _AnchoredPopoverLayout extends SingleChildLayoutDelegate {
+  static const double _gap = 6;
+  static const double _margin = 12;
+
+  final Rect anchor;
+  final EdgeInsets safeArea;
+  final double width;
+
+  const _AnchoredPopoverLayout({
+    required this.anchor,
+    required this.safeArea,
+    required this.width,
+  });
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      BoxConstraints.tightFor(width: width).copyWith(
+        maxHeight: math.max(
+          0,
+          constraints.maxHeight - safeArea.vertical - 2 * _margin,
+        ),
+      );
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final double minTop = safeArea.top + _margin;
+    final double maxBottom = size.height - safeArea.bottom - _margin;
+    final double below = anchor.bottom + _gap;
+    final double above = anchor.top - _gap - childSize.height;
+
+    final double top = below + childSize.height <= maxBottom
+        ? below
+        : above >= minTop
+        ? above
+        : math.max(minTop, maxBottom - childSize.height);
+    final double left = (anchor.right - childSize.width).clamp(
+      _margin,
+      math.max(_margin, size.width - childSize.width - _margin),
+    );
+    return Offset(left, top);
+  }
+
+  @override
+  bool shouldRelayout(_AnchoredPopoverLayout oldDelegate) =>
+      anchor != oldDelegate.anchor ||
+      safeArea != oldDelegate.safeArea ||
+      width != oldDelegate.width;
+}
+
 class _LineStylePickerPopover extends StatefulWidget {
   final IndicatorLineStyle initialValue;
   final ValueChanged<IndicatorLineStyle> onChanged;
   final bool showLineOptions;
-  final double maxHeight;
 
   const _LineStylePickerPopover({
     required this.initialValue,
     required this.onChanged,
     required this.showLineOptions,
-    required this.maxHeight,
   });
 
   @override
@@ -356,7 +388,6 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
     return Material(
       type: MaterialType.transparency,
       child: Container(
-        constraints: BoxConstraints(maxHeight: widget.maxHeight),
         decoration: BoxDecoration(
           color: _popoverBg,
           borderRadius: BorderRadius.circular(12),
@@ -370,8 +401,9 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
           ],
         ),
         padding: const EdgeInsets.all(12),
+        // Scroll hanya cadangan untuk layar yang lebih pendek dari isi popover.
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
+          physics: const ClampingScrollPhysics(),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

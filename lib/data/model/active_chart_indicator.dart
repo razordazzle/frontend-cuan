@@ -22,7 +22,7 @@ class ActiveChartIndicator {
   );
   static const IndicatorLevel defaultMiddleLevel = IndicatorLevel(
     value: 50,
-    style: IndicatorLineStyle(color: Color(0x80787B86), lineStyle: 2),
+    style: IndicatorLineStyle(color: Color(0x80787B86), lineStyle: 1),
   );
   static const IndicatorLevel defaultLowerLevel = IndicatorLevel(
     value: 30,
@@ -59,6 +59,7 @@ class ActiveChartIndicator {
   set period(int val) => _period = val;
 
   int? _lineWidth;
+  bool? _isLineVisible;
   int? _lineStyle; // 0: solid, 1: dashed, 2: dotted
   String? _source; // 'Close', 'Open', 'High', 'Low', 'HL2', 'HLC3', 'OHLC4'
   int? _offset;
@@ -82,6 +83,10 @@ class ActiveChartIndicator {
 
   int get lineWidth => _lineWidth ?? 2;
   set lineWidth(int val) => _lineWidth = val;
+
+  /// Visibilitas garis utama saja (checkbox di tab Style); [isVisible] = seluruh indikator.
+  bool get isLineVisible => _isLineVisible ?? true;
+  set isLineVisible(bool val) => _isLineVisible = val;
 
   int get lineStyle => _lineStyle ?? 0;
   set lineStyle(int val) => _lineStyle = val;
@@ -164,14 +169,10 @@ class ActiveChartIndicator {
     _ => title,
   };
 
-  /// Judul dengan input, mis. "SMA 20 close" / "RSI 14 close SMA 14".
+  /// Judul dengan input utama, mis. "SMA 20 close" / "RSI 14 close".
+  /// Input smoothing sengaja tidak dimasukkan supaya legend tetap ringkas.
   String get inputsTitle => switch (type) {
-    'sma' || 'rsi' => <String>[
-      shortTitle,
-      '$period',
-      source.toLowerCase(),
-      if (hasSmoothing) '$smoothingType $smoothingLength',
-    ].join(' '),
+    'sma' || 'rsi' => '$shortTitle $period ${source.toLowerCase()}',
     _ => shortTitle,
   };
 
@@ -183,6 +184,7 @@ class ActiveChartIndicator {
     int? period,
     this.color,
     int? lineWidth,
+    bool? isLineVisible,
     int? lineStyle,
     String? source,
     int? offset,
@@ -204,6 +206,7 @@ class ActiveChartIndicator {
     String? plotType,
     bool? priceLine,
   }) : _period = period ?? 20,
+       _isLineVisible = isLineVisible ?? true,
        _lineWidth = lineWidth ?? 2,
        _lineStyle = lineStyle ?? 0,
        _source = source ?? 'Close',
@@ -234,6 +237,7 @@ class ActiveChartIndicator {
     int? period,
     Color? color,
     int? lineWidth,
+    bool? isLineVisible,
     int? lineStyle,
     String? source,
     int? offset,
@@ -263,6 +267,7 @@ class ActiveChartIndicator {
       period: period ?? this.period,
       color: color ?? this.color,
       lineWidth: lineWidth ?? this.lineWidth,
+      isLineVisible: isLineVisible ?? this.isLineVisible,
       lineStyle: lineStyle ?? this.lineStyle,
       source: source ?? this.source,
       offset: offset ?? this.offset,
@@ -298,6 +303,7 @@ class ActiveChartIndicator {
           period == other.period &&
           color == other.color &&
           lineWidth == other.lineWidth &&
+          isLineVisible == other.isLineVisible &&
           lineStyle == other.lineStyle &&
           source == other.source &&
           offset == other.offset &&
@@ -328,6 +334,7 @@ class ActiveChartIndicator {
     period,
     color,
     lineWidth,
+    isLineVisible,
     lineStyle,
     source,
     offset,
@@ -358,6 +365,7 @@ class ActiveChartIndicator {
     'period': period,
     'color': color?.toCssRgba(),
     'lineWidth': lineWidth,
+    'isLineVisible': isLineVisible,
     'lineStyle': lineStyle,
     'source': source,
     'offset': offset,
