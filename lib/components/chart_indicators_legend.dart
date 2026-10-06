@@ -949,7 +949,10 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
 
 /// Nilai plot indikator di status line, diwarnai sesuai warna garisnya.
 class _PlotValuesText extends StatelessWidget {
-  static final NumberFormat _compactFormat = NumberFormat.compact();
+  /// Format volume ringkas 3 digit signifikan (44.9B, 4.75K), sama dengan price scale di chart.
+  static final NumberFormat _volumeFormat = NumberFormat.compact(
+    locale: 'en_US',
+  )..significantDigits = 3;
 
   final ActiveChartIndicator indicator;
   final ValueListenable<IndicatorPlotValues> plotValues;
@@ -969,10 +972,8 @@ class _PlotValuesText extends StatelessWidget {
     _ => indicator.bollingerStyle.color,
   };
 
-  /// Volume dengan precision 'Default' memakai format ringkas (K/M/B) seperti TradingView.
-  String _format(double value) =>
-      indicator.type == 'vol' && indicator.precision == 'Default'
-      ? _compactFormat.format(value)
+  String _format(double value) => indicator.type == 'vol'
+      ? _volumeFormat.format(value)
       : value.toStringAsFixed(indicator.precisionDigits);
 
   @override

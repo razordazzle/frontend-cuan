@@ -29,6 +29,9 @@ class VolumeSettingsModal extends StatefulWidget {
 }
 
 class _VolumeSettingsModalState extends State<VolumeSettingsModal> {
+  /// Indent baris Growing/Falling agar sejajar label "Volume" (checkbox 19 + jarak 10).
+  static const EdgeInsets _subRowPadding = EdgeInsets.only(left: 29);
+
   // Inputs
   late final TextEditingController _maLengthController;
   late bool _colorByPreviousClose;
@@ -74,6 +77,23 @@ class _VolumeSettingsModalState extends State<VolumeSettingsModal> {
     widget.onSave(updated.copyWith(title: updated.inputsTitle));
   }
 
+  Widget _buildColorRow({
+    required String label,
+    required Color color,
+    required ValueChanged<Color> onChanged,
+  }) {
+    return Padding(
+      padding: _subRowPadding,
+      child: SettingsRow(
+        label: label,
+        control: FillColorSwatch(
+          color: color,
+          onChanged: (Color value) => setState(() => onChanged(value)),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return IndicatorSettingsSheet(
@@ -94,22 +114,24 @@ class _VolumeSettingsModalState extends State<VolumeSettingsModal> {
         const SizedBox(height: 20),
       ],
       style: <Widget>[
-        // Swatch kiri = batang turun (falling), kanan = batang naik (growing), sama seperti TradingView.
         ToggleStyleRow(
           label: 'Volume',
           isVisible: _isVolumeVisible,
           onVisibilityChanged: (bool visible) =>
               setState(() => _isVolumeVisible = visible),
-          controls: <Widget>[
-            FillColorSwatch(
-              color: _fallingColor,
-              onChanged: (Color color) => setState(() => _fallingColor = color),
-            ),
-            FillColorSwatch(
-              color: _growingColor,
-              onChanged: (Color color) => setState(() => _growingColor = color),
-            ),
-          ],
+          controls: const <Widget>[],
+        ),
+        const SizedBox(height: 12),
+        _buildColorRow(
+          label: 'Growing',
+          color: _growingColor,
+          onChanged: (Color color) => _growingColor = color,
+        ),
+        const SizedBox(height: 12),
+        _buildColorRow(
+          label: 'Falling',
+          color: _fallingColor,
+          onChanged: (Color color) => _fallingColor = color,
         ),
         const SizedBox(height: 16),
         PlotStyleRow(
@@ -123,6 +145,7 @@ class _VolumeSettingsModalState extends State<VolumeSettingsModal> {
           value: _output,
           onChanged: (IndicatorOutputSettings value) =>
               setState(() => _output = value),
+          showPrecision: false,
         ),
       ],
     );

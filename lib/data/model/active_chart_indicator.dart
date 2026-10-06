@@ -431,8 +431,6 @@ class ActiveChartIndicator {
         'growingColor': volumeGrowingColor.toCssRgba(),
         'fallingColor': volumeFallingColor.toCssRgba(),
         'colorByPreviousClose': colorByPreviousClose,
-        // 'Default' = format volume ringkas (K/M/B) seperti TradingView.
-        'compactFormat': precision == 'Default',
       },
     },
   };
