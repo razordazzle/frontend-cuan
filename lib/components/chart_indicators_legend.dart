@@ -949,7 +949,10 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
 
 /// Nilai plot indikator di status line, diwarnai sesuai warna garisnya.
 class _PlotValuesText extends StatelessWidget {
-  static final NumberFormat _compactFormat = NumberFormat.compact();
+  /// Format volume ringkas 3 digit signifikan (44.9B, 4.75K), sama dengan price scale di chart.
+  static final NumberFormat _volumeFormat = NumberFormat.compact(
+    locale: 'en_US',
+  )..significantDigits = 3;
 
   final ActiveChartIndicator indicator;
   final ValueListenable<IndicatorPlotValues> plotValues;
@@ -961,16 +964,22 @@ class _PlotValuesText extends StatelessWidget {
     required this.fallbackColor,
   });
 
-  /// Urutan plot dari chart: [garis utama, smoothing MA, Bollinger atas, Bollinger bawah].
-  Color _plotColor(int plotIndex) => switch ((indicator.type, plotIndex)) {
-    ('vol', _) => fallbackColor,
-    (_, 0) => indicator.color ?? fallbackColor,
+  /// Urutan plot dari chart: [garis utama, smoothing/Volume MA, Bollinger atas, Bollinger bawah].
+  /// Nilai Volume ikut warna bar-nya (dibuat opaque agar teks tetap terbaca).
+  Color _plotColor(int plotIndex, bool? isGrowing) =>
+      switch ((indicator.type, plotIndex)) {
+        ('vol', 0) => switch (isGrowing) {
+          true => indicator.volumeGrowingColor.withValues(alpha: 1),
+          false => indicator.volumeFallingColor.withValues(alpha: 1),
+          null => fallbackColor,
+        },
+        (_, 0) => indicator.color ?? fallbackColor,
     (_, 1) => indicator.smoothingStyle.color,
     _ => indicator.bollingerStyle.color,
   };
 
   String _format(double value) => indicator.type == 'vol'
-      ? _compactFormat.format(value)
+      ? _volumeFormat.format(value)
       : value.toStringAsFixed(indicator.precisionDigits);
 
   @override
@@ -980,9 +989,10 @@ class _PlotValuesText extends StatelessWidget {
     return ValueListenableBuilder<IndicatorPlotValues>(
       valueListenable: plotValues,
       builder: (BuildContext context, IndicatorPlotValues values, _) {
+        final IndicatorPlotSnapshot? snapshot = values[indicator.id];
+        if (snapshot == null) return const SizedBox.shrink();
         final List<(int, double)> visiblePlots = <(int, double)>[
-          for (final (int index, double? value)
-              in (values[indicator.id] ?? const <double?>[]).indexed)
+          for (final (int index, double? value) in snapshot.values.indexed)
             if (value != null) (index, value),
         ];
         if (visiblePlots.isEmpty) return const SizedBox.shrink();
@@ -994,7 +1004,9 @@ class _PlotValuesText extends StatelessWidget {
                   in visiblePlots.indexed)
                 TextSpan(
                   text: '${position > 0 ? ' ' : ''}${_format(value)}',
-                  style: TextStyle(color: _plotColor(plotIndex)),
+                  style: TextStyle(
+                    color: _plotColor(plotIndex, snapshot.isGrowing),
+                  ),
                 ),
             ],
           ),

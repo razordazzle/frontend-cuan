@@ -214,18 +214,16 @@ class _TvChartWidgetState extends State<TvChartWidget> {
     });
   }
 
-  /// Payload JS: JSON `{ "<id>": [nilaiPlot1, nilaiPlot2, ...] }`.
+  /// Payload JS: JSON `{ "<id>": { "values": [...], "isGrowing"?: bool } }`.
   void _emitIndicatorValues(Object? payload) {
     final ValueChanged<IndicatorPlotValues>? callback = widget.onIndicatorValues;
     if (callback == null || payload is! String) return;
     final Map<String, dynamic> decoded =
         jsonDecode(payload) as Map<String, dynamic>;
-    callback(<String, List<double?>>{
+    callback(<String, IndicatorPlotSnapshot>{
       for (final MapEntry<String, dynamic>(:String key, :dynamic value)
           in decoded.entries)
-        key: <double?>[
-          for (final dynamic v in value as List<dynamic>) (v as num?)?.toDouble(),
-        ],
+        key: IndicatorPlotSnapshot.fromJson(value as Map<String, dynamic>),
     });
   }
 

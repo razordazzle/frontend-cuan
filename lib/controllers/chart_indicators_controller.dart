@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
 import '../data/model/active_chart_indicator.dart';
+import '../data/model/indicator_line_style.dart';
 
 /// State indikator teknikal di halaman chart TradingView (saham & IHSG).
 ///
@@ -23,11 +24,20 @@ class ChartIndicatorsController extends ChangeNotifier {
     Color(0xFFFFD600),
   ];
   static const Color _defaultRsiColor = Color(0xFFE91E63);
+  static const int _defaultVolumeMaLength = 20;
+
+  /// Garis Volume MA default biru & tersembunyi (volume tampil seperti sebelumnya).
+  static const IndicatorLineStyle _defaultVolumeMaStyle = IndicatorLineStyle(
+    color: Color(0xFF2962FF),
+    isVisible: false,
+  );
 
   /// Nilai plot terkini dari chart (ikut crosshair). Dipisah dari [notifyListeners]
   /// karena update-nya sangat sering dan cukup me-rebuild legend saja.
   final ValueNotifier<IndicatorPlotValues> plotValues =
-      ValueNotifier<IndicatorPlotValues>(const <String, List<double?>>{});
+      ValueNotifier<IndicatorPlotValues>(
+        const <String, IndicatorPlotSnapshot>{},
+      );
 
   List<ActiveChartIndicator> _indicators = const <ActiveChartIndicator>[];
   String? _selectedId;
@@ -139,7 +149,14 @@ class ChartIndicatorsController extends ChangeNotifier {
         smoothingLength: _defaultRsiSmoothingLength,
         labelsOnPriceScale: true,
       ),
-      'vol' => ActiveChartIndicator(id: id, type: type, title: ''),
+      'vol' => ActiveChartIndicator(
+        id: id,
+        type: type,
+        title: '',
+        period: _defaultVolumeMaLength,
+        smoothingStyle: _defaultVolumeMaStyle,
+        labelsOnPriceScale: true,
+      ),
       _ => null,
     };
     return created?.copyWith(title: '${created.inputsTitle}$suffix');

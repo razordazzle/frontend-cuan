@@ -272,6 +272,21 @@
     }
 
     /**
+     * Volume per bar beserta arahnya (untuk warna batang volume).
+     * @param {readonly Candle[]} candles
+     * @param {boolean} byPreviousClose true: close dibanding close bar sebelumnya
+     *   ("Color based on previous close"); false: close dibanding open bar yang sama.
+     * @returns {Array<Point & { isGrowing: boolean }>}
+     */
+    function volumePoints(candles, byPreviousClose) {
+        return candles.map((candle, i) => ({
+            time: candle.time,
+            value: candle.volume || 0,
+            isGrowing: candle.close >= (byPreviousClose && i > 0 ? candles[i - 1].close : candle.open),
+        }));
+    }
+
+    /**
      * Moving average dari Point series lain (mis. garis "Smoothing MA" di atas SMA).
      * Volume untuk VWMA diambil dari candle dengan waktu yang sama.
      * @param {readonly Point[]} points
@@ -351,6 +366,7 @@
         movingAverage,
         smaPoints,
         rsiPoints,
+        volumePoints,
         smoothPoints,
         bollingerPoints,
         shiftPoints,

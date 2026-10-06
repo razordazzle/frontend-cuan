@@ -818,10 +818,14 @@ class OutputSettingsSection extends StatelessWidget {
   final IndicatorOutputSettings value;
   final ValueChanged<IndicatorOutputSettings> onChanged;
 
+  /// false untuk indikator yang formatnya tetap (mis. Volume selalu ringkas K/M/B).
+  final bool showPrecision;
+
   const OutputSettingsSection({
     super.key,
     required this.value,
     required this.onChanged,
+    this.showPrecision = true,
   });
 
   @override
@@ -831,17 +835,19 @@ class OutputSettingsSection extends StatelessWidget {
       children: <Widget>[
         const SettingsSectionHeader('OUTPUT VALUES'),
         const SizedBox(height: 16),
-        SettingsRow(
-          label: 'Precision',
-          control: SettingsSelect(
-            title: 'Precision',
-            value: value.precision,
-            items: SettingsOptions.precisions,
-            onChanged: (String precision) =>
-                onChanged(value.copyWith(precision: precision)),
+        if (showPrecision) ...<Widget>[
+          SettingsRow(
+            label: 'Precision',
+            control: SettingsSelect(
+              title: 'Precision',
+              value: value.precision,
+              items: SettingsOptions.precisions,
+              onChanged: (String precision) =>
+                  onChanged(value.copyWith(precision: precision)),
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
+          const SizedBox(height: 16),
+        ],
         SettingsCheckboxRow(
           label: 'Labels on price scale',
           value: value.labelsOnPriceScale,

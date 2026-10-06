@@ -275,6 +275,35 @@ describe('rsiPoints', () => {
   });
 });
 
+describe('volumePoints', () => {
+  const candles = [
+    { time: 1, open: 10, high: 12, low: 9, close: 11, volume: 100 },
+    { time: 2, open: 12, high: 12, low: 9, close: 10, volume: 200 },
+    { time: 3, open: 9, high: 11, low: 8, close: 10, volume: 300 },
+  ];
+
+  it('arah dibanding open bar yang sama', () => {
+    assert.deepEqual(Indicators.volumePoints(candles, false), [
+      { time: 1, value: 100, isGrowing: true },
+      { time: 2, value: 200, isGrowing: false },
+      { time: 3, value: 300, isGrowing: true },
+    ]);
+  });
+
+  it('arah dibanding close sebelumnya (bar pertama tetap vs open)', () => {
+    // bar 2: 10 < 11 turun; bar 3: 10 >= 10 naik (meskipun bar 2 close 10 > open bar 3 9)
+    assert.deepEqual(Indicators.volumePoints(candles, true).map((p) => p.isGrowing), [true, false, true]);
+    const flatThenDown = [candles[0], { ...candles[2], open: 5, close: 10.5 }];
+    // close 10.5 > open 5 (naik vs open) tapi < close sebelumnya 11 (turun vs previous close)
+    assert.deepEqual(Indicators.volumePoints(flatThenDown, false).map((p) => p.isGrowing), [true, true]);
+    assert.deepEqual(Indicators.volumePoints(flatThenDown, true).map((p) => p.isGrowing), [true, false]);
+  });
+
+  it('volume kosong dianggap 0', () => {
+    assert.equal(Indicators.volumePoints([{ time: 1, open: 1, high: 1, low: 1, close: 1 }], false)[0].value, 0);
+  });
+});
+
 describe('smoothPoints', () => {
   it('menerapkan moving average ke nilai Point & mempertahankan waktunya', () => {
     const points = [1, 2, 3, 4, 5].map((value, i) => ({ time: 10 + i, value }));
