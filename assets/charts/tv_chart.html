@@ -1113,7 +1113,7 @@
             width: 22px;
             height: 22px;
             border-radius: 5px;
-            background-color: #AB47BC;
+            background-color: #787B86;
             flex-shrink: 0;
         }
 
@@ -1727,7 +1727,7 @@
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12.5 2.5l3 3L5.5 15.5H2.5v-3L12.5 2.5z" />
                     </svg>
-                    <div id="tv-indicator-line-color" class="tv-color-underline" style="background-color: #7C4DFF;"></div>
+                    <div id="tv-indicator-line-color" class="tv-color-underline" style="background-color: #2962FF;"></div>
                 </div>
             </button>
 
@@ -2013,7 +2013,7 @@
                             <div id="tv-fib-trendline-pill-swatch" class="tv-fib-pill-swatch"></div>
                             <div id="tv-fib-trendline-pill-preview" class="tv-fib-pill-preview">
                                 <svg width="34" height="12" viewBox="0 0 34 12">
-                                    <line id="tv-fib-pill-line" x1="2" y1="6" x2="32" y2="6" stroke="#AB47BC" stroke-width="2" stroke-dasharray="5 3.5" />
+                                    <line id="tv-fib-pill-line" x1="2" y1="6" x2="32" y2="6" stroke="#787B86" stroke-width="2" stroke-dasharray="5 3.5" />
                                 </svg>
                             </div>
                         </button>
@@ -2062,7 +2062,7 @@
                     <span class="tv-fib-setting-left">Use one color</span>
                     <div class="tv-fib-setting-right">
                         <div class="tv-color-box-wrap">
-                            <button id="tv-fib-single-color-btn" class="tv-fib-swatch-btn" style="background-color: #AB47BC;"></button>
+                            <button id="tv-fib-single-color-btn" class="tv-fib-swatch-btn" style="background-color: #787B86;"></button>
                         </div>
                     </div>
                 </div>
@@ -2494,36 +2494,44 @@
             renderFib();
         }
 
+        // Warna default drawing tool, mengikuti default TradingView.
+        const DRAWING_COLORS = Object.freeze({
+            trendline: '#2962FF',
+            horizontalLine: '#2962FF',
+            rectangle: '#9C27B0',
+            fibonacci: '#787B86', // garis trend fib & mode "satu warna"
+        });
+
         const DEFAULT_FIB_LEVELS_CONFIG = [
-            { level: 0, enabled: true, color: '#AB47BC' },
-            { level: 0.236, enabled: false, color: '#AB47BC' },
-            { level: 0.382, enabled: false, color: '#AB47BC' },
-            { level: -0.27, enabled: true, color: '#AB47BC' },
-            { level: 0.618, enabled: true, color: '#AB47BC' },
-            { level: 0.786, enabled: true, color: '#AB47BC' },
-            { level: 1, enabled: true, color: '#AB47BC' },
-            { level: 1.618, enabled: false, color: '#AB47BC' },
-            { level: 2.618, enabled: false, color: '#AB47BC' },
-            { level: 3.618, enabled: false, color: '#AB47BC' },
-            { level: 4.236, enabled: false, color: '#AB47BC' },
-            { level: 1.272, enabled: false, color: '#AB47BC' },
-            { level: 1.414, enabled: false, color: '#AB47BC' },
-            { level: 2.272, enabled: false, color: '#AB47BC' },
-            { level: 2.414, enabled: false, color: '#AB47BC' },
-            { level: 2, enabled: false, color: '#AB47BC' },
-            { level: 3, enabled: false, color: '#AB47BC' },
-            { level: 3.272, enabled: false, color: '#AB47BC' },
-            { level: 3.414, enabled: false, color: '#AB47BC' },
-            { level: 4, enabled: false, color: '#AB47BC' },
-            { level: 4.272, enabled: false, color: '#AB47BC' },
-            { level: 4.414, enabled: false, color: '#AB47BC' },
-            { level: 4.618, enabled: false, color: '#AB47BC' },
-            { level: 4.764, enabled: false, color: '#AB47BC' }
+            { level: 0, enabled: true, color: '#787B86' },
+            { level: 0.236, enabled: false, color: '#F23645' },
+            { level: 0.382, enabled: false, color: '#FF9800' },
+            { level: -0.27, enabled: true, color: '#2962FF' },
+            { level: 0.618, enabled: true, color: '#089981' },
+            { level: 0.786, enabled: true, color: '#00BCD4' },
+            { level: 1, enabled: true, color: '#787B86' },
+            { level: 1.618, enabled: false, color: '#2962FF' },
+            { level: 2.618, enabled: false, color: '#F23645' },
+            { level: 3.618, enabled: false, color: '#9C27B0' },
+            { level: 4.236, enabled: false, color: '#E91E63' },
+            { level: 1.272, enabled: false, color: '#FF9800' },
+            { level: 1.414, enabled: false, color: '#F23645' },
+            { level: 2.272, enabled: false, color: '#FF9800' },
+            { level: 2.414, enabled: false, color: '#4CAF50' },
+            { level: 2, enabled: false, color: '#089981' },
+            { level: 3, enabled: false, color: '#00BCD4' },
+            { level: 3.272, enabled: false, color: '#787B86' },
+            { level: 3.414, enabled: false, color: '#2962FF' },
+            { level: 4, enabled: false, color: '#F23645' },
+            { level: 4.272, enabled: false, color: '#9C27B0' },
+            { level: 4.414, enabled: false, color: '#E91E63' },
+            { level: 4.618, enabled: false, color: '#FF9800' },
+            { level: 4.764, enabled: false, color: '#089981' }
         ];
 
         let fibSettings = {
             showTrendline: true,
-            trendlineColor: '#AB47BC',
+            trendlineColor: DRAWING_COLORS.fibonacci,
             trendlineOpacity: 1.0,
             trendlineStyle: 'dashed',
             trendlineWidth: 1,
@@ -2532,7 +2540,7 @@
             extend: 'none', // 'none', 'left', 'right', 'both'
             levels: JSON.parse(JSON.stringify(DEFAULT_FIB_LEVELS_CONFIG)),
             useOneColor: false,
-            singleColor: '#AB47BC',
+            singleColor: DRAWING_COLORS.fibonacci,
             showBackground: false,
             backgroundOpacity: 0.15,
             reverse: false,
@@ -2551,7 +2559,7 @@
         let isFibSettingsModalOpen = false;
 
         let lastTrendlineStyle = {
-            color: '#7C4DFF',
+            color: DRAWING_COLORS.trendline,
             width: 2,
             style: 'solid',
             opacity: 1.0
@@ -2825,7 +2833,7 @@
                 return {
                     id: 'hl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
                     price: item,
-                    color: '#00E5FF',
+                    color: DRAWING_COLORS.horizontalLine,
                     width: 2,
                     style: 'solid',
                     opacity: 1.0,
@@ -2844,7 +2852,7 @@
                 return {
                     id: item.id || ('hl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)),
                     price: typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0,
-                    color: item.color || '#00E5FF',
+                    color: item.color || DRAWING_COLORS.horizontalLine,
                     width: item.width || 2,
                     style: item.style || 'solid',
                     opacity: item.opacity !== undefined ? item.opacity : 1.0,
@@ -2868,10 +2876,10 @@
                     id: item.id || ('rect_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)),
                     p1: item.p1,
                     p2: item.p2,
-                    color: item.color || '#AB47BC',
+                    color: item.color || DRAWING_COLORS.rectangle,
                     width: item.width || 2,
                     style: item.style || 'solid',
-                    fillColor: item.fillColor || '#AB47BC',
+                    fillColor: item.fillColor || DRAWING_COLORS.rectangle,
                     fillOpacity: item.fillOpacity !== undefined ? item.fillOpacity : 0.2,
                     text: item.text || '',
                     textColor: item.textColor || '#FFFFFF',
@@ -2902,7 +2910,7 @@
             const toolbar = document.getElementById('tv-trendline-toolbar');
             if (!toolbar) return;
 
-            const lineColor = h.color || '#00E5FF';
+            const lineColor = h.color || DRAWING_COLORS.horizontalLine;
             const textColor = h.textColor || '#FFFFFF';
             const width = h.width || 2;
             const style = h.style || 'solid';
@@ -2970,7 +2978,7 @@
             const toolbar = document.getElementById('tv-trendline-toolbar');
             if (!toolbar) return;
 
-            const lineColor = t.color || '#7C4DFF';
+            const lineColor = t.color || DRAWING_COLORS.trendline;
             const textColor = t.textColor || '#FFFFFF';
             const width = t.width || 2;
             const style = t.style || 'solid';
@@ -3039,8 +3047,8 @@
             const toolbar = document.getElementById('tv-trendline-toolbar');
             if (!toolbar) return;
 
-            const lineColor = r.color || '#AB47BC';
-            const fillColor = r.fillColor || '#AB47BC';
+            const lineColor = r.color || DRAWING_COLORS.rectangle;
+            const fillColor = r.fillColor || DRAWING_COLORS.rectangle;
             const fillOpacity = (r.fillOpacity !== undefined) ? r.fillOpacity : 0.2;
             const textColor = r.textColor || '#FFFFFF';
             const width = r.width || 2;
@@ -3588,7 +3596,7 @@
             if (!pendingFibSettings) return;
             const swatch = document.getElementById('tv-fib-trendline-pill-swatch');
             const line = document.getElementById('tv-fib-pill-line');
-            const color = pendingFibSettings.trendlineColor || '#AB47BC';
+            const color = pendingFibSettings.trendlineColor || DRAWING_COLORS.fibonacci;
             const opacity = pendingFibSettings.trendlineOpacity !== undefined ? pendingFibSettings.trendlineOpacity : 1.0;
             const style = pendingFibSettings.trendlineStyle || 'dashed';
             const width = Math.max(1, Math.min(4, pendingFibSettings.trendlineWidth || 1));
@@ -3720,7 +3728,7 @@
             if (!pendingFibSettings) return;
             renderColorPickerPopover(
                 FIB_TRENDLINE_COLOR_PICKER,
-                pendingFibSettings.trendlineColor || '#AB47BC',
+                pendingFibSettings.trendlineColor || DRAWING_COLORS.fibonacci,
                 pendingFibSettings.trendlineOpacity !== undefined ? pendingFibSettings.trendlineOpacity : 1.0,
                 fibRecentTrendlineColors,
                 selectTrendlineColor,
@@ -3884,7 +3892,7 @@
 
             currentFibColorPickerTarget = targetBtn;
             currentFibColorPickerCallback = onColorChange;
-            currentFibColorPickerColor = (initialColor || '#AB47BC').toUpperCase();
+            currentFibColorPickerColor = (initialColor || DRAWING_COLORS.fibonacci).toUpperCase();
             currentFibColorPickerOpacity = initialOpacity !== undefined ? initialOpacity : 1.0;
             targetBtn.classList.add('active');
 
@@ -4081,7 +4089,7 @@
                 const swatchBtn = document.createElement('button');
                 swatchBtn.type = 'button';
                 swatchBtn.className = 'tv-fib-swatch-btn';
-                swatchBtn.style.backgroundColor = lvl.color || '#AB47BC';
+                swatchBtn.style.backgroundColor = lvl.color || DRAWING_COLORS.fibonacci;
 
                 swatchBtn.onclick = (e) => {
                     e.stopPropagation();
@@ -4167,7 +4175,7 @@
 
             // Populate Use one color
             const singleColorBtn = document.getElementById('tv-fib-single-color-btn');
-            if (singleColorBtn) singleColorBtn.style.backgroundColor = pendingFibSettings.singleColor || '#AB47BC';
+            if (singleColorBtn) singleColorBtn.style.backgroundColor = pendingFibSettings.singleColor || DRAWING_COLORS.fibonacci;
 
             // Populate Background & Opacity
             const bgCheck = document.getElementById('tv-fib-bg-check');
@@ -4251,7 +4259,7 @@
                     if (!pendingFibSettings) return;
                     const pct = parseInt(trendOpacitySlider.value, 10);
                     pendingFibSettings.trendlineOpacity = pct / 100;
-                    renderOpacityControls(FIB_TRENDLINE_COLOR_PICKER, pendingFibSettings.trendlineColor || '#AB47BC', pendingFibSettings.trendlineOpacity);
+                    renderOpacityControls(FIB_TRENDLINE_COLOR_PICKER, pendingFibSettings.trendlineColor || DRAWING_COLORS.fibonacci, pendingFibSettings.trendlineOpacity);
                     updateTrendlinePillUI();
                     commitFibSettings(pendingFibSettings);
                 };
@@ -4380,7 +4388,7 @@
                 singleColorBtn.onclick = (e) => {
                     e.stopPropagation();
                     if (!pendingFibSettings) return;
-                    openFibColorPicker(singleColorBtn, pendingFibSettings.singleColor || '#AB47BC', 1.0, (c, op) => {
+                    openFibColorPicker(singleColorBtn, pendingFibSettings.singleColor || DRAWING_COLORS.fibonacci, 1.0, (c, op) => {
                         pendingFibSettings.singleColor = c;
                         pendingFibSettings.useOneColor = true;
                         pendingFibSettings.trendlineColor = c;
@@ -5233,10 +5241,10 @@
                 } else if (colorHex === null) {
                     // Reset to rainbow
                     fibCustomColor = null;
-                    fibSettings.trendlineColor = '#AB47BC';
+                    fibSettings.trendlineColor = DRAWING_COLORS.fibonacci;
                     fibSettings.useOneColor = false;
                     if (pendingFibSettings) {
-                        pendingFibSettings.trendlineColor = '#AB47BC';
+                        pendingFibSettings.trendlineColor = DRAWING_COLORS.fibonacci;
                         pendingFibSettings.useOneColor = false;
                     }
                     const lineInd = document.getElementById('tv-indicator-line-color');
@@ -5283,17 +5291,17 @@
                 }
                 const lineInd = document.getElementById('tv-indicator-line-color');
                 if (lineInd && drawing.color) lineInd.style.backgroundColor = drawing.color;
-                updateSliderGradient(drawing.color || (isHLine ? '#00E5FF' : (isRect ? '#AB47BC' : '#7C4DFF')));
+                updateSliderGradient(drawing.color || (isHLine ? DRAWING_COLORS.horizontalLine : (isRect ? DRAWING_COLORS.rectangle : DRAWING_COLORS.trendline)));
             } else if (activeColorPickerTarget === 'fill') {
                 if (colorHex) drawing.fillColor = colorHex;
                 if (opacityVal !== undefined) drawing.fillOpacity = opacityVal;
                 const fillInd = document.getElementById('tv-indicator-fill-color');
                 if (fillInd) {
-                    const curFill = drawing.fillColor || '#AB47BC';
+                    const curFill = drawing.fillColor || DRAWING_COLORS.rectangle;
                     const curOp = drawing.fillOpacity !== undefined ? drawing.fillOpacity : 0.2;
                     fillInd.style.backgroundColor = hexToRgba(curFill, curOp);
                 }
-                updateSliderGradient(drawing.fillColor || '#AB47BC');
+                updateSliderGradient(drawing.fillColor || DRAWING_COLORS.rectangle);
             } else if (activeColorPickerTarget === 'text') {
                 if (colorHex) {
                     drawing.textColor = colorHex;
@@ -5308,9 +5316,9 @@
             // Update swatch selection highlight
             let activeColor = '#FFFFFF';
             if (activeColorPickerTarget === 'line') {
-                activeColor = drawing.color || (isHLine ? '#00E5FF' : (isRect ? '#AB47BC' : '#7C4DFF'));
+                activeColor = drawing.color || (isHLine ? DRAWING_COLORS.horizontalLine : (isRect ? DRAWING_COLORS.rectangle : DRAWING_COLORS.trendline));
             } else if (activeColorPickerTarget === 'fill') {
-                activeColor = drawing.fillColor || '#AB47BC';
+                activeColor = drawing.fillColor || DRAWING_COLORS.rectangle;
             } else {
                 activeColor = drawing.textColor || '#FFFFFF';
             }
@@ -5496,7 +5504,7 @@
                 const cloned = {
                     id: 'hl_' + Date.now(),
                     price: src.price + priceOffset,
-                    color: src.color || '#00E5FF',
+                    color: src.color || DRAWING_COLORS.horizontalLine,
                     width: src.width || 2,
                     style: src.style || 'solid',
                     opacity: src.opacity !== undefined ? src.opacity : 1.0,
@@ -5541,7 +5549,7 @@
                     id: 'tl_' + Date.now(),
                     p1: { time: src.p1.time, price: src.p1.price + priceOffset },
                     p2: { time: src.p2.time, price: src.p2.price + priceOffset },
-                    color: src.color || '#7C4DFF',
+                    color: src.color || DRAWING_COLORS.trendline,
                     width: src.width || 2,
                     style: src.style || 'solid',
                     opacity: src.opacity !== undefined ? src.opacity : 1.0,
@@ -5588,10 +5596,10 @@
                     id: 'rect_' + Date.now(),
                     p1: { time: src.p1.time, price: src.p1.price + priceOffset },
                     p2: { time: src.p2.time, price: src.p2.price + priceOffset },
-                    color: src.color || '#AB47BC',
+                    color: src.color || DRAWING_COLORS.rectangle,
                     width: src.width || 2,
                     style: src.style || 'solid',
-                    fillColor: src.fillColor || '#AB47BC',
+                    fillColor: src.fillColor || DRAWING_COLORS.rectangle,
                     fillOpacity: (src.fillOpacity !== undefined) ? src.fillOpacity : 0.2,
                     text: src.text || '',
                     textColor: src.textColor || '#FFFFFF',
@@ -5757,7 +5765,7 @@
                     }
                     if (active) {
                         const d = active.drawing;
-                        const curColor = d.color || (active.isFib ? '#00BCD4' : (active.isHLine ? '#00E5FF' : '#7C4DFF'));
+                        const curColor = d.color || (active.isFib ? '#00BCD4' : (active.isHLine ? DRAWING_COLORS.horizontalLine : DRAWING_COLORS.trendline));
                         const curOp = (d.opacity !== undefined) ? Math.round(d.opacity * 100) : 100;
                         if (opSlider) opSlider.value = curOp;
                         if (opVal) opVal.textContent = curOp + '%';
@@ -5786,7 +5794,7 @@
                     const active = getActiveDrawing();
                     if (active) {
                         const d = active.drawing;
-                        const curColor = d.fillColor || '#AB47BC';
+                        const curColor = d.fillColor || DRAWING_COLORS.rectangle;
                         const curOp = (d.fillOpacity !== undefined) ? Math.round(d.fillOpacity * 100) : 20;
                         if (opSlider) opSlider.value = curOp;
                         if (opVal) opVal.textContent = curOp + '%';
@@ -6902,7 +6910,7 @@
                         const newHLine = normalizeHorizontalLine({
                             id: 'hl_' + Date.now(),
                             price: price,
-                            color: lastHLineStyle.color || '#00E5FF',
+                            color: lastHLineStyle.color || DRAWING_COLORS.horizontalLine,
                             width: lastHLineStyle.width || 2,
                             style: lastHLineStyle.style || 'solid',
                             opacity: lastHLineStyle.opacity !== undefined ? lastHLineStyle.opacity : 1.0,
@@ -7002,7 +7010,7 @@
                                     id: 'tl_' + Date.now(),
                                     p1: tempTrendlineP1,
                                     p2: { time: finalTime, price: finalPrice },
-                                    color: lastTrendlineStyle.color || '#7C4DFF',
+                                    color: lastTrendlineStyle.color || DRAWING_COLORS.trendline,
                                     width: lastTrendlineStyle.width || 2,
                                     style: lastTrendlineStyle.style || 'solid',
                                     opacity: lastTrendlineStyle.opacity !== undefined ? lastTrendlineStyle.opacity : 1.0,
@@ -7058,10 +7066,10 @@
                                     id: 'rect_' + Date.now(),
                                     p1: tempRectangleP1,
                                     p2: { time, price },
-                                    color: '#AB47BC',
+                                    color: DRAWING_COLORS.rectangle,
                                     width: 2,
                                     style: 'solid',
-                                    fillColor: '#AB47BC',
+                                    fillColor: DRAWING_COLORS.rectangle,
                                     fillOpacity: 0.2,
                                     text: '',
                                     textColor: '#FFFFFF',
@@ -7839,7 +7847,7 @@
                             id: 'tl_' + Date.now(),
                             p1: tempTrendlineP1,
                             p2: tempTrendlineP2,
-                            color: lastTrendlineStyle.color || '#7C4DFF',
+                            color: lastTrendlineStyle.color || DRAWING_COLORS.trendline,
                             width: lastTrendlineStyle.width || 2,
                             style: lastTrendlineStyle.style || 'solid',
                             opacity: lastTrendlineStyle.opacity !== undefined ? lastTrendlineStyle.opacity : 1.0,
@@ -7885,10 +7893,10 @@
                             id: 'rect_' + Date.now(),
                             p1: tempRectangleP1,
                             p2: tempRectangleP2,
-                            color: '#AB47BC',
+                            color: DRAWING_COLORS.rectangle,
                             width: 2,
                             style: 'solid',
-                            fillColor: '#AB47BC',
+                            fillColor: DRAWING_COLORS.rectangle,
                             fillOpacity: 0.2,
                             text: '',
                             textColor: '#FFFFFF',
@@ -8030,7 +8038,7 @@
                 const price = getPriceAtY(hy);
 
                 ctx.save();
-                ctx.strokeStyle = isDrawingTrendline ? hexToRgba(lastTrendlineStyle.color || '#7C4DFF', 0.85) : (isDrawingRectangle ? 'rgba(171, 71, 188, 0.85)' : (currentCrosshairColor || 'rgba(255, 255, 255, 0.85)'));
+                ctx.strokeStyle = isDrawingTrendline ? hexToRgba(lastTrendlineStyle.color || DRAWING_COLORS.trendline, 0.85) : (isDrawingRectangle ? hexToRgba(DRAWING_COLORS.rectangle, 0.85) : (currentCrosshairColor || 'rgba(255, 255, 255, 0.85)'));
                 ctx.lineWidth = 1;
                 ctx.setLineDash([6, 6]);
 
@@ -8063,7 +8071,7 @@
                     if (y === null || y < 0 || y > height) continue;
 
                     const isSelected = (i === selectedHorizontalLineIndex);
-                    const lineColor = (typeof h === 'object' && h.color) ? h.color : '#00E5FF';
+                    const lineColor = (typeof h === 'object' && h.color) ? h.color : DRAWING_COLORS.horizontalLine;
                     const lineWidth = (typeof h === 'object' && h.width) ? h.width : 2;
                     const lineOpacity = (typeof h === 'object' && h.opacity !== undefined) ? h.opacity : 1.0;
                     const lineStyle = (typeof h === 'object' && h.style) ? h.style : 'solid';
@@ -8181,7 +8189,7 @@
                     if (x1 === null || y1 === null || x2 === null || y2 === null) continue;
 
                     const isSelected = (i === selectedTrendlineIndex);
-                    const lineColor = t.color || '#7C4DFF';
+                    const lineColor = t.color || DRAWING_COLORS.trendline;
                     const lineWidth = t.width || 2;
                     const lineStyle = t.style || 'solid';
                     const lineOpacity = (t.opacity !== undefined) ? t.opacity : 1.0;
@@ -8355,7 +8363,7 @@
                 const y2 = activeSeries.priceToCoordinate(tempTrendlineP2.price);
                 if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
                     ctx.save();
-                    const tlColor = lastTrendlineStyle.color || '#7C4DFF';
+                    const tlColor = lastTrendlineStyle.color || DRAWING_COLORS.trendline;
                     const tlWidth = lastTrendlineStyle.width || 2.0;
                     const tlOpacity = lastTrendlineStyle.opacity !== undefined ? lastTrendlineStyle.opacity : 1.0;
                     const tlStyle = lastTrendlineStyle.style || 'solid';
@@ -8421,14 +8429,14 @@
                     const isSelected = (i === selectedRectangleIndex);
 
                     // Translucent fill
-                    const fColor = r.fillColor || '#AB47BC';
+                    const fColor = r.fillColor || DRAWING_COLORS.rectangle;
                     const fOp = (r.fillOpacity !== undefined) ? r.fillOpacity : 0.2;
                     ctx.fillStyle = hexToRgba(fColor, fOp);
                     ctx.fillRect(left, top, boxW, boxH);
 
                     // Border stroke
                     ctx.beginPath();
-                    ctx.strokeStyle = r.color || '#AB47BC';
+                    ctx.strokeStyle = r.color || DRAWING_COLORS.rectangle;
                     ctx.lineWidth = r.width || 2;
                     if (r.style === 'dashed') {
                         ctx.setLineDash([6, 5]);
@@ -8493,7 +8501,7 @@
                             { x: left, y: bottom }
                         ];
 
-                        const handleColor = r.color || '#AB47BC';
+                        const handleColor = r.color || DRAWING_COLORS.rectangle;
                         corners.forEach(c => {
                             ctx.save();
                             ctx.beginPath();
@@ -8535,19 +8543,19 @@
                     const boxH = Math.max(1, bottom - top);
 
                     // Fill preview
-                    ctx.fillStyle = 'rgba(171, 71, 188, 0.16)';
+                    ctx.fillStyle = hexToRgba(DRAWING_COLORS.rectangle, 0.16);
                     ctx.fillRect(left, top, boxW, boxH);
 
                     // Dashed border preview
                     ctx.beginPath();
                     ctx.setLineDash([5, 4]);
-                    ctx.strokeStyle = '#AB47BC';
+                    ctx.strokeStyle = DRAWING_COLORS.rectangle;
                     ctx.lineWidth = 1.8;
                     ctx.strokeRect(left, top, boxW, boxH);
                     ctx.setLineDash([]);
 
                     // Corner 1 dot
-                    ctx.fillStyle = '#AB47BC';
+                    ctx.fillStyle = DRAWING_COLORS.rectangle;
                     ctx.beginPath();
                     ctx.arc(x1, y1, 6, 0, Math.PI * 2);
                     ctx.fill();
@@ -8557,7 +8565,7 @@
                     ctx.fill();
 
                     // Corner 2 (cursor) dot
-                    ctx.fillStyle = '#AB47BC';
+                    ctx.fillStyle = DRAWING_COLORS.rectangle;
                     ctx.beginPath();
                     ctx.arc(x2, y2, 6, 0, Math.PI * 2);
                     ctx.fill();
@@ -8678,9 +8686,9 @@
                         }
                     }
                     const y = candleSeries.priceToCoordinate(price);
-                    let color = item.color || '#AB47BC';
+                    let color = item.color || DRAWING_COLORS.fibonacci;
                     if (fSettings.useOneColor) {
-                        color = fSettings.singleColor || '#AB47BC';
+                        color = fSettings.singleColor || DRAWING_COLORS.fibonacci;
                     }
                     levelYs.push({ ...item, price, y, color });
                 }
@@ -8789,7 +8797,7 @@
                 if (fSettings.showTrendline) {
                     ctx.save();
                     ctx.beginPath();
-                    const tColor = fSettings.trendlineColor || fCustomColor || '#AB47BC';
+                    const tColor = fSettings.trendlineColor || fCustomColor || DRAWING_COLORS.fibonacci;
                     const tOpacity = fSettings.trendlineOpacity !== undefined ? fSettings.trendlineOpacity : 1.0;
                     ctx.strokeStyle = hexToRgba(tColor, tOpacity);
                     const tWidth = fSettings.trendlineWidth || 1;
@@ -8890,7 +8898,7 @@
                     const y = activeSeries.priceToCoordinate(price);
                     if (y === null || y < 0 || y > pane0Height) continue;
 
-                    const lineColor = (typeof h === 'object' && h.color) ? h.color : '#00E5FF';
+                    const lineColor = (typeof h === 'object' && h.color) ? h.color : DRAWING_COLORS.horizontalLine;
                     const text = formatPrice(price);
                     if (!text) continue;
 
@@ -8942,7 +8950,7 @@
                         const badgeX = Math.min(maxContentX, Math.round(width - 2 - neededW));
                         const badgeWidth = Math.round(width - 2 - badgeX);
 
-                        ctx.fillStyle = isDrawingTrendline ? (lastTrendlineStyle.color || '#7C4DFF') : (isDrawingRectangle ? '#AB47BC' : (isDrawingHorizontalLine ? (lastHLineStyle.color || '#00E5FF') : '#2962FF'));
+                        ctx.fillStyle = isDrawingTrendline ? (lastTrendlineStyle.color || DRAWING_COLORS.trendline) : (isDrawingRectangle ? DRAWING_COLORS.rectangle : (isDrawingHorizontalLine ? (lastHLineStyle.color || DRAWING_COLORS.horizontalLine) : '#2962FF'));
                         ctx.beginPath();
                         if (ctx.roundRect) {
                             ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, [0, 4, 4, 0]);
@@ -9697,6 +9705,7 @@
                 ma = Indicators.smoothPoints(rsi, cfg.smoothingType, cfg.smoothingLength, rawCandlesData);
             }
             entry.series.setData(rsi);
+            entry.levelHost.setData(rsi);
             entry.overboughtFill.setData(rsi);
             entry.oversoldFill.setData(rsi);
             entry.maSeries.setData(ma);
@@ -9926,7 +9935,19 @@
                     ? ['upper', 'middle', 'lower'].filter((key) => levels[key].isVisible !== false).map((key) => levels[key].value)
                     : [],
             );
-            for (const options of [rsiOptions, maOptions, bandOptions]) {
+            // Level & fill menempel ke series penampung (garis transparan), bukan ke garis RSI,
+            // karena price line & primitive ikut tersembunyi bersama series tempatnya menempel.
+            const levelHostOptions = {
+                color: 'rgba(0, 0, 0, 0)',
+                lineWidth: 1,
+                title: '',
+                priceLineVisible: false,
+                lastValueVisible: false,
+                crosshairMarkerVisible: false,
+                priceFormat: priceFormat,
+                visible: isVisible,
+            };
+            for (const options of [rsiOptions, maOptions, bandOptions, levelHostOptions]) {
                 options.autoscaleInfoProvider = autoscaleInfoProvider;
             }
 
@@ -9935,7 +9956,8 @@
                 entry.maSeries.applyOptions(maOptions);
                 entry.upperBandSeries.applyOptions(bandOptions);
                 entry.lowerBandSeries.applyOptions(bandOptions);
-                for (const series of entry.plots) moveSeriesToPane(series, paneIndex);
+                entry.levelHost.applyOptions(levelHostOptions);
+                for (const series of allSeriesOf(entry)) moveSeriesToPane(series, paneIndex);
                 for (const key of ['upper', 'middle', 'lower']) {
                     entry.levelLines[key].applyOptions(levelLineOptions(levels[key], isVisible, labels));
                 }
@@ -9944,24 +9966,25 @@
                 const priceScaleId = 'rsi-scale-' + item.id;
                 const addLine = (options) =>
                     chart.addSeries(LightweightCharts.LineSeries, { ...options, priceScaleId: priceScaleId }, pane);
-                const series = addLine(rsiOptions);
-                series.priceScale().applyOptions({ scaleMargins: { top: 0.1, bottom: 0.1 } });
+                const levelHost = addLine(levelHostOptions);
+                levelHost.priceScale().applyOptions({ scaleMargins: { top: 0.1, bottom: 0.1 } });
                 const bandFill = new PriceBandFill();
                 const overbought = new LevelGradientFill(100);
                 const oversold = new LevelGradientFill(0);
-                series.attachPrimitive(bandFill);
-                series.attachPrimitive(overbought);
-                series.attachPrimitive(oversold);
+                levelHost.attachPrimitive(bandFill);
+                levelHost.attachPrimitive(overbought);
+                levelHost.attachPrimitive(oversold);
                 entry = {
                     type: 'rsi',
-                    series: series,
+                    series: addLine(rsiOptions),
                     maSeries: addLine(maOptions),
                     upperBandSeries: addLine(bandOptions),
                     lowerBandSeries: addLine(bandOptions),
+                    levelHost: levelHost,
                     levelLines: {
-                        upper: series.createPriceLine(levelLineOptions(levels.upper, isVisible, labels)),
-                        middle: series.createPriceLine(levelLineOptions(levels.middle, isVisible, labels)),
-                        lower: series.createPriceLine(levelLineOptions(levels.lower, isVisible, labels)),
+                        upper: levelHost.createPriceLine(levelLineOptions(levels.upper, isVisible, labels)),
+                        middle: levelHost.createPriceLine(levelLineOptions(levels.middle, isVisible, labels)),
+                        lower: levelHost.createPriceLine(levelLineOptions(levels.lower, isVisible, labels)),
                     },
                     bandFill: bandFill,
                     overboughtFill: overbought,
@@ -9969,7 +9992,9 @@
                     rsiConfig: null,
                     calcKey: null,
                 };
+                // plots = series yang nilainya tampil di legend; extraSeries = series bantu.
                 entry.plots = [entry.series, entry.maSeries, entry.upperBandSeries, entry.lowerBandSeries];
+                entry.extraSeries = [levelHost];
             }
 
             entry.bandFill.applyOptions({
@@ -10013,8 +10038,12 @@
             return { type: 'vol', series: series, plots: [series] };
         }
 
+        function allSeriesOf(entry) {
+            return entry.extraSeries ? [...entry.plots, ...entry.extraSeries] : entry.plots;
+        }
+
         function removeIndicatorEntry(entry) {
-            for (const series of entry.plots) {
+            for (const series of allSeriesOf(entry)) {
                 try {
                     chart.removeSeries(series);
                 } catch (e) {

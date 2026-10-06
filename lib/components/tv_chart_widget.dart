@@ -13,6 +13,9 @@ import 'web_message_listener.dart';
 
 const bool _kShowDebugReloadButton = false;
 
+/// Jumlah desimal harga di chart (sama dengan PRICE_PRECISION di tv_chart.html).
+const int kChartPricePrecision = 3;
+
 /// Nilai OHLC bar di posisi crosshair. Null per field kalau series tidak punya
 /// nilai itu (mis. mode area hanya punya close/value).
 @immutable

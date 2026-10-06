@@ -520,7 +520,7 @@ class _Legend extends StatelessWidget {
     Widget kv(String k, double? v) => Padding(
       padding: const EdgeInsets.only(right: 12),
       child: Text(
-        '$k ${v != null ? v.toStringAsFixed(0) : '-'}',
+        '$k ${v?.toStringAsFixed(kChartPricePrecision) ?? '-'}',
         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
       ),
     );
