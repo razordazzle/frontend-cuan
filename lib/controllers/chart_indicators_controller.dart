@@ -12,6 +12,7 @@ import '../data/model/active_chart_indicator.dart';
 class ChartIndicatorsController extends ChangeNotifier {
   static const int _defaultSmaPeriod = 20;
   static const int _defaultRsiPeriod = 14;
+  static const int _defaultRsiSmoothingLength = 14;
   static const List<Color> _smaPalette = <Color>[
     Color(0xFF2962FF),
     Color(0xFFFF6D00),
@@ -119,23 +120,28 @@ class ChartIndicatorsController extends ChangeNotifier {
     final String suffix = sameTypeCount > 0 ? ' ${sameTypeCount + 1}' : '';
     final String id = '${type}_${DateTime.now().microsecondsSinceEpoch}';
 
-    return switch (type) {
+    final ActiveChartIndicator? created = switch (type) {
       'sma' => ActiveChartIndicator(
         id: id,
         type: type,
-        title: 'SMA $_defaultSmaPeriod close$suffix',
+        title: '',
         period: _defaultSmaPeriod,
         color: _smaPalette[sameTypeCount % _smaPalette.length],
       ),
+      // Default RSI ala TradingView: RSI-based MA (SMA 14) aktif & label nilai di price scale.
       'rsi' => ActiveChartIndicator(
         id: id,
         type: type,
-        title: 'RSI $_defaultRsiPeriod close$suffix',
+        title: '',
         period: _defaultRsiPeriod,
         color: _defaultRsiColor,
+        smoothingType: 'SMA',
+        smoothingLength: _defaultRsiSmoothingLength,
+        labelsOnPriceScale: true,
       ),
-      'vol' => ActiveChartIndicator(id: id, type: type, title: 'Vol$suffix'),
+      'vol' => ActiveChartIndicator(id: id, type: type, title: ''),
       _ => null,
     };
+    return created?.copyWith(title: '${created.inputsTitle}$suffix');
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/model/active_chart_indicator.dart';
+import 'rsi_settings_modal.dart';
 import 'sma_settings_modal.dart';
 
 /// Buka modal settings sesuai tipe [indicator].
@@ -9,13 +10,21 @@ void showIndicatorSettingsSheet({
   required ActiveChartIndicator indicator,
   required ValueChanged<ActiveChartIndicator> onSave,
 }) {
-  if (indicator.type == 'sma') {
-    SmaSettingsModal.show(
-      context: context,
-      indicator: indicator,
-      onSave: onSave,
-    );
-    return;
+  switch (indicator.type) {
+    case 'sma':
+      SmaSettingsModal.show(
+        context: context,
+        indicator: indicator,
+        onSave: onSave,
+      );
+      return;
+    case 'rsi':
+      RsiSettingsModal.show(
+        context: context,
+        indicator: indicator,
+        onSave: onSave,
+      );
+      return;
   }
 
   showModalBottomSheet<void>(
@@ -32,11 +41,7 @@ class _IndicatorSettingsPlaceholder extends StatelessWidget {
 
   const _IndicatorSettingsPlaceholder({required this.indicator});
 
-  String get _title => switch (indicator.type) {
-    'rsi' => 'Relative Strength Index (RSI)',
-    'vol' => 'Volume',
-    _ => indicator.title,
-  };
+  String get _title => indicator.type == 'vol' ? 'Volume' : indicator.title;
 
   @override
   Widget build(BuildContext context) {

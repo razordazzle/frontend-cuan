@@ -300,6 +300,50 @@ describe('smoothPoints', () => {
   });
 });
 
+/** Standar deviasi populasi langsung dari definisi. @param {number[]} values @param {number} length @returns {Series} */
+const referenceStdev = (values, length) =>
+  values.map((_, i) => {
+    if (i < length - 1) return null;
+    const window = values.slice(i - length + 1, i + 1);
+    const mean = window.reduce((a, b) => a + b, 0) / length;
+    return Math.sqrt(window.reduce((acc, v) => acc + (v - mean) ** 2, 0) / length);
+  });
+
+describe('stdev', () => {
+  it('menghitung contoh hitung tangan (populasi, bukan sampel)', () => {
+    // [2,4,4,4,5,5,7,9]: mean 5, variance 4 -> stdev 2
+    assertSeriesClose(Indicators.stdev([2, 4, 4, 4, 5, 5, 7, 9], 8), [null, null, null, null, null, null, null, 2]);
+    assertSeriesClose(Indicators.stdev([3, 3, 3], 2), [null, 0, 0]);
+  });
+
+  it('sama dengan referensi naive pada data acak', () => {
+    const closes = randomCandles(300).map((c) => c.close);
+    for (const length of [2, 14, 20]) {
+      assertSeriesClose(Indicators.stdev(closes, length), referenceStdev(closes, length));
+    }
+  });
+});
+
+describe('bollingerPoints', () => {
+  it('basis = SMA, band = basis ± multiplier × stdev', () => {
+    const points = randomCandles(120).map((c) => ({ time: c.time, value: c.close }));
+    const values = points.map((p) => p.value);
+    const { basis, upper, lower } = Indicators.bollingerPoints(points, 20, 2);
+    const expectedBasis = referenceSma(values, 20).filter((v) => v !== null);
+    const expectedDeviation = referenceStdev(values, 20).filter((v) => v !== null);
+
+    assertSeriesClose(basis.map((p) => p.value), expectedBasis);
+    assertSeriesClose(upper.map((p) => p.value), expectedBasis.map((b, i) => /** @type {number} */ (b) + 2 * /** @type {number} */ (expectedDeviation[i])));
+    assertSeriesClose(lower.map((p) => p.value), expectedBasis.map((b, i) => /** @type {number} */ (b) - 2 * /** @type {number} */ (expectedDeviation[i])));
+    assert.equal(basis[0].time, points[19].time);
+    assert.ok(upper.every((p, i) => p.value >= lower[i].value));
+  });
+
+  it('kosong kalau data kurang dari length', () => {
+    assert.deepEqual(Indicators.bollingerPoints([{ time: 1, value: 1 }], 20, 2), { basis: [], upper: [], lower: [] });
+  });
+});
+
 describe('shiftPoints', () => {
   const candles = candlesFromCloses([1, 2, 3, 4, 5]);
   const points = [{ time: 1, value: 10 }, { time: 2, value: 20 }, { time: 3, value: 30 }];
