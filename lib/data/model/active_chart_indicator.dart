@@ -45,6 +45,10 @@ class ActiveChartIndicator {
     color: Color(0xFF4CAF50),
   );
 
+  // Default Volume: warna naik/turun tema app dengan opacity 50%.
+  static const Color defaultVolumeGrowingColor = Color(0x8021C07A);
+  static const Color defaultVolumeFallingColor = Color(0x80E53935);
+
   /// Tipe smoothing yang menambah Bollinger Bands di sekitar garis MA (khusus RSI).
   static const String bollingerSmoothingType = 'SMA + Bollinger Bands';
 
@@ -73,6 +77,9 @@ class ActiveChartIndicator {
   IndicatorGradientFill? _overboughtFill;
   IndicatorGradientFill? _oversoldFill;
   IndicatorLineStyle? _bollingerStyle;
+  Color? _volumeGrowingColor;
+  Color? _volumeFallingColor;
+  bool? _colorByPreviousClose;
   double? _bbStdDev;
   String? _precision; // 'Default', '0', '1', etc.
   bool? _labelsOnPriceScale;
@@ -137,6 +144,19 @@ class ActiveChartIndicator {
       _bollingerStyle ?? defaultBollingerStyle;
   set bollingerStyle(IndicatorLineStyle val) => _bollingerStyle = val;
 
+  /// Warna batang volume saat naik / turun.
+  Color get volumeGrowingColor =>
+      _volumeGrowingColor ?? defaultVolumeGrowingColor;
+  set volumeGrowingColor(Color val) => _volumeGrowingColor = val;
+
+  Color get volumeFallingColor =>
+      _volumeFallingColor ?? defaultVolumeFallingColor;
+  set volumeFallingColor(Color val) => _volumeFallingColor = val;
+
+  /// True: arah batang dibanding close sebelumnya; false: dibanding open bar yang sama.
+  bool get colorByPreviousClose => _colorByPreviousClose ?? false;
+  set colorByPreviousClose(bool val) => _colorByPreviousClose = val;
+
   double get bbStdDev => _bbStdDev ?? 2.0;
   set bbStdDev(double val) => _bbStdDev = val;
 
@@ -198,6 +218,9 @@ class ActiveChartIndicator {
     IndicatorGradientFill? overboughtFill,
     IndicatorGradientFill? oversoldFill,
     IndicatorLineStyle? bollingerStyle,
+    Color? volumeGrowingColor,
+    Color? volumeFallingColor,
+    bool? colorByPreviousClose,
     double? bbStdDev,
     String? precision,
     bool? labelsOnPriceScale,
@@ -221,6 +244,9 @@ class ActiveChartIndicator {
        _overboughtFill = overboughtFill ?? defaultOverboughtFill,
        _oversoldFill = oversoldFill ?? defaultOversoldFill,
        _bollingerStyle = bollingerStyle ?? defaultBollingerStyle,
+       _volumeGrowingColor = volumeGrowingColor ?? defaultVolumeGrowingColor,
+       _volumeFallingColor = volumeFallingColor ?? defaultVolumeFallingColor,
+       _colorByPreviousClose = colorByPreviousClose ?? false,
        _bbStdDev = bbStdDev ?? 2.0,
        _precision = precision ?? 'Default',
        _labelsOnPriceScale = labelsOnPriceScale ?? false,
@@ -251,6 +277,9 @@ class ActiveChartIndicator {
     IndicatorGradientFill? overboughtFill,
     IndicatorGradientFill? oversoldFill,
     IndicatorLineStyle? bollingerStyle,
+    Color? volumeGrowingColor,
+    Color? volumeFallingColor,
+    bool? colorByPreviousClose,
     double? bbStdDev,
     String? precision,
     bool? labelsOnPriceScale,
@@ -281,6 +310,9 @@ class ActiveChartIndicator {
       overboughtFill: overboughtFill ?? this.overboughtFill,
       oversoldFill: oversoldFill ?? this.oversoldFill,
       bollingerStyle: bollingerStyle ?? this.bollingerStyle,
+      volumeGrowingColor: volumeGrowingColor ?? this.volumeGrowingColor,
+      volumeFallingColor: volumeFallingColor ?? this.volumeFallingColor,
+      colorByPreviousClose: colorByPreviousClose ?? this.colorByPreviousClose,
       bbStdDev: bbStdDev ?? this.bbStdDev,
       precision: precision ?? this.precision,
       labelsOnPriceScale: labelsOnPriceScale ?? this.labelsOnPriceScale,
@@ -317,6 +349,9 @@ class ActiveChartIndicator {
           overboughtFill == other.overboughtFill &&
           oversoldFill == other.oversoldFill &&
           bollingerStyle == other.bollingerStyle &&
+          volumeGrowingColor == other.volumeGrowingColor &&
+          volumeFallingColor == other.volumeFallingColor &&
+          colorByPreviousClose == other.colorByPreviousClose &&
           bbStdDev == other.bbStdDev &&
           precision == other.precision &&
           labelsOnPriceScale == other.labelsOnPriceScale &&
@@ -348,6 +383,9 @@ class ActiveChartIndicator {
     overboughtFill,
     oversoldFill,
     bollingerStyle,
+    volumeGrowingColor,
+    volumeFallingColor,
+    colorByPreviousClose,
     bbStdDev,
     precision,
     labelsOnPriceScale,
@@ -387,6 +425,15 @@ class ActiveChartIndicator {
       'overboughtFill': overboughtFill.toJson(),
       'oversoldFill': oversoldFill.toJson(),
       'bollingerStyle': bollingerStyle.toJson(),
+    },
+    if (type == 'vol') ...<String, dynamic>{
+      'volume': <String, dynamic>{
+        'growingColor': volumeGrowingColor.toCssRgba(),
+        'fallingColor': volumeFallingColor.toCssRgba(),
+        'colorByPreviousClose': colorByPreviousClose,
+        // 'Default' = format volume ringkas (K/M/B) seperti TradingView.
+        'compactFormat': precision == 'Default',
+      },
     },
   };
 }

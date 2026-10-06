@@ -2535,10 +2535,6 @@
         let originalFibSettings = null;
         let pendingFibSettings = null;
         let rawCandlesData = [];
-        let currentVolumeData = [];
-        const VOLUME_BAR_OPACITY = 0.5;
-        let volumeUpColor = 'rgba(33, 192, 122, 0.5)';
-        let volumeDownColor = 'rgba(229, 57, 53, 0.5)';
 
         let horizontalLines = []; // Array of prices: [7650, 7820]
         let isDrawingHorizontalLine = false;
@@ -9144,8 +9140,6 @@
             }
             upColor = upColor || '#21C07A';
             downColor = downColor || '#E53935';
-            volumeUpColor = hexToRgba(upColor, VOLUME_BAR_OPACITY);
-            volumeDownColor = hexToRgba(downColor, VOLUME_BAR_OPACITY);
             gridColor = gridColor || 'rgba(128, 128, 128, 0.15)';
             if (interactive === undefined || interactive === null) interactive = true;
             if (crosshairColor) currentCrosshairColor = crosshairColor;
@@ -9357,12 +9351,10 @@
             initFibPointerEvents();
         }
 
-        // Warna tema app: naik/turun (hex) untuk candle, area & bar volume; grid (rgba).
+        // Warna tema app: naik/turun (hex) untuk candle & area; grid (rgba). Warna volume diatur per indikator.
         function applyThemeColors(upColor, downColor, gridColor) {
             if (!chart) return;
             if (upColor && downColor) {
-                volumeUpColor = hexToRgba(upColor, VOLUME_BAR_OPACITY);
-                volumeDownColor = hexToRgba(downColor, VOLUME_BAR_OPACITY);
                 candleSeries.applyOptions({
                     upColor: upColor,
                     downColor: downColor,
@@ -9374,7 +9366,6 @@
                     topColor: upColor + '55',
                     bottomColor: upColor + '05',
                 });
-                if (rawCandlesData.length > 0) setVolumeData(rawCandlesData.map(toVolumeBar));
             }
             if (gridColor) {
                 chart.applyOptions({
@@ -9384,26 +9375,6 @@
                     },
                 });
             }
-        }
-
-        function toVolumeBar(candle) {
-            return {
-                time: candle.time,
-                value: candle.volume || 0,
-                color: candle.close >= candle.open ? volumeUpColor : volumeDownColor,
-            };
-        }
-
-        // Semua series indikator Volume yang aktif.
-        function getVolumeSeriesList() {
-            return Object.values(activeIndicatorSeriesMap)
-                .filter(entry => entry.type === 'vol')
-                .map(entry => entry.series);
-        }
-
-        function setVolumeData(volumeBars) {
-            currentVolumeData = volumeBars;
-            for (const series of getVolumeSeriesList()) series.setData(volumeBars);
         }
 
         // Ganti titik terakhir kalau waktunya sama, tambah kalau lebih baru (update bar live).
@@ -9896,26 +9867,89 @@
             return entry;
         }
 
+        const VOLUME_DEFAULTS = Object.freeze({
+            period: 20,
+            growingColor: 'rgba(33, 192, 122, 0.5)',
+            fallingColor: 'rgba(229, 57, 53, 0.5)',
+            maColor: '#2962FF',
+        });
+
+        function normalizeVolumeConfig(item) {
+            const volume = item.volume || {};
+            return {
+                period: item.period || VOLUME_DEFAULTS.period,
+                growingColor: volume.growingColor || VOLUME_DEFAULTS.growingColor,
+                fallingColor: volume.fallingColor || VOLUME_DEFAULTS.fallingColor,
+                colorByPreviousClose: Boolean(volume.colorByPreviousClose),
+            };
+        }
+
+        function updateVolumeData(entry) {
+            const cfg = entry.volumeConfig;
+            const points = Indicators.volumePoints(rawCandlesData, cfg.colorByPreviousClose);
+            entry.series.setData(points.map((point) => ({
+                time: point.time,
+                value: point.value,
+                color: point.isGrowing ? cfg.growingColor : cfg.fallingColor,
+            })));
+            entry.maSeries.setData(Indicators.smoothPoints(points, 'SMA', cfg.period, rawCandlesData));
+        }
+
         function syncVolumeIndicator(item, entry, paneIndex) {
-            const visible = item.isVisible !== false;
+            const cfg = normalizeVolumeConfig(item);
+            const isVisible = item.isVisible !== false;
+            const maStyle = item.smoothingStyle || {};
+            const priceFormat = item.volume?.compactFormat === false
+                ? buildPriceFormat(item.precisionDigits)
+                : { type: 'volume' };
+            const lastValueVisible = Boolean(item.labelsOnPriceScale);
+            const priceScaleId = 'volume-scale-' + item.id;
+
+            const histogramOptions = {
+                title: '',
+                priceScaleId: priceScaleId,
+                priceLineVisible: false,
+                lastValueVisible: lastValueVisible,
+                priceFormat: priceFormat,
+                visible: isVisible && item.isLineVisible !== false,
+            };
+            const maOptions = {
+                ...lineSeriesOptions(
+                    { color: VOLUME_DEFAULTS.maColor, ...maStyle },
+                    isVisible && maStyle.isVisible === true,
+                    priceFormat,
+                    lastValueVisible,
+                ),
+                priceScaleId: priceScaleId,
+            };
+
             if (entry) {
-                entry.series.applyOptions({ visible: visible });
-                moveSeriesToPane(entry.series, paneIndex);
-                return entry;
+                entry.series.applyOptions(histogramOptions);
+                entry.maSeries.applyOptions(maOptions);
+                for (const series of allSeriesOf(entry)) moveSeriesToPane(series, paneIndex);
+            } else {
+                const pane = paneIndex ?? 1;
+                const series = chart.addSeries(LightweightCharts.HistogramSeries, histogramOptions, pane);
+                const maSeries = chart.addSeries(LightweightCharts.LineSeries, maOptions, pane);
+                series.priceScale().applyOptions({ scaleMargins: { top: 0.15, bottom: 0 } });
+                entry = {
+                    type: 'vol',
+                    series: series,
+                    maSeries: maSeries,
+                    plots: [series, maSeries],
+                    volumeConfig: null,
+                    calcKey: null,
+                };
             }
-            const series = chart.addSeries(LightweightCharts.HistogramSeries, {
-                priceFormat: { type: 'volume' },
-                priceScaleId: 'volume-scale-' + item.id,
-                title: item.title || 'VOL',
-                visible: visible,
-            }, paneIndex ?? 1);
-            series.priceScale().applyOptions({
-                scaleMargins: { top: 0.15, bottom: 0 },
-            });
-            if (currentVolumeData && currentVolumeData.length > 0) {
-                series.setData(currentVolumeData);
+
+            // Hitung ulang hanya kalau input perhitungan/warna batang berubah.
+            const calcKey = [cfg.period, cfg.growingColor, cfg.fallingColor, cfg.colorByPreviousClose].join('|');
+            if (entry.calcKey !== calcKey) {
+                entry.calcKey = calcKey;
+                entry.volumeConfig = cfg;
+                updateVolumeData(entry);
             }
-            return { type: 'vol', series: series, plots: [series] };
+            return entry;
         }
 
         function allSeriesOf(entry) {
@@ -9965,6 +9999,8 @@
                     updateSmaData(entry);
                 } else if (entry.type === 'rsi') {
                     updateRsiData(entry);
+                } else if (entry.type === 'vol') {
+                    updateVolumeData(entry);
                 }
             }
             if (!isCrosshairActive) emitIndicatorValues(null);
@@ -10029,7 +10065,6 @@
             rawCandlesData = candles;
             candleSeries.setData(candles);
             areaSeries.setData(candles.map(c => ({ time: c.time, value: c.close })));
-            setVolumeData(candles.map(toVolumeBar));
             if (currentShowFib && (!fibPoint1 || !fibPoint2)) {
                 startFibDrawing();
             }
@@ -10041,12 +10076,9 @@
         function updateBar(barInput) {
             if (!chart) return;
             const bar = typeof barInput === 'string' ? JSON.parse(barInput) : barInput;
-            const volumeBar = toVolumeBar(bar);
             upsertLastByTime(rawCandlesData, bar);
-            upsertLastByTime(currentVolumeData, volumeBar);
             candleSeries.update(bar);
             areaSeries.update({ time: bar.time, value: bar.close });
-            for (const series of getVolumeSeriesList()) series.update(volumeBar);
             refreshActiveIndicatorsData();
             renderFib();
         }

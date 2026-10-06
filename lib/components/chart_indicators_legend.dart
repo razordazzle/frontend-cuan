@@ -961,15 +961,17 @@ class _PlotValuesText extends StatelessWidget {
     required this.fallbackColor,
   });
 
-  /// Urutan plot dari chart: [garis utama, smoothing MA, Bollinger atas, Bollinger bawah].
+  /// Urutan plot dari chart: [garis utama, smoothing/Volume MA, Bollinger atas, Bollinger bawah].
   Color _plotColor(int plotIndex) => switch ((indicator.type, plotIndex)) {
-    ('vol', _) => fallbackColor,
+    ('vol', 0) => fallbackColor,
     (_, 0) => indicator.color ?? fallbackColor,
     (_, 1) => indicator.smoothingStyle.color,
     _ => indicator.bollingerStyle.color,
   };
 
-  String _format(double value) => indicator.type == 'vol'
+  /// Volume dengan precision 'Default' memakai format ringkas (K/M/B) seperti TradingView.
+  String _format(double value) =>
+      indicator.type == 'vol' && indicator.precision == 'Default'
       ? _compactFormat.format(value)
       : value.toStringAsFixed(indicator.precisionDigits);
 
