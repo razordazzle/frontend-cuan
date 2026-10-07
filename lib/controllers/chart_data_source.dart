@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../data/model/chart_payload.dart';
+import '../data/model/chart_timeframe.dart';
 import '../providers/stock_detail_provider.dart';
 import '../providers/stocks_provider.dart';
 
@@ -12,14 +13,14 @@ abstract class ChartDataSource<P extends ChangeNotifier> implements Listenable {
   const ChartDataSource(this.provider);
 
   String get symbol;
-  String get resolution;
+  ChartTimeframe get timeframe;
   ChartPayload? get payload;
 
   /// Harga live terakhir dari WebSocket; null kalau belum ada.
   double? get liveLast;
 
   Future<void> fetchCandles();
-  Future<void> setResolution(String resolution);
+  Future<void> setTimeframe(ChartTimeframe timeframe);
 
   @override
   void addListener(VoidCallback listener) => provider.addListener(listener);
@@ -38,7 +39,7 @@ class StockChartDataSource extends ChartDataSource<StockDetailProvider> {
   String get symbol => ticker;
 
   @override
-  String get resolution => provider.tvResolution;
+  ChartTimeframe get timeframe => provider.tvTimeframe;
 
   @override
   ChartPayload? get payload => provider.tvChartPayload;
@@ -50,8 +51,8 @@ class StockChartDataSource extends ChartDataSource<StockDetailProvider> {
   Future<void> fetchCandles() => provider.fetchTvCandles(ticker);
 
   @override
-  Future<void> setResolution(String resolution) =>
-      provider.setTvResolution(ticker, resolution);
+  Future<void> setTimeframe(ChartTimeframe timeframe) =>
+      provider.setTvTimeframe(ticker, timeframe);
 }
 
 class IhsgChartDataSource extends ChartDataSource<StocksProvider> {
@@ -61,7 +62,7 @@ class IhsgChartDataSource extends ChartDataSource<StocksProvider> {
   String get symbol => 'IHSG';
 
   @override
-  String get resolution => provider.tvResolution;
+  ChartTimeframe get timeframe => provider.tvTimeframe;
 
   @override
   ChartPayload? get payload => provider.tvChartPayload;
@@ -73,6 +74,6 @@ class IhsgChartDataSource extends ChartDataSource<StocksProvider> {
   Future<void> fetchCandles() => provider.fetchTvCandles();
 
   @override
-  Future<void> setResolution(String resolution) =>
-      provider.setTvResolution(resolution);
+  Future<void> setTimeframe(ChartTimeframe timeframe) =>
+      provider.setTvTimeframe(timeframe);
 }
