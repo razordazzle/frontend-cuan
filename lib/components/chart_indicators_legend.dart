@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../controllers/chart_indicators_controller.dart';
 import '../data/model/active_chart_indicator.dart';
 import '../data/model/indicator_macd.dart';
 
@@ -261,30 +262,21 @@ class _MacdIconPainter extends CustomPainter {
 
 /// Widget Legend Indikator Aktif di Pojok Kiri Atas Chart
 /// Menampilkan indikator yang sedang aktif ala TradingView mobile
+///
+/// Daftar, seleksi, visibilitas & nilai plot dibaca langsung dari [controller], supaya
+/// modal Object tree tetap sinkron walau widget legend di-rebuild/di-mount ulang.
 class ChartIndicatorsLegend extends StatefulWidget {
+  final ChartIndicatorsController controller;
   final String symbol;
   final String timeframe;
-  final List<ActiveChartIndicator> activeIndicators;
-  final ValueChanged<String>? onToggleIndicatorVisibility;
-  final ValueChanged<String>? onDeleteIndicator;
-  final String? selectedId;
-  final ValueChanged<String?>? onSelectionChanged;
-  final ValueChanged<String>? onOpenSettings;
-
-  /// Nilai plot terkini per indikator untuk status line (opsional).
-  final ValueListenable<IndicatorPlotValues>? plotValues;
+  final ValueChanged<String> onOpenSettings;
 
   const ChartIndicatorsLegend({
     super.key,
-    this.symbol = 'IHSG',
-    this.timeframe = '1D',
-    required this.activeIndicators,
-    this.onToggleIndicatorVisibility,
-    this.onDeleteIndicator,
-    this.selectedId,
-    this.onSelectionChanged,
-    this.onOpenSettings,
-    this.plotValues,
+    required this.controller,
+    required this.symbol,
+    required this.timeframe,
+    required this.onOpenSettings,
   });
 
   @override
@@ -292,21 +284,13 @@ class ChartIndicatorsLegend extends StatefulWidget {
 }
 
 class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
-  String? _internalSelectedId;
-  String? get _effectiveSelectedId => widget.selectedId ?? _internalSelectedId;
-
-  void _setSelectedId(String? id) {
-    setState(() {
-      _internalSelectedId = id;
-    });
-    widget.onSelectionChanged?.call(id);
-  }
-
   bool _isCollapsed = false;
+
+  ChartIndicatorsController get _controller => widget.controller;
 
   @override
   Widget build(BuildContext context) {
-    final List<ActiveChartIndicator> indicators = widget.activeIndicators;
+    final List<ActiveChartIndicator> indicators = _controller.indicators;
     if (indicators.isEmpty) return const SizedBox.shrink();
 
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -315,9 +299,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
 
     return TapRegion(
       onTapOutside: (PointerDownEvent _) {
-        if (_effectiveSelectedId != null) {
-          _setSelectedId(null);
-        }
+        _controller.select(null);
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -372,18 +354,17 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
     final String id = indicator.id;
     final String title = indicator.inputsInStatusLine ? indicator.title : indicator.shortTitle;
     final bool isHidden = !indicator.isVisible;
-    final ValueListenable<IndicatorPlotValues>? plotValues = widget.plotValues;
-    final Widget? values = (plotValues != null && !isHidden)
-        ? _PlotValuesText(
+    final Widget? values = isHidden
+        ? null
+        : _PlotValuesText(
             indicator: indicator,
-            plotValues: plotValues,
+            plotValues: _controller.plotValues,
             fallbackColor: textColor,
-          )
-        : null;
+          );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-      child: _effectiveSelectedId == id
+      child: _controller.selectedId == id
           ? _buildSelectedRow(
               id: id,
               title: title,
@@ -391,12 +372,9 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
               values: values,
               textColor: textColor,
               mutedColor: mutedColor,
-              onToggleEye: () => widget.onToggleIndicatorVisibility?.call(id),
-              onDelete: () {
-                _setSelectedId(null);
-                widget.onDeleteIndicator?.call(id);
-              },
-              onSettings: () => widget.onOpenSettings?.call(id),
+              onToggleEye: () => _controller.toggleVisibility(id),
+              onDelete: () => _controller.remove(id),
+              onSettings: () => widget.onOpenSettings(id),
             )
           : _buildNormalRow(
               id: id,
@@ -427,7 +405,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
   }) {
     return GestureDetector(
       onTap: () {
-        _setSelectedId(id);
+        _controller.select(id);
       },
       behavior: HitTestBehavior.opaque,
       child: Container(
@@ -496,7 +474,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
     return GestureDetector(
       onTap: () {
         // Klik ulang untuk deselect
-        _setSelectedId(null);
+        _controller.select(null);
       },
       behavior: HitTestBehavior.opaque,
       child: Container(
@@ -784,9 +762,14 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
 
         final Color neutralIconColor = isDark ? const Color(0xFFD1D4DC) : const Color(0xFF131722);
 
-        return StatefulBuilder(
-          builder: (BuildContext bCtx, void Function(void Function()) setModalState) {
-            final List<ActiveChartIndicator> indicators = widget.activeIndicators;
+        // Simbol & timeframe tidak berubah selama modal terbuka; daftar indikator ikut controller.
+        final String chartInfo = '${widget.symbol}, ${widget.timeframe}';
+        final ChartIndicatorsController controller = _controller;
+
+        return ListenableBuilder(
+          listenable: controller,
+          builder: (BuildContext bCtx, _) {
+            final List<ActiveChartIndicator> indicators = controller.indicators;
 
             return Container(
               height: MediaQuery.of(context).size.height * 0.80,
@@ -858,7 +841,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                               ),
                               const SizedBox(width: 12),
                               Text(
-                                '${widget.symbol}, ${widget.timeframe}',
+                                chartInfo,
                                 style: TextStyle(
                                   color: textColor,
                                   fontSize: 15,
@@ -888,16 +871,6 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                               size: const Size(18, 18),
                               painter: _indicatorIconPainter(indicator.type, neutralIconColor),
                             );
-                            void onToggleEye() {
-                              widget.onToggleIndicatorVisibility?.call(indicator.id);
-                              setModalState(() {});
-                            }
-
-                            void onDelete() {
-                              widget.onDeleteIndicator?.call(indicator.id);
-                              setModalState(() {});
-                            }
-
                             return Container(
                               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                               decoration: BoxDecoration(
@@ -941,7 +914,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                                         // Eye button
                                         GestureDetector(
                                           behavior: HitTestBehavior.opaque,
-                                          onTap: onToggleEye,
+                                          onTap: () => controller.toggleVisibility(indicator.id),
                                           child: Padding(
                                             padding: const EdgeInsets.all(4),
                                             child: Icon(
@@ -957,7 +930,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                                         // Trash button
                                         GestureDetector(
                                           behavior: HitTestBehavior.opaque,
-                                          onTap: onDelete,
+                                          onTap: () => controller.remove(indicator.id),
                                           child: Padding(
                                             padding: const EdgeInsets.all(4),
                                             child: Icon(

@@ -1,6 +1,6 @@
-import 'dart:collection';
-
 import 'package:flutter/foundation.dart';
+
+import 'persisted_favorites.dart';
 
 enum ChartDrawingTool { fibonacci, horizontalLine, trendline, rectangle }
 
@@ -16,20 +16,33 @@ class ChartDrawingsController extends ChangeNotifier {
   List<Map<String, dynamic>> _horizontalLines = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _trendlines = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _rectangles = const <Map<String, dynamic>>[];
-  final Set<ChartDrawingTool> _favoriteTools = <ChartDrawingTool>{
-    ChartDrawingTool.rectangle,
-    ChartDrawingTool.trendline,
-    ChartDrawingTool.horizontalLine,
-    ChartDrawingTool.fibonacci,
-  };
+  final PersistedFavorites<ChartDrawingTool> _favoriteTools =
+      PersistedFavorites<ChartDrawingTool>(
+        storageKey: 'chart.drawingFavorites',
+        defaults: const <ChartDrawingTool>[
+          ChartDrawingTool.rectangle,
+          ChartDrawingTool.trendline,
+          ChartDrawingTool.horizontalLine,
+          ChartDrawingTool.fibonacci,
+        ],
+        encode: (ChartDrawingTool tool) => tool.name,
+        decode: (String name) => ChartDrawingTool.values.asNameMap()[name],
+      );
+  bool _isDisposed = false;
+
+  /// Favorit tampil di toolbar chart, jadi begitu selesai dimuat perlu rebuild.
+  ChartDrawingsController() {
+    _favoriteTools.load().then((bool changed) {
+      if (changed && !_isDisposed) notifyListeners();
+    });
+  }
 
   ChartDrawingTool? get activeTool => _activeTool;
   bool get showFibonacci => _showFibonacci;
   bool get isToolbarVisible => _isToolbarVisible;
 
   /// Tool favorit, urut sesuai waktu ditambahkan (jadi urutan tombol di toolbar chart).
-  Set<ChartDrawingTool> get favoriteTools =>
-      UnmodifiableSetView<ChartDrawingTool>(_favoriteTools);
+  Set<ChartDrawingTool> get favoriteTools => _favoriteTools.items;
   bool isFavorite(ChartDrawingTool tool) => _favoriteTools.contains(tool);
   List<Map<String, dynamic>> get horizontalLines => _horizontalLines;
   List<Map<String, dynamic>> get trendlines => _trendlines;
@@ -102,7 +115,7 @@ class ChartDrawingsController extends ChangeNotifier {
   }
 
   void toggleFavorite(ChartDrawingTool tool) {
-    if (!_favoriteTools.remove(tool)) _favoriteTools.add(tool);
+    _favoriteTools.toggle(tool);
     notifyListeners();
   }
 
@@ -110,6 +123,12 @@ class ChartDrawingsController extends ChangeNotifier {
     _isToolbarVisible = false;
     _activeTool = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
   }
 
   /// Objek dari [tool] baru di-update oleh chart, jadi mode gambar tool itu diakhiri.
