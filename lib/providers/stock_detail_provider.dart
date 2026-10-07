@@ -7,7 +7,6 @@ import 'package:cuan_app/data/model/dividend_item.dart';
 import 'package:cuan_app/data/model/key_stats_latest.dart';
 import 'package:cuan_app/data/model/ratio_item.dart';
 import 'package:cuan_app/data/model/stock_detail.dart';
-import 'package:cuan_app/data/model/yahoo_fundamentals.dart';
 import 'package:cuan_app/data/services/live_prices_ws.dart';
 import 'package:cuan_app/data/services/stocks_service.dart';
 import 'package:cuan_app/pages/screen/home_page.dart';
@@ -59,9 +58,14 @@ class StockDetailProvider extends ChangeNotifier {
           interval: candleInterval,
           limit: candleLimit,
         ), // futures[1] (List<CandleItem>)
+        // futures[2] (KeyStatsLatest?): error (mis. 404) jadi null. catchError((_) => null)
+        // langsung di Future<KeyStatsLatest> akan melempar TypeError & menggagalkan Future.wait.
         api
             .getKeyStatsLatest(ticker)
-            .catchError((_) => null), // futures[2] (KeyStatsLatest?)
+            .then<KeyStatsLatest?>(
+              (KeyStatsLatest value) => value,
+              onError: (Object _) => null,
+            ),
         api
             .getDividends(ticker, years: 6)
             .catchError(

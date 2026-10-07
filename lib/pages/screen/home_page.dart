@@ -899,29 +899,14 @@ class _IhsgCandleChart extends StatefulWidget {
 }
 
 class _IhsgCandleChartState extends State<_IhsgCandleChart> {
-  // late TrackballBehavior _trackball;
-  // late TooltipBehavior _tooltip;
   TrackballBehavior _trackball = TrackballBehavior(enable: true);
-  TooltipBehavior _tooltip = TooltipBehavior(enable: true);
   Ohlc? _selected;
   Timer? _resetTimer;
-  int? _selectedIndex;
   bool _boxOnRight = false;
 
   @override
   void initState() {
     super.initState();
-    _tooltip = TooltipBehavior(
-      enable: true,
-      shared: true,
-      color: Colors.black87,
-      textStyle: const TextStyle(
-        color: Colors.white,
-        fontWeight: FontWeight.w600,
-      ),
-      // header: '', // Biar nggak ada header ganda
-      // format: 'point.x : point.y', // Ini yang bakal munculin kotak harga
-    );
 
     // _trackball = TrackballBehavior(
     //   enable: true,
@@ -1231,11 +1216,10 @@ class _IhsgCandleChartState extends State<_IhsgCandleChart> {
                     ),
                 ],
                 onTrackballPositionChanging: (args) {
-                  final i = args.chartPointInfo?.dataPointIndex;
+                  final i = args.chartPointInfo.dataPointIndex;
                   if (i != null && i >= 0 && i < validCandles.length) {
                     setState(() {
                       _selected = validCandles[i];
-                      _selectedIndex = i;
                       _boxOnRight = i < (validCandles.length / 2);
                     });
                     _scheduleReset();
