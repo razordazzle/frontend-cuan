@@ -36,11 +36,8 @@ class _LevelDraft {
   IndicatorLineStyle style;
 
   _LevelDraft(this.label, IndicatorLevel level)
-    : controller = TextEditingController(text: _formatLevel(level.value)),
+    : controller = TextEditingController(text: formatNumber(level.value)),
       style = level.style;
-
-  static String _formatLevel(double value) =>
-      value == value.roundToDouble() ? value.toInt().toString() : '$value';
 
   IndicatorLevel toLevel(IndicatorLevel fallback) => IndicatorLevel(
     value: parseNumber(controller.text, fallback.value),

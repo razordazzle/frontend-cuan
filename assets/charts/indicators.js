@@ -18,6 +18,18 @@
     /** Array sejajar dengan input; `null` = data belum cukup untuk dihitung. */
     /** @typedef {Array<number | null>} Series */
     /** @typedef {'SMA' | 'EMA' | 'SMMA (RMA)' | 'WMA' | 'VWMA'} MovingAverageType */
+    /** Arah histogram MACD (menentukan warna batang, sama seperti TradingView). */
+    /** @typedef {'growAbove' | 'fallAbove' | 'growBelow' | 'fallBelow'} MacdTrend */
+    /**
+     * @typedef {{
+     *   fastLength: number,
+     *   slowLength: number,
+     *   signalLength: number,
+     *   source?: string,
+     *   oscillatorMaType?: 'SMA' | 'EMA',
+     *   signalMaType?: 'SMA' | 'EMA',
+     * }} MacdConfig
+     */
 
     // ===== Harga sumber =====
 
@@ -287,6 +299,50 @@
     }
 
     /**
+     * Moving Average Convergence Divergence, sama dengan MACD bawaan TradingView:
+     * macd = MA(fast) − MA(slow), signal = MA(macd, signalLength), histogram = macd − signal.
+     * Histogram "grow" kalau nilainya naik dibanding bar sebelumnya (bar pertama dianggap "fall").
+     * @param {readonly Candle[]} candles
+     * @param {MacdConfig} config
+     * @returns {{ macd: Point[], signal: Point[], histogram: Array<Point & { trend: MacdTrend }> }}
+     */
+    function macdPoints(candles, config) {
+        const values = sourceValues(candles, config.source || 'Close');
+        const oscillatorMa = config.oscillatorMaType || 'EMA';
+        const fast = movingAverage(oscillatorMa, values, config.fastLength);
+        const slow = movingAverage(oscillatorMa, values, config.slowLength);
+        /** @type {Series} */
+        const macdSeries = fast.map((f, i) => {
+            const s = slow[i];
+            return f === null || s === null ? null : f - s;
+        });
+        const macd = toPoints(candles.map((c) => c.time), macdSeries);
+        const signal = toPoints(
+            macd.map((p) => p.time),
+            movingAverage(config.signalMaType || 'EMA', macd.map((p) => p.value), config.signalLength),
+        );
+
+        /** @type {Array<Point & { trend: MacdTrend }>} */
+        const histogram = [];
+        // signal selalu berada di ekor macd, jadi index macd = offset + index signal.
+        const offset = macd.length - signal.length;
+        let previous = NaN;
+        for (let i = 0; i < signal.length; i++) {
+            const value = macd[offset + i].value - signal[i].value;
+            const isGrowing = previous < value; // NaN di bar pertama → false, sama dengan hist[1] < hist di Pine
+            histogram.push({
+                time: signal[i].time,
+                value: value,
+                trend: value >= 0
+                    ? (isGrowing ? 'growAbove' : 'fallAbove')
+                    : (isGrowing ? 'growBelow' : 'fallBelow'),
+            });
+            previous = value;
+        }
+        return { macd, signal, histogram };
+    }
+
+    /**
      * Moving average dari Point series lain (mis. garis "Smoothing MA" di atas SMA).
      * Volume untuk VWMA diambil dari candle dengan waktu yang sama.
      * @param {readonly Point[]} points
@@ -367,6 +423,7 @@
         smaPoints,
         rsiPoints,
         volumePoints,
+        macdPoints,
         smoothPoints,
         bollingerPoints,
         shiftPoints,

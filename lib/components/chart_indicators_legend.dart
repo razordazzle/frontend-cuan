@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../data/model/active_chart_indicator.dart';
+import '../data/model/indicator_macd.dart';
 
 /// Painter untuk menggambar icon baut/mur segi-enam (Nut Icon)
 /// persis seperti icon setting indikator TradingView mobile
@@ -228,6 +229,45 @@ class _VolumeIconPainter extends CustomPainter {
   bool shouldRepaint(covariant _VolumeIconPainter oldDelegate) => oldDelegate.color != color;
 }
 
+/// Ikon MACD: histogram di sekitar garis nol + garis osilator.
+class _MacdIconPainter extends CustomPainter {
+  final Color color;
+  const _MacdIconPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint bar = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    final Paint line = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    canvas.save();
+    canvas.scale(size.width / 20.0, size.height / 20.0);
+    canvas.drawLine(const Offset(5, 12), const Offset(5, 9), bar);
+    canvas.drawLine(const Offset(10, 12), const Offset(10, 7), bar);
+    canvas.drawLine(const Offset(15, 12), const Offset(15, 15), bar);
+    canvas.drawPath(
+      Path()
+        ..moveTo(2.5, 8)
+        ..lineTo(8, 4)
+        ..lineTo(13, 9)
+        ..lineTo(17.5, 13),
+      line,
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _MacdIconPainter oldDelegate) => oldDelegate.color != color;
+}
+
 /// Widget Legend Indikator Aktif di Pojok Kiri Atas Chart
 /// Menampilkan indikator yang sedang aktif ala TradingView mobile
 class ChartIndicatorsLegend extends StatefulWidget {
@@ -381,6 +421,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
   static CustomPainter _indicatorIconPainter(String type, Color color) => switch (type) {
     'sma' => _SmaIconPainter(color),
     'rsi' => _RsiIconPainter(color),
+    'macd' => _MacdIconPainter(color),
     _ => _VolumeIconPainter(color),
   };
 
@@ -966,17 +1007,24 @@ class _PlotValuesText extends StatelessWidget {
 
   /// Urutan plot dari chart: [garis utama, smoothing/Volume MA, Bollinger atas, Bollinger bawah].
   /// Nilai Volume ikut warna bar-nya (dibuat opaque agar teks tetap terbaca).
-  Color _plotColor(int plotIndex, bool? isGrowing) =>
+  /// MACD: [Histogram (warna ikut arah batang), MACD, Signal].
+  Color _plotColor(int plotIndex, IndicatorPlotSnapshot snapshot) =>
       switch ((indicator.type, plotIndex)) {
-        ('vol', 0) => switch (isGrowing) {
+        ('vol', 0) => switch (snapshot.isGrowing) {
           true => indicator.volumeGrowingColor.withValues(alpha: 1),
           false => indicator.volumeFallingColor.withValues(alpha: 1),
           null => fallbackColor,
         },
+        ('macd', 0) => switch (snapshot.macdTrend) {
+          final MacdTrend trend => indicator.macd.histogram.colorOf(trend),
+          null => fallbackColor,
+        },
+        ('macd', 1) => indicator.color ?? fallbackColor,
+        ('macd', _) => indicator.macd.signalStyle.color,
         (_, 0) => indicator.color ?? fallbackColor,
-    (_, 1) => indicator.smoothingStyle.color,
-    _ => indicator.bollingerStyle.color,
-  };
+        (_, 1) => indicator.smoothingStyle.color,
+        _ => indicator.bollingerStyle.color,
+      };
 
   String _format(double value) => indicator.type == 'vol'
       ? _volumeFormat.format(value)
@@ -1005,7 +1053,7 @@ class _PlotValuesText extends StatelessWidget {
                 TextSpan(
                   text: '${position > 0 ? ' ' : ''}${_format(value)}',
                   style: TextStyle(
-                    color: _plotColor(plotIndex, snapshot.isGrowing),
+                    color: _plotColor(plotIndex, snapshot),
                   ),
                 ),
             ],

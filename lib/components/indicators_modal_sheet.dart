@@ -67,7 +67,6 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
       id: 'macd',
       name: 'Moving Average Convergence Divergence',
       description: 'Indikator momentum trend-following yang membandingkan pergerakan dua moving average.',
-      isSupported: false,
     ),
     IndicatorItem(
       id: 'sma',

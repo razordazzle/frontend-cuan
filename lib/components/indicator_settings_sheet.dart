@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/model/active_chart_indicator.dart';
+import 'macd_settings_modal.dart';
 import 'rsi_settings_modal.dart';
 import 'sma_settings_modal.dart';
 import 'volume_settings_modal.dart';
@@ -26,6 +27,12 @@ void showIndicatorSettingsSheet({
       );
     case 'vol':
       VolumeSettingsModal.show(
+        context: context,
+        indicator: indicator,
+        onSave: onSave,
+      );
+    case 'macd':
+      MacdSettingsModal.show(
         context: context,
         indicator: indicator,
         onSave: onSave,

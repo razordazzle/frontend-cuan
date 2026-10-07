@@ -304,6 +304,62 @@ describe('volumePoints', () => {
   });
 });
 
+describe('macdPoints', () => {
+  const closes = [10, 11, 12, 11, 13, 15, 14, 16, 18, 17, 19, 21];
+  const candles = closes.map((close, i) => ({ time: i + 1, open: close, high: close, low: close, close }));
+  const config = { fastLength: 3, slowLength: 5, signalLength: 3 };
+
+  it('sama dengan referensi naive (EMA seed SMA)', () => {
+    /** @param {number[]} values @param {number} length @returns {Series} */
+    const naiveEma = (values, length) => {
+      /** @type {Series} */
+      const out = new Array(values.length).fill(null);
+      let prev = values.slice(0, length).reduce((a, b) => a + b, 0) / length;
+      out[length - 1] = prev;
+      for (let i = length; i < values.length; i++) out[i] = prev = (2 / (length + 1)) * values[i] + (1 - 2 / (length + 1)) * prev;
+      return out;
+    };
+    const fast = naiveEma(closes, 3);
+    const slow = naiveEma(closes, 5);
+    const macd = /** @type {number[]} */ (slow.flatMap((s, i) => (s === null ? [] : [Number(fast[i]) - s])));
+    const signal = naiveEma(macd, 3).filter((v) => v !== null);
+
+    const result = Indicators.macdPoints(candles, config);
+    assert.equal(result.macd.length, 8); // mulai bar ke-5 (slowLength)
+    assert.equal(result.macd[0].time, 5);
+    assertSeriesClose(result.macd.map((p) => p.value), macd);
+    assert.equal(result.signal.length, 6);
+    assert.equal(result.signal[0].time, 7);
+    assertSeriesClose(result.signal.map((p) => p.value), signal);
+    assertSeriesClose(
+      result.histogram.map((p) => p.value),
+      signal.map((v, i) => macd[i + 2] - Number(v)),
+    );
+  });
+
+  it('trend histogram: bar pertama fall, lalu dibanding bar sebelumnya', () => {
+    const { histogram } = Indicators.macdPoints(candles, config);
+    histogram.forEach((p, i) => {
+      const isGrowing = i > 0 && histogram[i - 1].value < p.value;
+      const expected = p.value >= 0 ? (isGrowing ? 'growAbove' : 'fallAbove') : (isGrowing ? 'growBelow' : 'fallBelow');
+      assert.equal(p.trend, expected);
+    });
+    assert.ok(histogram[0].trend.startsWith('fall'));
+  });
+
+  it('oscillator & signal SMA', () => {
+    const { macd, signal } = Indicators.macdPoints(candles, { ...config, oscillatorMaType: 'SMA', signalMaType: 'SMA' });
+    /** @param {number} end @param {number} length */
+    const smaAt = (end, length) => closes.slice(end - length + 1, end + 1).reduce((a, b) => a + b, 0) / length;
+    assertSeriesClose([macd[0].value], [smaAt(4, 3) - smaAt(4, 5)]);
+    assertSeriesClose([signal[0].value], [(macd[0].value + macd[1].value + macd[2].value) / 3]);
+  });
+
+  it('data kurang dari slowLength menghasilkan kosong', () => {
+    assert.deepEqual(Indicators.macdPoints(candles.slice(0, 4), config), { macd: [], signal: [], histogram: [] });
+  });
+});
+
 describe('smoothPoints', () => {
   it('menerapkan moving average ke nilai Point & mempertahankan waktunya', () => {
     const points = [1, 2, 3, 4, 5].map((value, i) => ({ time: 10 + i, value }));

@@ -24,6 +24,7 @@ class ChartIndicatorsController extends ChangeNotifier {
     Color(0xFFFFD600),
   ];
   static const Color _defaultRsiColor = Color(0xFFE91E63);
+  static const Color _defaultMacdColor = Color(0xFF2962FF);
   static const int _defaultVolumeMaLength = 20;
 
   /// Garis Volume MA default biru & tersembunyi (volume tampil seperti sebelumnya).
@@ -155,6 +156,15 @@ class ChartIndicatorsController extends ChangeNotifier {
         title: '',
         period: _defaultVolumeMaLength,
         smoothingStyle: _defaultVolumeMaStyle,
+        labelsOnPriceScale: true,
+      ),
+      // Default MACD ala TradingView: 12 26 close 9 (EMA), garis MACD biru tebal 1.
+      'macd' => ActiveChartIndicator(
+        id: id,
+        type: type,
+        title: '',
+        color: _defaultMacdColor,
+        lineWidth: 1,
         labelsOnPriceScale: true,
       ),
       _ => null,
