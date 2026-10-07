@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:cuan_app/components/chart_indicators_legend.dart';
+import 'package:cuan_app/components/chart_timeframe_sheet.dart';
 import 'package:cuan_app/components/drawing_tools.dart';
 import 'package:cuan_app/components/indicator_settings_sheet.dart';
 import 'package:cuan_app/components/indicators_modal_sheet.dart';
@@ -8,6 +9,7 @@ import 'package:cuan_app/controllers/chart_data_source.dart';
 import 'package:cuan_app/controllers/chart_drawings_controller.dart';
 import 'package:cuan_app/controllers/chart_indicators_controller.dart';
 import 'package:cuan_app/data/model/active_chart_indicator.dart';
+import 'package:cuan_app/data/model/chart_timeframe.dart';
 import 'package:flutter/material.dart';
 import 'home_page.dart'
     show Ohlc, makeDummyCandles; // reuse model & helper yg udah ada
@@ -23,8 +25,6 @@ class TradingViewChartPage extends StatefulWidget {
 }
 
 class _TradingViewChartPageState extends State<TradingViewChartPage> {
-  static const List<String> _resolutions = <String>['1D', '1W', '1M'];
-
   final ChartIndicatorsController _indicators = ChartIndicatorsController();
   final ChartDrawingsController _drawings = ChartDrawingsController();
   late final Listenable _chartState = Listenable.merge(<Listenable>[
@@ -70,6 +70,15 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
     );
   }
 
+  Future<void> _pickTimeframe() async {
+    final ChartDataSource<ChangeNotifier> source = widget.source;
+    final ChartTimeframe? picked = await ChartTimeframeSheet.show(
+      context: context,
+      selected: source.timeframe,
+    );
+    if (picked != null) await source.setTimeframe(picked);
+  }
+
   void _openIndicatorSettings(String id) {
     final ActiveChartIndicator? indicator = _indicators.findById(id);
     if (indicator == null) return;
@@ -88,6 +97,11 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
     const Color upColor = Color(0xFF21C07A);
     final Color downColor = Colors.red.shade600;
     final ChartDataSource<ChangeNotifier> source = widget.source;
+
+    // Warna ikon/teks tombol toolbar yang tidak aktif.
+    final Color neutralColor = isDark
+        ? const Color(0xFFD8D8D8)
+        : const Color(0xFF373737);
 
     return Scaffold(
       appBar: AppBar(
@@ -144,34 +158,33 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    // Timeframe pills (sekarang sangat rapi dan pas di layar)
-                    Expanded(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: _resolutions
-                              .map(
-                                (String r) => Padding(
-                                  padding: const EdgeInsets.only(right: 6),
-                                  child: ChoiceChip(
-                                    label: Text(r),
-                                    selected: source.resolution == r,
-                                    onSelected: (_) => source.setResolution(r),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                        ),
+                    // Satu tombol timeframe aktif; ditekan = sheet semua timeframe (ala TradingView)
+                    _ActionButton(
+                      tooltip: 'Timeframe',
+                      onTap: _pickTimeframe,
+                      isActive: false,
+                      activeColor: const Color(0xFF00A3A8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(
+                            source.timeframe.label,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13.5,
+                              color: neutralColor,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            size: 18,
+                            color: neutralColor,
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 4),
-                    // Pembatas visual
-                    Container(
-                      width: 1,
-                      height: 22,
-                      color: cs.outline.withValues(alpha: 0.25),
-                    ),
-                    const SizedBox(width: 8),
+                    const Spacer(),
                     // Tombol Indikator Teknikal (fx) dengan badge counter
                     _ActionButton(
                       tooltip: 'Indikator Teknikal',
@@ -188,9 +201,7 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
                               fontSize: 14,
                               color: _indicators.count > 0
                                   ? const Color(0xFF00A3A8)
-                                  : (isDark
-                                        ? const Color(0xFFD8D8D8)
-                                        : const Color(0xFF373737)),
+                                  : neutralColor,
                             ),
                           ),
                           if (_indicators.count > 0) ...[
@@ -232,9 +243,7 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
                         size: 17,
                         color: _drawings.isToolbarActive
                             ? const Color(0xFF00A3A8)
-                            : (isDark
-                                  ? const Color(0xFFD8D8D8)
-                                  : const Color(0xFF373737)),
+                            : neutralColor,
                       ),
                     ),
                   ],
@@ -246,7 +255,7 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
                   children: [
                     TvChartWidget(
                       symbol: source.symbol,
-                      timeframe: source.resolution,
+                      timeframe: source.timeframe.label,
                       candles: candles,
                       payload: source.payload,
                       isCandle: _isCandle,
@@ -318,7 +327,7 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
                         child: ChartIndicatorsLegend(
                           controller: _indicators,
                           symbol: source.symbol,
-                          timeframe: source.resolution,
+                          timeframe: source.timeframe.label,
                           onOpenSettings: _openIndicatorSettings,
                         ),
                       ),
@@ -360,9 +369,7 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
                               Icon(
                                 Icons.touch_app_outlined,
                                 size: 16,
-                                color: isDark
-                                    ? const Color(0xFFD8D8D8)
-                                    : const Color(0xFF373737),
+                                color: neutralColor,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -380,9 +387,7 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w600,
-                                    color: isDark
-                                        ? const Color(0xFFD8D8D8)
-                                        : const Color(0xFF373737),
+                                    color: neutralColor,
                                   ),
                                 ),
                               ),

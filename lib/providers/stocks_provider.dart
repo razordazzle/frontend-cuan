@@ -1,6 +1,7 @@
 import 'package:cuan_app/data/model/candle_item.dart';
 import 'package:cuan_app/data/model/stock_list_item.dart';
 import 'package:cuan_app/data/model/chart_payload.dart';
+import 'package:cuan_app/data/model/chart_timeframe.dart';
 import 'package:cuan_app/pages/screen/home_page.dart' show Ohlc;
 import 'package:cuan_app/data/services/auth_service.dart';
 import 'package:cuan_app/data/services/stocks_service.dart';
@@ -57,8 +58,8 @@ class StocksProvider extends ChangeNotifier {
   String? errTv;
   List<CandleItem> tvCandles = [];
   ChartPayload? tvChartPayload;
-  String tvResolution =
-      '1D'; // '1D' | '1W' | '1M' — resolusi candle, BUKAN window waktu
+  /// Resolusi candle di halaman chart TradingView, BUKAN window waktu.
+  ChartTimeframe tvTimeframe = ChartTimeframe.defaultTimeframe;
 
   // ========== HELPER: overlay harga live dari GOAPI ==========
   // Future<List<StockListItem>> _applyLivePrices(List<StockListItem> list) async {
@@ -403,17 +404,16 @@ class StocksProvider extends ChangeNotifier {
 
   /// Ganti resolusi candle di halaman TradingView (Model B: resolusi, bukan window).
   /// TERPISAH dari setIndexInterval() yang dipakai home_page, biar ga saling ganggu.
-  Future<void> setTvResolution(String v) async {
-    if (tvResolution == v) return;
-    tvResolution = v;
+  Future<void> setTvTimeframe(ChartTimeframe timeframe) async {
+    if (tvTimeframe == timeframe) return;
+    tvTimeframe = timeframe;
     await fetchTvCandles(force: true);
     notifyListeners();
   }
 
   /// Candles IHSG untuk halaman TradingViewChartPage (IHSG).
-  /// interval yang dikirim ke backend = resolusi asli (1d/1w/1M), BUKAN mapping
-  /// window kayak di fetchIndexCandles() — biar konsisten sama SOP trading chart:
-  /// tiap candle merepresentasikan 1 resolusi tsb, history-nya panjang (bukan dipotong per-chip).
+  /// interval yang dikirim ke backend = resolusi asli ([ChartTimeframe.apiInterval]),
+  /// BUKAN mapping window kayak di fetchIndexCandles(): tiap candle = 1 resolusi.
   Future<void> fetchTvCandles({bool force = false}) async {
     if (tvCandles.isNotEmpty && !force) return;
 
@@ -422,30 +422,9 @@ class StocksProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      String apiInterval;
-      int apiLimit;
-
-      switch (tvResolution) {
-        case '1D':
-          apiInterval = '1d';
-          apiLimit = 480; // ~2 tahun candle harian
-          break;
-        case '1W':
-          apiInterval = '1w';
-          apiLimit = 100; // ~5 tahun candle mingguan
-          break;
-        case '1M':
-          apiInterval = '1M';
-          apiLimit = 24; // 20 tahun candle bulanan
-          break;
-        default:
-          apiInterval = '1d';
-          apiLimit = 500;
-      }
-
       tvChartPayload = await _svc.getIhsgChartWithIndicators(
-        interval: apiInterval,
-        limit: apiLimit,
+        interval: tvTimeframe.apiInterval,
+        limit: tvTimeframe.limit,
       );
 
       tvCandles = tvChartPayload!.candles

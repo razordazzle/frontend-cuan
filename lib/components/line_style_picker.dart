@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../data/model/indicator_line_style.dart';
+import 'settings_colors.dart';
 
 /// Tombol pill "kotak warna + preview garis" untuk membuka [showLineStylePicker].
 class LineStyleSwatchButton extends StatelessWidget {
@@ -34,6 +35,7 @@ class LineStyleSwatchButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final SettingsColors colors = SettingsColors.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -44,10 +46,10 @@ class LineStyleSwatchButton extends StatelessWidget {
           vertical: _padding,
         ),
         decoration: BoxDecoration(
-          color: const Color(0xFF2A2A2A),
+          color: colors.controlBg,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isActive ? const Color(0xFF2962FF) : const Color(0xFF3A3A3C),
+            color: isActive ? const Color(0xFF2962FF) : colors.controlBorder,
             width: _borderWidth,
           ),
           boxShadow: isActive
@@ -96,7 +98,9 @@ class _ColorBox extends StatelessWidget {
       child: SizedBox.square(
         dimension: size,
         child: CustomPaint(
-          painter: color.a < 1 ? const _CheckerboardPainter() : null,
+          painter: color.a < 1
+              ? _CheckerboardPainter(SettingsColors.of(context))
+              : null,
           child: ColoredBox(color: color),
         ),
       ),
@@ -106,15 +110,15 @@ class _ColorBox extends StatelessWidget {
 
 class _CheckerboardPainter extends CustomPainter {
   static const double _cellSize = 5.5;
-  static const Color _darkCell = Color(0xFF1E222D);
-  static const Color _lightCell = Color(0xFF2A2E39);
 
-  const _CheckerboardPainter();
+  final SettingsColors colors;
+
+  const _CheckerboardPainter(this.colors);
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.drawRect(Offset.zero & size, Paint()..color = _darkCell);
-    final Paint light = Paint()..color = _lightCell;
+    canvas.drawRect(Offset.zero & size, Paint()..color = colors.checkerDark);
+    final Paint light = Paint()..color = colors.checkerLight;
     for (double y = 0; y < size.height; y += _cellSize) {
       final bool oddRow = (y / _cellSize).round().isOdd;
       for (
@@ -128,7 +132,8 @@ class _CheckerboardPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CheckerboardPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _CheckerboardPainter oldDelegate) =>
+      oldDelegate.colors != colors;
 }
 
 /// Preview garis solid / dashed / dotted.
@@ -296,11 +301,6 @@ class _LineStylePickerPopover extends StatefulWidget {
 }
 
 class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
-  static const Color _popoverBg = Color(0xFF1E1E1E);
-  static const Color _divider = Color(0xFF2C2C2E);
-  static const Color _segmentBg = Color(0xFF2A2A2A);
-  static const Color _segmentBorder = Color(0xFF3A3A3C);
-  static const Color _labelColor = Color(0xFF8E8E93);
   static const double _paletteGap = 4;
   static const int _maxRecentColors = 4;
   static const List<int> _lineWidths = <int>[1, 2, 3, 4];
@@ -384,19 +384,20 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
   @override
   Widget build(BuildContext context) {
     final Color baseColor = _value.color.withValues(alpha: 1.0);
+    final SettingsColors colors = SettingsColors.of(context);
 
     return Material(
       type: MaterialType.transparency,
       child: Container(
         decoration: BoxDecoration(
-          color: _popoverBg,
+          color: colors.popoverBg,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _divider, width: 1),
-          boxShadow: const <BoxShadow>[
+          border: Border.all(color: colors.cardBorder, width: 1),
+          boxShadow: <BoxShadow>[
             BoxShadow(
-              color: Color(0xBF000000), // rgba(0, 0, 0, 0.75)
+              color: colors.popoverShadow,
               blurRadius: 32,
-              offset: Offset(0, 8),
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -408,22 +409,23 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              _buildPalette(baseColor),
+              _buildPalette(baseColor, colors),
               Container(
                 height: 1,
-                color: _divider,
+                color: colors.cardBorder,
                 margin: const EdgeInsets.symmetric(vertical: 10),
               ),
-              _buildRecentColors(baseColor),
+              _buildRecentColors(baseColor, colors),
               const SizedBox(height: 6),
-              _buildLabel('Opacity', fontSize: 12),
+              _buildLabel('Opacity', colors, fontSize: 12),
               const SizedBox(height: 6),
-              _buildOpacitySlider(baseColor),
+              _buildOpacitySlider(baseColor, colors),
               if (widget.showLineOptions) ...<Widget>[
                 const SizedBox(height: 12),
-                _buildLabel('Thickness'),
+                _buildLabel('Thickness', colors),
                 const SizedBox(height: 6),
                 _buildSegmentedControl<int>(
+                  colors: colors,
                   options: _lineWidths,
                   selected: _value.lineWidth,
                   onSelected: (int width) =>
@@ -432,21 +434,24 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
                     width: 26,
                     height: width.toDouble(),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.black : Colors.white,
+                      color: isSelected
+                          ? colors.onForeground
+                          : colors.foreground,
                       borderRadius: BorderRadius.circular(1),
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                _buildLabel('Line style'),
+                _buildLabel('Line style', colors),
                 const SizedBox(height: 6),
                 _buildSegmentedControl<int>(
+                  colors: colors,
                   options: _lineStyles,
                   selected: _value.lineStyle,
                   onSelected: (int style) =>
                       _update(_value.copyWith(lineStyle: style)),
                   builder: (int style, bool isSelected) => LineStylePreview(
-                    color: isSelected ? Colors.black : Colors.white,
+                    color: isSelected ? colors.onForeground : colors.foreground,
                     width: 2.0,
                     lineStyle: style,
                   ),
@@ -460,7 +465,7 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
   }
 
   // Jarak antar kotak ditaruh di luar Expanded supaya semua kotak (termasuk kolom terakhir) sama besar.
-  Widget _buildPalette(Color baseColor) {
+  Widget _buildPalette(Color baseColor, SettingsColors colors) {
     return Column(
       children: <Widget>[
         for (final (int rowIndex, List<Color> row)
@@ -481,7 +486,7 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
                           color: swatch,
                           borderRadius: BorderRadius.circular(3.5),
                           border: _isSameRgb(baseColor, swatch)
-                              ? Border.all(color: Colors.white, width: 2.0)
+                              ? Border.all(color: colors.foreground, width: 2.0)
                               : null,
                         ),
                       ),
@@ -496,7 +501,7 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
     );
   }
 
-  Widget _buildRecentColors(Color baseColor) {
+  Widget _buildRecentColors(Color baseColor, SettingsColors colors) {
     return Row(
       children: <Widget>[
         for (final Color color in _recentColors)
@@ -510,7 +515,7 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
                 color: color,
                 borderRadius: BorderRadius.circular(5),
                 border: _isSameRgb(baseColor, color)
-                    ? Border.all(color: Colors.white, width: 2)
+                    ? Border.all(color: colors.foreground, width: 2)
                     : null,
               ),
             ),
@@ -522,17 +527,17 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
             height: 24,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(5),
-              border: Border.all(color: const Color(0xFF434651)),
+              border: Border.all(color: colors.outline),
             ),
             alignment: Alignment.center,
-            child: const Icon(Icons.add, color: _labelColor, size: 16),
+            child: Icon(Icons.add, color: colors.subtitle, size: 16),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildOpacitySlider(Color baseColor) {
+  Widget _buildOpacitySlider(Color baseColor, SettingsColors colors) {
     final double opacity = _value.color.a;
 
     return Row(
@@ -541,7 +546,7 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
           child: SliderTheme(
             data: SliderThemeData(
               trackHeight: 12,
-              trackShape: _OpacitySliderTrackShape(baseColor),
+              trackShape: _OpacitySliderTrackShape(baseColor, colors),
               thumbShape: _OpacitySliderThumbShape(),
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
             ),
@@ -558,15 +563,15 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
           width: 48,
           height: 26,
           decoration: BoxDecoration(
-            color: _popoverBg,
+            color: colors.popoverBg,
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: const Color(0xFF434651)),
+            border: Border.all(color: colors.outline),
           ),
           alignment: Alignment.center,
           child: Text(
             '${(opacity * 100).round()}%',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: colors.foreground,
               fontSize: 12,
               fontWeight: FontWeight.w600,
               decoration: TextDecoration.none,
@@ -577,11 +582,15 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
     );
   }
 
-  Widget _buildLabel(String text, {double fontSize = 13}) {
+  Widget _buildLabel(
+    String text,
+    SettingsColors colors, {
+    double fontSize = 13,
+  }) {
     return Text(
       text,
       style: TextStyle(
-        color: _labelColor,
+        color: colors.subtitle,
         fontSize: fontSize,
         fontWeight: FontWeight.w500,
       ),
@@ -589,6 +598,7 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
   }
 
   Widget _buildSegmentedControl<T>({
+    required SettingsColors colors,
     required List<T> options,
     required T selected,
     required ValueChanged<T> onSelected,
@@ -597,9 +607,9 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
     return Container(
       height: 32,
       decoration: BoxDecoration(
-        color: _segmentBg,
+        color: colors.controlBg,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: _segmentBorder),
+        border: Border.all(color: colors.controlBorder),
       ),
       child: Row(
         children: <Widget>[
@@ -611,12 +621,12 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
                 child: Container(
                   decoration: BoxDecoration(
                     color: option == selected
-                        ? Colors.white
+                        ? colors.foreground
                         : Colors.transparent,
                     border: index == options.length - 1
                         ? null
-                        : const Border(
-                            right: BorderSide(color: _segmentBorder),
+                        : Border(
+                            right: BorderSide(color: colors.controlBorder),
                           ),
                   ),
                   alignment: Alignment.center,
@@ -633,7 +643,9 @@ class _LineStylePickerPopoverState extends State<_LineStylePickerPopover> {
 class _OpacitySliderTrackShape extends SliderTrackShape
     with BaseSliderTrackShape {
   final Color baseColor;
-  _OpacitySliderTrackShape(this.baseColor);
+  final SettingsColors colors;
+
+  _OpacitySliderTrackShape(this.baseColor, this.colors);
 
   @override
   void paint(
@@ -666,11 +678,10 @@ class _OpacitySliderTrackShape extends SliderTrackShape
     canvas.save();
     canvas.clipRRect(rrect);
 
-    // Dark background
-    canvas.drawRRect(rrect, Paint()..color = const Color(0xFF1E222D));
+    // Latar pola kotak-kotak (menandai transparansi)
+    canvas.drawRRect(rrect, Paint()..color = colors.checkerDark);
 
-    // Subtle checkered pattern underneath
-    final Paint checkPaint = Paint()..color = const Color(0xFF2A2E39);
+    final Paint checkPaint = Paint()..color = colors.checkerLight;
     const double checkSize = 4.0;
     for (double x = trackRect.left; x < trackRect.right; x += checkSize * 2) {
       for (double y = trackRect.top; y < trackRect.bottom; y += checkSize * 2) {
@@ -698,7 +709,7 @@ class _OpacitySliderTrackShape extends SliderTrackShape
     canvas.drawRRect(
       rrect,
       Paint()
-        ..color = const Color(0xFF434651)
+        ..color = colors.outline
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0,
     );

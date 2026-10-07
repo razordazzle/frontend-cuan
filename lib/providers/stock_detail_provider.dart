@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cuan_app/data/model/candle_item.dart';
 import 'package:cuan_app/data/model/chart_payload.dart';
+import 'package:cuan_app/data/model/chart_timeframe.dart';
 import 'package:cuan_app/data/model/dividend_item.dart';
 import 'package:cuan_app/data/model/key_stats_latest.dart';
 import 'package:cuan_app/data/model/ratio_item.dart';
@@ -28,7 +29,7 @@ class StockDetailProvider extends ChangeNotifier {
   List<dynamic> earningsMatrix = [];
 
   // State terpisah, JANGAN reuse `candles`/`candleInterval` yang dipakai chart inline
-  String tvResolution = '1D';
+  ChartTimeframe tvTimeframe = ChartTimeframe.defaultTimeframe;
   ChartPayload? tvChartPayload;
   List<CandleItem> tvCandles = [];
   bool loadingTv = false;
@@ -112,9 +113,9 @@ class StockDetailProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> setTvResolution(String ticker, String v) async {
-    if (tvResolution == v && _tvTicker == ticker) return;
-    tvResolution = v;
+  Future<void> setTvTimeframe(String ticker, ChartTimeframe timeframe) async {
+    if (tvTimeframe == timeframe && _tvTicker == ticker) return;
+    tvTimeframe = timeframe;
     _tvTicker = ticker;
     await fetchTvCandles(ticker, force: true);
     notifyListeners();
@@ -127,29 +128,10 @@ class StockDetailProvider extends ChangeNotifier {
     _tvTicker = ticker;
     notifyListeners();
     try {
-      String apiInterval;
-      int apiLimit;
-      switch (tvResolution) {
-        case '1D':
-          apiInterval = '1d';
-          apiLimit = 480;
-          break;
-        case '1W':
-          apiInterval = '1w';
-          apiLimit = 100;
-          break;
-        case '1M':
-          apiInterval = '1M';
-          apiLimit = 24;
-          break;
-        default:
-          apiInterval = '1d';
-          apiLimit = 480;
-      }
       tvChartPayload = await api.getStockChartWithIndicators(
         ticker: ticker,
-        interval: apiInterval,
-        limit: apiLimit,
+        interval: tvTimeframe.apiInterval,
+        limit: tvTimeframe.limit,
       );
       tvCandles = tvChartPayload!.candles
           .map(
