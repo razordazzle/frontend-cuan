@@ -140,8 +140,21 @@ class _TvChartWidgetState extends State<TvChartWidget> {
   bool _isSynced = false;
   bool _isPushing = false;
 
+  /// Tema yang terakhir dikirim ke UI drawing di chart (popover, modal, object tree).
+  Brightness? _brightness;
+
   /// Pengukuran waktu buka chart (debug/profile saja), dimulai saat widget dibuat.
   final Stopwatch _openTimer = Stopwatch()..start();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final Brightness brightness = Theme.of(context).brightness;
+    if (brightness == _brightness) return;
+    _brightness = brightness;
+    // Sebelum sinkron, tema ikut dikirim oleh _pushAll.
+    if (_isSynced) _run(<String>[_themeModeScript]);
+  }
 
   @override
   void initState() {
@@ -265,6 +278,9 @@ class _TvChartWidgetState extends State<TvChartWidget> {
 
   // ===== Script JS per bagian state chart =====
 
+  String get _themeModeScript =>
+      "setThemeMode('${_brightness == Brightness.light ? 'light' : 'dark'}');";
+
   String get _chartInfoScript =>
       "setChartInfo(${jsonEncode(widget.symbol)}, ${jsonEncode(widget.timeframe)});";
 
@@ -326,6 +342,7 @@ class _TvChartWidgetState extends State<TvChartWidget> {
 
       await _run(<String>[
         "initChart($_themeColorArgs, ${widget.interactive}, '$_crosshairCss');",
+        _themeModeScript,
         _chartInfoScript,
         _setDataScript,
         _seriesTypeScript,

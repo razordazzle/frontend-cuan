@@ -5,6 +5,53 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <style>
+        /* Token warna UI drawing (popover, sheet, modal settings, object tree).
+           Default dark; light diaktifkan Flutter lewat setThemeMode('light'). */
+        :root {
+            --tv-surface: #1E1E1E;
+            --tv-border: #2C2C2E;
+            --tv-control-bg: #2A2A2A;
+            --tv-control-border: #3A3A3C;
+            --tv-pressed: #2B2B2B;
+            --tv-input-bg: #121212;
+            --tv-fg: #FFFFFF;
+            --tv-on-fg: #000000;
+            --tv-label: #D1D4DC;
+            --tv-muted: #B2B5BE;
+            --tv-icon: #868993;
+            --tv-subtle: #787B86;
+            --tv-disabled: #50535E;
+            --tv-selected-row: #1B365D;
+            --tv-checkbox-border: #FFFFFF;
+            --tv-hairline-weak: rgba(255, 255, 255, 0.03);
+            --tv-hairline: rgba(255, 255, 255, 0.08);
+            --tv-hairline-strong: rgba(255, 255, 255, 0.15);
+            --tv-hover: rgba(255, 255, 255, 0.05);
+            --tv-shadow: rgba(0, 0, 0, 0.75);
+        }
+
+        :root[data-theme="light"] {
+            --tv-surface: #FFFFFF;
+            --tv-border: #E0E3EB;
+            --tv-control-bg: #F0F3FA;
+            --tv-control-border: #D1D4DC;
+            --tv-pressed: #E0E3EB;
+            --tv-input-bg: #F0F3FA;
+            --tv-fg: #131722;
+            --tv-on-fg: #FFFFFF;
+            --tv-label: #434651;
+            --tv-muted: #6A6D78;
+            --tv-icon: #787B86;
+            --tv-subtle: #9598A1;
+            --tv-disabled: #B2B5BE;
+            --tv-selected-row: #E3EFFD;
+            --tv-checkbox-border: #131722;
+            --tv-hairline-weak: rgba(0, 0, 0, 0.03);
+            --tv-hairline: rgba(0, 0, 0, 0.08);
+            --tv-hairline-strong: rgba(0, 0, 0, 0.15);
+            --tv-hover: rgba(0, 0, 0, 0.04);
+            --tv-shadow: rgba(0, 0, 0, 0.18);
+        }
         html,
         body {
             margin: 0;
@@ -45,10 +92,10 @@
             transform: translateX(-50%);
             display: flex;
             align-items: center;
-            background: #1E1E1E;
-            border: 1px solid #2C2C2E;
+            background: var(--tv-surface);
+            border: 1px solid var(--tv-border);
             border-radius: 8px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+            box-shadow: 0 8px 24px var(--tv-shadow);
             height: 38px;
             padding: 0 4px;
             z-index: 50;
@@ -79,7 +126,7 @@
             background: transparent;
             border: none;
             border-radius: 6px;
-            color: #B2B5BE;
+            color: var(--tv-muted);
             cursor: pointer;
             padding: 0;
             margin: 0 1px;
@@ -90,12 +137,12 @@
         }
 
         .tv-tb-btn:active, .tv-tb-btn.active {
-            background: #2B2B2B;
-            color: #FFFFFF;
+            background: var(--tv-pressed);
+            color: var(--tv-fg);
         }
 
         #tv-btn-angle.active {
-            background: #2B2B2B;
+            background: var(--tv-pressed);
             color: #00E5FF;
         }
 
@@ -111,7 +158,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             font-size: 13px;
             font-weight: 600;
-            color: #FFFFFF;
+            color: var(--tv-fg);
             width: auto;
             padding: 0 7px;
         }
@@ -148,7 +195,7 @@
         .tv-style-line-solid {
             width: 18px;
             height: 2px;
-            background: #FFFFFF;
+            background: var(--tv-fg);
             border-radius: 1px;
             display: block;
         }
@@ -156,24 +203,24 @@
         .tv-style-line-dashed {
             width: 18px;
             height: 0;
-            border-top: 2px dashed #FFFFFF;
+            border-top: 2px dashed var(--tv-fg);
             display: block;
         }
 
         .tv-style-line-dotted {
             width: 18px;
             height: 0;
-            border-top: 2px dotted #FFFFFF;
+            border-top: 2px dotted var(--tv-fg);
             display: block;
         }
 
         /* Common Popover Menu Style */
         .tv-popover {
             position: absolute;
-            background: #1E1E1E;
-            border: 1px solid #2C2C2E;
+            background: var(--tv-surface);
+            border: 1px solid var(--tv-border);
             border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75);
+            box-shadow: 0 10px 30px var(--tv-shadow);
             z-index: 60;
             user-select: none;
             touch-action: manipulation;
@@ -192,7 +239,7 @@
             align-items: center;
             padding: 8px 12px;
             border-radius: 6px;
-            color: #D1D4DC;
+            color: var(--tv-label);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             font-size: 13.5px;
             font-weight: 500;
@@ -202,19 +249,19 @@
         }
 
         .tv-menu-item:active, .tv-menu-item.selected {
-            background: #FFFFFF;
-            color: #121212;
+            background: var(--tv-fg);
+            color: var(--tv-on-fg);
             font-weight: 700;
         }
 
         .tv-menu-item.selected .tv-menu-line {
-            background: #121212 !important;
-            border-color: #121212 !important;
+            background: var(--tv-input-bg) !important;
+            border-color: var(--tv-on-fg) !important;
         }
 
         .tv-menu-line {
             width: 22px;
-            background: #D1D4DC;
+            background: var(--tv-label);
             border-radius: 1px;
             display: inline-block;
         }
@@ -239,11 +286,11 @@
             cursor: pointer;
             box-sizing: border-box;
             position: relative;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--tv-hairline);
         }
 
         .tv-color-swatch.selected {
-            box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 3.5px #1E1E1E;
+            box-shadow: 0 0 0 2px var(--tv-fg), 0 0 0 3.5px var(--tv-surface);
             z-index: 2;
         }
 
@@ -253,7 +300,7 @@
             gap: 8px;
             margin-bottom: 12px;
             padding-top: 8px;
-            border-top: 1px solid #2C2C2E;
+            border-top: 1px solid var(--tv-border);
         }
 
         .tv-custom-btn {
@@ -263,8 +310,8 @@
             width: 22px;
             height: 22px;
             border-radius: 4px;
-            border: 1px dashed #50535E;
-            color: #B2B5BE;
+            border: 1px dashed var(--tv-disabled);
+            color: var(--tv-muted);
             background: transparent;
             cursor: pointer;
             font-size: 15px;
@@ -280,7 +327,7 @@
         .tv-opacity-label {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             font-size: 11.5px;
-            color: #787B86;
+            color: var(--tv-subtle);
             font-weight: 500;
         }
 
@@ -296,10 +343,10 @@
             height: 12px;
             border-radius: 6px;
             overflow: hidden;
-            background-image: repeating-linear-gradient(45deg, #2B2B2B 25%, transparent 25%, transparent 75%, #2B2B2B 75%, #2B2B2B), repeating-linear-gradient(45deg, #2B2B2B 25%, #1E1E1E 25%, #1E1E1E 75%, #2B2B2B 75%, #2B2B2B);
+            background-image: repeating-linear-gradient(45deg, var(--tv-pressed) 25%, transparent 25%, transparent 75%, var(--tv-pressed) 75%, var(--tv-pressed)), repeating-linear-gradient(45deg, var(--tv-pressed) 25%, var(--tv-surface) 25%, var(--tv-surface) 75%, var(--tv-pressed) 75%, var(--tv-pressed));
             background-position: 0 0, 4px 4px;
             background-size: 8px 8px;
-            border: 1px solid #2C2C2E;
+            border: 1px solid var(--tv-border);
         }
 
         .tv-slider-gradient {
@@ -327,10 +374,10 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             font-size: 11.5px;
             font-weight: 600;
-            color: #D1D4DC;
+            color: var(--tv-label);
             padding: 3px 6px;
-            background: #121212;
-            border: 1px solid #2C2C2E;
+            background: var(--tv-input-bg);
+            border: 1px solid var(--tv-border);
             border-radius: 4px;
             min-width: 34px;
             text-align: center;
@@ -359,12 +406,12 @@
             left: 0;
             bottom: 0;
             width: 100%;
-            background: #1E1E1E;
-            border-top: 1px solid #2C2C2E;
+            background: var(--tv-surface);
+            border-top: 1px solid var(--tv-border);
             border-top-left-radius: 16px;
             border-top-right-radius: 16px;
             z-index: 1001;
-            box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 -8px 28px var(--tv-shadow);
             padding: 8px 0 20px 0;
             transform: translateY(100%);
             transition: transform 0.24s cubic-bezier(0.2, 0.9, 0.3, 1);
@@ -380,7 +427,7 @@
         .tv-sheet-handle {
             width: 36px;
             height: 4px;
-            background: #50535E;
+            background: var(--tv-disabled);
             border-radius: 2px;
             margin: 4px auto 10px auto;
         }
@@ -390,7 +437,7 @@
             align-items: center;
             gap: 16px;
             padding: 13px 20px;
-            color: #D1D4DC;
+            color: var(--tv-label);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             font-size: 15px;
             font-weight: 400;
@@ -400,23 +447,23 @@
         }
 
         .tv-sheet-item:active {
-            background: #2B2B2B;
-            color: #FFFFFF;
+            background: var(--tv-pressed);
+            color: var(--tv-fg);
         }
 
         .tv-sheet-item svg {
             flex-shrink: 0;
-            color: #868993;
+            color: var(--tv-icon);
             transition: color 0.12s;
         }
 
         .tv-sheet-item:active svg {
-            color: #FFFFFF;
+            color: var(--tv-fg);
         }
 
         .tv-sheet-separator {
             height: 1px;
-            background: rgba(255, 255, 255, 0.08);
+            background: var(--tv-hairline);
             margin: 6px 0;
         }
 
@@ -444,12 +491,12 @@
             bottom: 0;
             width: 100%;
             max-height: 90vh;
-            background: #1E1E1E;
-            border-top: 1px solid #2C2C2E;
+            background: var(--tv-surface);
+            border-top: 1px solid var(--tv-border);
             border-top-left-radius: 16px;
             border-top-right-radius: 16px;
             z-index: 1060;
-            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.75);
+            box-shadow: 0 -8px 32px var(--tv-shadow);
             transform: translateY(100%);
             transition: transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1);
             user-select: none;
@@ -476,7 +523,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            color: #FFFFFF;
+            color: var(--tv-fg);
             font-size: 19px;
             font-weight: 600;
         }
@@ -484,7 +531,7 @@
         .tv-settings-close-btn {
             background: transparent;
             border: none;
-            color: #868993;
+            color: var(--tv-icon);
             cursor: pointer;
             padding: 4px;
             display: flex;
@@ -494,18 +541,18 @@
         }
 
         .tv-settings-close-btn:active {
-            color: #FFFFFF;
+            color: var(--tv-fg);
         }
 
         .tv-settings-tabs {
             display: flex;
-            border-bottom: 1px solid #2C2C2E;
+            border-bottom: 1px solid var(--tv-border);
             padding: 0 20px;
         }
 
         .tv-settings-tab {
             position: relative;
-            color: #FFFFFF;
+            color: var(--tv-fg);
             font-size: 14.5px;
             font-weight: 600;
             padding: 10px 4px 12px 4px;
@@ -518,7 +565,7 @@
             left: 0;
             right: 0;
             height: 2.5px;
-            background: #FFFFFF;
+            background: var(--tv-fg);
             border-radius: 1.5px;
         }
 
@@ -546,8 +593,8 @@
             width: 36px;
             height: 36px;
             border-radius: 6px;
-            border: 1px solid #3A3A3C;
-            background: #1E1E1E;
+            border: 1px solid var(--tv-control-border);
+            background: var(--tv-surface);
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -561,7 +608,7 @@
             height: 100%;
             border-radius: 4px;
             background: #FFFFFF;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid var(--tv-hairline-strong);
         }
 
         .tv-fmt-select-wrap {
@@ -574,9 +621,9 @@
             min-width: 68px;
             padding: 0 10px 0 12px;
             border-radius: 6px;
-            border: 1px solid #3A3A3C;
-            background: #1E1E1E;
-            color: #FFFFFF;
+            border: 1px solid var(--tv-control-border);
+            background: var(--tv-surface);
+            color: var(--tv-fg);
             font-family: inherit;
             font-size: 14px;
             font-weight: 500;
@@ -592,11 +639,11 @@
         }
 
         .tv-fmt-size-btn:hover, .tv-fmt-size-btn:focus {
-            border-color: #50535E;
+            border-color: var(--tv-disabled);
         }
 
         .tv-size-chevron {
-            color: #868993;
+            color: var(--tv-icon);
             transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1);
             display: flex;
             align-items: center;
@@ -614,11 +661,11 @@
             bottom: 0;
             top: auto;
             max-height: 55vh;
-            background: #1E1E1E;
-            border-top: 1px solid #2C2C2E;
+            background: var(--tv-surface);
+            border-top: 1px solid var(--tv-border);
             border-top-left-radius: 16px;
             border-top-right-radius: 16px;
-            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.85);
+            box-shadow: 0 -8px 32px var(--tv-shadow);
             z-index: 2200;
             overflow-y: auto;
             padding: 12px 14px max(24px, env(safe-area-inset-bottom, 24px)) 14px;
@@ -640,7 +687,7 @@
             align-items: center;
             padding: 0 16px;
             border-radius: 8px;
-            color: #D1D4DC;
+            color: var(--tv-label);
             font-size: 15px;
             font-weight: 500;
             cursor: pointer;
@@ -651,12 +698,12 @@
         }
 
         .tv-size-item:hover {
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--tv-hover);
         }
 
         .tv-size-item.selected {
-            background: #FFFFFF !important;
-            color: #000000 !important;
+            background: var(--tv-fg) !important;
+            color: var(--tv-on-fg) !important;
             font-weight: 600;
         }
 
@@ -666,7 +713,7 @@
             top: 50%;
             transform: translateY(-50%);
             pointer-events: none;
-            color: #868993;
+            color: var(--tv-icon);
             display: flex;
         }
 
@@ -674,9 +721,9 @@
             width: 36px;
             height: 36px;
             border-radius: 6px;
-            border: 1px solid #3A3A3C;
-            background: #1E1E1E;
-            color: #D1D4DC;
+            border: 1px solid var(--tv-control-border);
+            background: var(--tv-surface);
+            color: var(--tv-label);
             font-size: 15px;
             font-weight: 600;
             display: flex;
@@ -687,9 +734,9 @@
         }
 
         .tv-fmt-toggle-btn.active {
-            background: #2B2B2B;
-            border-color: #FFFFFF;
-            color: #FFFFFF;
+            background: var(--tv-pressed);
+            border-color: var(--tv-fg);
+            color: var(--tv-fg);
         }
 
         /* Textarea */
@@ -697,9 +744,9 @@
             width: 100%;
             height: 110px;
             border-radius: 8px;
-            border: 1px solid #3A3A3C;
-            background: #1E1E1E;
-            color: #FFFFFF;
+            border: 1px solid var(--tv-control-border);
+            background: var(--tv-surface);
+            color: var(--tv-fg);
             font-family: inherit;
             font-size: 14px;
             padding: 12px;
@@ -717,7 +764,7 @@
         }
 
         .tv-settings-textarea::placeholder {
-            color: #50535E;
+            color: var(--tv-disabled);
         }
 
         /* Alignment row */
@@ -729,7 +776,7 @@
         }
 
         .tv-align-label {
-            color: #D1D4DC;
+            color: var(--tv-label);
             font-size: 14px;
             font-weight: 400;
             flex: 1;
@@ -742,9 +789,9 @@
         .tv-align-select {
             height: 36px;
             border-radius: 6px;
-            border: 1px solid #3A3A3C;
-            background: #1E1E1E;
-            color: #FFFFFF;
+            border: 1px solid var(--tv-control-border);
+            background: var(--tv-surface);
+            color: var(--tv-fg);
             font-family: inherit;
             font-size: 13.5px;
             font-weight: 500;
@@ -768,7 +815,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            color: #D1D4DC;
+            color: var(--tv-label);
             font-size: 14px;
             font-weight: 400;
         }
@@ -784,7 +831,7 @@
             align-items: center;
             gap: 12px;
             cursor: pointer;
-            color: #D1D4DC;
+            color: var(--tv-label);
             font-size: 14px;
             user-select: none;
             -webkit-user-select: none;
@@ -795,7 +842,7 @@
             -webkit-appearance: none;
             width: 18px;
             height: 18px;
-            border: 1.5px solid #50535E;
+            border: 1.5px solid var(--tv-disabled);
             border-radius: 4px;
             background-color: transparent;
             cursor: pointer;
@@ -810,7 +857,7 @@
 
         .tv-checkbox:checked {
             background-color: #131722;
-            border-color: #FFFFFF;
+            border-color: var(--tv-checkbox-border);
         }
 
         .tv-checkbox:checked::after {
@@ -828,7 +875,7 @@
             width: 32px;
             height: 32px;
             border-radius: 6px;
-            border: 1px solid #2A2E39;
+            border: 1px solid var(--tv-control-border);
             cursor: pointer;
             padding: 0;
             flex-shrink: 0;
@@ -863,9 +910,9 @@
             height: 34px;
             padding: 0 8px;
             border-radius: 7px;
-            border: 1px solid #3A3A3C;
-            background: #2A2A2A;
-            color: #D1D4DC;
+            border: 1px solid var(--tv-control-border);
+            background: var(--tv-control-bg);
+            color: var(--tv-label);
             cursor: pointer;
             display: inline-flex;
             align-items: center;
@@ -877,7 +924,7 @@
         }
 
         .tv-fib-mini-btn:hover {
-            border-color: #50535E;
+            border-color: var(--tv-disabled);
         }
 
         .tv-fib-mini-btn.active {
@@ -898,9 +945,9 @@
             min-width: 84px;
             padding: 0 10px 0 12px;
             border-radius: 6px;
-            border: 1px solid #3A3A3C;
-            background: #2A2A2A;
-            color: #D1D4DC;
+            border: 1px solid var(--tv-control-border);
+            background: var(--tv-control-bg);
+            color: var(--tv-label);
             font-family: inherit;
             font-size: 13.5px;
             font-weight: 500;
@@ -917,7 +964,7 @@
         }
 
         .tv-fib-select-btn:hover {
-            border-color: #50535E;
+            border-color: var(--tv-disabled);
         }
 
         .tv-fib-select-btn.active {
@@ -933,7 +980,7 @@
             gap: 12px;
             font-size: 15px;
             font-weight: 500;
-            color: #D1D4DC;
+            color: var(--tv-label);
             border-radius: 8px;
             user-select: none;
             -webkit-user-select: none;
@@ -941,14 +988,14 @@
         }
 
         .tv-fib-extend-item:hover {
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--tv-hover);
         }
 
         .tv-select-control {
             height: 34px;
-            background-color: #2A2A2A;
-            border: 1px solid #3A3A3C;
-            color: #D1D4DC;
+            background-color: var(--tv-control-bg);
+            border: 1px solid var(--tv-control-border);
+            color: var(--tv-label);
             font-size: 13px;
             font-weight: 500;
             padding: 0 28px 0 10px;
@@ -983,10 +1030,10 @@
             width: 76px;
             flex: none;
             height: 32px;
-            background: #2A2A2A;
-            border: 1px solid #3A3A3C;
+            background: var(--tv-control-bg);
+            border: 1px solid var(--tv-control-border);
             border-radius: 6px;
-            color: #FFFFFF;
+            color: var(--tv-fg);
             font-size: 13.5px;
             font-weight: 500;
             padding: 0 10px;
@@ -1000,7 +1047,7 @@
         }
 
         .tv-fib-lvl-input.disabled {
-            color: #50535E;
+            color: var(--tv-disabled);
         }
 
         .tv-fib-slider {
@@ -1050,7 +1097,7 @@
             max-height: none !important;
             border-radius: 0 !important;
             border: none !important;
-            background: #1E1E1E !important;
+            background: var(--tv-surface) !important;
             box-shadow: none !important;
             transform: translateY(100%);
             transition: transform 0.24s cubic-bezier(0.2, 0.9, 0.3, 1);
@@ -1063,24 +1110,24 @@
         }
 
         .tv-settings-modal.fullscreen .tv-settings-header {
-            background: #1E1E1E;
+            background: var(--tv-surface);
             padding: 16px 16px 10px 16px;
         }
 
         .tv-settings-modal.fullscreen .tv-settings-tabs {
-            background: #1E1E1E;
-            border-bottom: 1px solid #2C2C2E;
+            background: var(--tv-surface);
+            border-bottom: 1px solid var(--tv-border);
             padding: 0 16px;
         }
 
         .tv-settings-modal.fullscreen .tv-settings-body {
-            background: #1E1E1E;
+            background: var(--tv-surface);
             padding: 14px 16px 20px 16px;
         }
 
         .tv-settings-modal.fullscreen .tv-settings-footer {
-            background: #1E1E1E;
-            border-top: 1px solid #2C2C2E;
+            background: var(--tv-surface);
+            border-top: 1px solid var(--tv-border);
             padding: 12px 16px;
             padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
         }
@@ -1093,8 +1140,8 @@
             width: 82px;
             height: 36px;
             padding: 4px 8px;
-            background: #2A2A2A;
-            border: 1.5px solid #3A3A3C;
+            background: var(--tv-control-bg);
+            border: 1.5px solid var(--tv-control-border);
             border-radius: 8px;
             cursor: pointer;
             box-sizing: border-box;
@@ -1139,10 +1186,10 @@
             right: 16px;
             width: 310px;
             max-width: calc(100% - 32px);
-            background: #1E1E1E;
-            border: 1px solid #2C2C2E;
+            background: var(--tv-surface);
+            border: 1px solid var(--tv-border);
             border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75);
+            box-shadow: 0 8px 32px var(--tv-shadow);
             padding: 12px;
             box-sizing: border-box;
             z-index: 2100;
@@ -1171,7 +1218,7 @@
         }
 
         .tv-fib-palette-swatch.selected {
-            outline: 2px solid #FFFFFF;
+            outline: 2px solid var(--tv-fg);
             outline-offset: 1px;
             z-index: 2;
         }
@@ -1182,7 +1229,7 @@
             gap: 8px;
             margin-top: 10px;
             padding-top: 10px;
-            border-top: 1px solid #2C2C2E;
+            border-top: 1px solid var(--tv-border);
         }
 
         .tv-fib-recent-colors {
@@ -1201,7 +1248,7 @@
         }
 
         .tv-fib-recent-swatch.selected {
-            box-shadow: 0 0 0 2px #1E1E1E, 0 0 0 4px #FFFFFF;
+            box-shadow: 0 0 0 2px var(--tv-surface), 0 0 0 4px var(--tv-fg);
             border-radius: 4px;
         }
 
@@ -1210,19 +1257,19 @@
             height: 26px;
             border-radius: 5px;
             background: transparent;
-            color: #FFFFFF;
+            color: var(--tv-fg);
             font-size: 20px;
             font-weight: 300;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            border: 1px dashed #50535E;
+            border: 1px dashed var(--tv-disabled);
             transition: border-color 0.15s;
         }
 
         .tv-fib-add-color-btn:hover {
-            border-color: #868993;
+            border-color: var(--tv-icon);
         }
 
         .tv-fib-pop-section {
@@ -1231,7 +1278,7 @@
 
         .tv-fib-pop-label {
             font-size: 13px;
-            color: #868993;
+            color: var(--tv-icon);
             font-weight: 500;
             margin-bottom: 6px;
         }
@@ -1247,12 +1294,12 @@
             position: relative;
             height: 12px;
             border-radius: 6px;
-            background-color: #2C2C2E;
+            background-color: var(--tv-border);
             background-image: 
-                linear-gradient(45deg, #1E1E1E 25%, transparent 25%), 
-                linear-gradient(-45deg, #1E1E1E 25%, transparent 25%), 
-                linear-gradient(45deg, transparent 75%, #1E1E1E 75%), 
-                linear-gradient(-45deg, transparent 75%, #1E1E1E 75%);
+                linear-gradient(45deg, var(--tv-surface) 25%, transparent 25%), 
+                linear-gradient(-45deg, var(--tv-surface) 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, var(--tv-surface) 75%), 
+                linear-gradient(-45deg, transparent 75%, var(--tv-surface) 75%);
             background-size: 8px 8px;
             background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
             display: flex;
@@ -1306,25 +1353,25 @@
         }
 
         .tv-fib-opacity-badge {
-            border: 1px solid #3A3A3C;
+            border: 1px solid var(--tv-control-border);
             border-radius: 5px;
             padding: 3px 8px;
             font-size: 13px;
-            color: #D1D4DC;
+            color: var(--tv-label);
             font-weight: 500;
             min-width: 48px;
             text-align: center;
             box-sizing: border-box;
-            background: #2A2A2A;
+            background: var(--tv-control-bg);
         }
 
         .tv-fib-segmented-control {
             display: flex;
             width: 100%;
-            border: 1px solid #3A3A3C;
+            border: 1px solid var(--tv-control-border);
             border-radius: 6px;
             overflow: hidden;
-            background: #2A2A2A;
+            background: var(--tv-control-bg);
             height: 32px;
             box-sizing: border-box;
         }
@@ -1335,9 +1382,9 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            border-right: 1px solid #3A3A3C;
+            border-right: 1px solid var(--tv-control-border);
             background: transparent;
-            color: #FFFFFF;
+            color: var(--tv-fg);
             transition: background 0.12s, color 0.12s;
         }
 
@@ -1346,8 +1393,8 @@
         }
 
         .tv-fib-segment.selected {
-            background: #FFFFFF !important;
-            color: #000000 !important;
+            background: var(--tv-fg) !important;
+            color: var(--tv-on-fg) !important;
         }
 
         .tv-fib-seg-line {
@@ -1364,10 +1411,10 @@
         /* Levels Width and Style Dropdowns (TradingView Style) */
         .tv-fib-dropdown {
             position: absolute;
-            background: #1E1E1E;
-            border: 1px solid #2C2C2E;
+            background: var(--tv-surface);
+            border: 1px solid var(--tv-border);
             border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75);
+            box-shadow: 0 8px 32px var(--tv-shadow);
             padding: 6px;
             box-sizing: border-box;
             z-index: 2100;
@@ -1392,23 +1439,23 @@
             border-radius: 8px;
             cursor: pointer;
             background: transparent;
-            color: #FFFFFF;
+            color: var(--tv-fg);
             transition: background 0.1s, color 0.1s;
             margin: 3px 0;
             box-sizing: border-box;
         }
 
         .tv-fib-dropdown-item:active {
-            background: #2A2A2A;
+            background: var(--tv-control-bg);
         }
 
         .tv-fib-dropdown-item.selected {
-            background: #FFFFFF !important;
-            color: #000000 !important;
+            background: var(--tv-fg) !important;
+            color: var(--tv-on-fg) !important;
         }
 
         .tv-fib-dropdown-item.selected .tv-fib-seg-line {
-            background-color: #000000 !important;
+            background-color: var(--tv-on-fg) !important;
         }
 
         .tv-fib-style-item {
@@ -1425,20 +1472,20 @@
         }
 
         .tv-fib-style-item.selected svg {
-            stroke: #000000 !important;
+            stroke: var(--tv-on-fg) !important;
         }
 
         .tv-fib-style-item.selected span {
-            color: #000000 !important;
+            color: var(--tv-on-fg) !important;
         }
 
         .tv-footer-btn-template {
             height: 36px;
             width: 48px;
             border-radius: 6px;
-            border: 1px solid #3A3A3C;
+            border: 1px solid var(--tv-control-border);
             background: transparent;
-            color: #FFFFFF;
+            color: var(--tv-fg);
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -1447,7 +1494,7 @@
         }
 
         .tv-footer-btn-template:active {
-            background: #2B2B2B;
+            background: var(--tv-pressed);
         }
 
         /* Footer */
@@ -1456,8 +1503,8 @@
             align-items: center;
             justify-content: space-between;
             padding: 14px 20px 20px 20px;
-            border-top: 1px solid #2C2C2E;
-            background: #1E1E1E;
+            border-top: 1px solid var(--tv-border);
+            background: var(--tv-surface);
         }
 
         .tv-footer-actions {
@@ -1470,9 +1517,9 @@
             height: 36px;
             padding: 0 16px;
             border-radius: 6px;
-            border: 1px solid #3A3A3C;
+            border: 1px solid var(--tv-control-border);
             background: transparent;
-            color: #FFFFFF;
+            color: var(--tv-fg);
             font-family: inherit;
             font-size: 14px;
             font-weight: 500;
@@ -1481,7 +1528,7 @@
         }
 
         .tv-footer-btn-cancel:active {
-            background: #2B2B2B;
+            background: var(--tv-pressed);
         }
 
         .tv-footer-btn-ok {
@@ -1489,8 +1536,8 @@
             padding: 0 20px;
             border-radius: 6px;
             border: none;
-            background: #FFFFFF;
-            color: #000000;
+            background: var(--tv-fg);
+            color: var(--tv-on-fg);
             font-family: inherit;
             font-size: 14px;
             font-weight: 600;
@@ -1510,12 +1557,12 @@
             width: 100%;
             height: 80vh;
             max-height: 85vh;
-            background: #1E1E1E;
-            border-top: 1px solid #2C2C2E;
+            background: var(--tv-surface);
+            border-top: 1px solid var(--tv-border);
             border-top-left-radius: 16px;
             border-top-right-radius: 16px;
             z-index: 1060;
-            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.75);
+            box-shadow: 0 -8px 32px var(--tv-shadow);
             transform: translateY(100%);
             transition: transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1);
             user-select: none;
@@ -1536,11 +1583,11 @@
             align-items: center;
             justify-content: space-between;
             padding: 18px 20px 14px 20px;
-            border-bottom: 1px solid #2C2C2E;
+            border-bottom: 1px solid var(--tv-border);
         }
 
         .tv-object-tree-title {
-            color: #FFFFFF;
+            color: var(--tv-fg);
             font-size: 19px;
             font-weight: 600;
         }
@@ -1554,7 +1601,7 @@
         .tv-tree-header-btn {
             background: transparent;
             border: none;
-            color: #868993;
+            color: var(--tv-icon);
             cursor: pointer;
             padding: 4px;
             display: flex;
@@ -1564,7 +1611,7 @@
         }
 
         .tv-tree-header-btn:active {
-            color: #FFFFFF;
+            color: var(--tv-fg);
         }
 
         .tv-object-tree-body {
@@ -1586,13 +1633,13 @@
             padding: 12px 20px;
             cursor: pointer;
             transition: background 0.12s;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid var(--tv-hairline-weak);
             user-select: none;
             -webkit-user-select: none;
         }
 
         .tv-tree-item:hover {
-            background: rgba(255, 255, 255, 0.04);
+            background: var(--tv-hover);
         }
 
         .tv-tree-info-row, .tv-tree-info-row:hover {
@@ -1601,7 +1648,7 @@
         }
 
         .tv-tree-item.selected {
-            background: #1B365D; /* TradingView mobile active row highlight */
+            background: var(--tv-selected-row); /* TradingView mobile active row highlight */
         }
 
         .tv-tree-item.hidden-item {
@@ -1617,7 +1664,7 @@
         }
 
         .tv-tree-item-icon {
-            color: #868993;
+            color: var(--tv-icon);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1629,7 +1676,7 @@
         }
 
         .tv-tree-item-label {
-            color: #FFFFFF;
+            color: var(--tv-fg);
             font-size: 14.5px;
             font-weight: 400;
             white-space: nowrap;
@@ -1638,7 +1685,7 @@
         }
 
         .tv-tree-item-sub {
-            color: #868993;
+            color: var(--tv-icon);
             font-size: 12px;
             margin-left: 6px;
         }
@@ -1654,7 +1701,7 @@
         .tv-tree-action-btn {
             background: transparent;
             border: none;
-            color: #868993;
+            color: var(--tv-icon);
             cursor: pointer;
             padding: 4px;
             display: flex;
@@ -1664,7 +1711,7 @@
         }
 
         .tv-tree-action-btn:hover {
-            color: #FFFFFF;
+            color: var(--tv-fg);
         }
 
         .tv-tree-action-btn.active-action {
@@ -1672,7 +1719,7 @@
         }
 
         .tv-tree-action-btn.dimmed-action {
-            color: #50535E;
+            color: var(--tv-disabled);
             opacity: 0.6;
         }
 
@@ -1683,7 +1730,7 @@
         .tv-tree-empty {
             padding: 48px 20px;
             text-align: center;
-            color: #868993;
+            color: var(--tv-icon);
             font-size: 14px;
         }
     </style>
@@ -1915,7 +1962,7 @@
             <div class="tv-settings-header">
                 <div class="tv-settings-title-group">
                     <span id="tv-settings-title-text">Trendline</span>
-                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#868993" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style="stroke: var(--tv-icon);" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M11.5 2.5a1.414 1.414 0 0 1 2 2L4.5 13.5l-3 1 1-3 9-9z" />
                     </svg>
                 </div>
@@ -4572,17 +4619,17 @@
             infoRow.style.webkitUserSelect = 'none';
             infoRow.innerHTML = `
                 <div class="tv-tree-item-left">
-                    <div class="tv-tree-item-icon" style="color: #D1D4DC;">
+                    <div class="tv-tree-item-icon" style="color: var(--tv-label);">
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
                             <!-- Left taller hollow candle -->
                             <line x1="5.5" y1="2.5" x2="5.5" y2="17.5" />
-                            <rect x="3.5" y="5.5" width="4" height="9" rx="0.5" fill="#1E1E1E" stroke="currentColor" />
+                            <rect x="3.5" y="5.5" width="4" height="9" rx="0.5" style="fill: var(--tv-surface);" stroke="currentColor" />
                             <!-- Right shorter hollow candle -->
                             <line x1="14.5" y1="5.5" x2="14.5" y2="15.5" />
-                            <rect x="12.5" y="8" width="4" height="5" rx="0.5" fill="#1E1E1E" stroke="currentColor" />
+                            <rect x="12.5" y="8" width="4" height="5" rx="0.5" style="fill: var(--tv-surface);" stroke="currentColor" />
                         </svg>
                     </div>
-                    <span id="tv-tree-symbol-info" class="tv-tree-item-label" style="font-weight: 600; font-size: 15px; color: #FFFFFF;">${currentChartSymbol}, ${currentChartTimeframe}</span>
+                    <span id="tv-tree-symbol-info" class="tv-tree-item-label" style="font-weight: 600; font-size: 15px; color: var(--tv-fg);">${currentChartSymbol}, ${currentChartTimeframe}</span>
                 </div>
             `;
             body.appendChild(infoRow);
@@ -4613,7 +4660,7 @@
 
                     row.innerHTML = `
                         <div class="tv-tree-item-left">
-                            <div class="tv-tree-item-icon" style="color: #D1D4DC;">
+                            <div class="tv-tree-item-icon" style="color: var(--tv-label);">
                                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
                                     <circle cx="3.8" cy="14.2" r="1.6" />
                                     <line x1="4.9" y1="13.1" x2="13.1" y2="4.9" />
@@ -4728,7 +4775,7 @@
                     row.className = 'tv-tree-item' + (isSelected ? ' selected' : '') + (isHidden ? ' hidden-item' : '');
                     row.innerHTML = `
                         <div class="tv-tree-item-left">
-                            <div class="tv-tree-item-icon" style="color: #D1D4DC;">
+                            <div class="tv-tree-item-icon" style="color: var(--tv-label);">
                                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
                                     <rect x="2.5" y="4.5" width="13" height="9" rx="1.5" />
                                 </svg>
@@ -4842,7 +4889,7 @@
                     row.className = 'tv-tree-item' + (isSelected ? ' selected' : '') + (isHidden ? ' hidden-item' : '');
                     row.innerHTML = `
                         <div class="tv-tree-item-left">
-                            <div class="tv-tree-item-icon" style="color: #D1D4DC;">
+                            <div class="tv-tree-item-icon" style="color: var(--tv-label);">
                                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
                                     <line x1="2" y1="9" x2="7.3" y2="9" />
                                     <circle cx="9" cy="9" r="1.6" />
@@ -4960,7 +5007,7 @@
                     const labelText = fibonaccis.length > 1 ? `Fib retracement ${fIdx + 1}` : 'Fib retracement';
                     row.innerHTML = `
                         <div class="tv-tree-item-left">
-                            <div class="tv-tree-item-icon" style="color: #D1D4DC;">
+                            <div class="tv-tree-item-icon" style="color: var(--tv-label);">
                                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
                                     <line x1="2" y1="3.5" x2="16" y2="3.5" />
                                     <line x1="2" y1="7.5" x2="12.5" y2="7.5" />
@@ -9340,6 +9387,11 @@
 
             setTimeout(resizeFibCanvas, 100);
             initFibPointerEvents();
+        }
+
+        // Tema UI drawing (dark/light) mengikuti tema app; warnanya di token CSS --tv-*.
+        function setThemeMode(mode) {
+            document.documentElement.dataset.theme = mode === 'light' ? 'light' : 'dark';
         }
 
         // Warna tema app: naik/turun (hex) untuk candle & area; grid (rgba). Warna volume diatur per indikator.

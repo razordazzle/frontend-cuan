@@ -85,6 +85,7 @@ class _DrawingToolsSheetState extends State<DrawingToolsSheet> {
   ];
   static const Color _starColor = Color(0xFFF7A600); // TradingView Amber Star
   static const Color _selectedColor = Color(0xFF2962FF);
+  static const Color _switchOffColor = Color(0xFF8E8E93);
 
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
@@ -543,18 +544,25 @@ class _DrawingToolsSheetState extends State<DrawingToolsSheet> {
                         ),
                         const SizedBox(width: 4),
                       ],
+                      // Off = bentuk sama dengan on (thumb penuh, track tanpa outline),
+                      // hanya warnanya abu-abu.
                       Switch(
                         value: controller.isToolbarVisible,
                         activeThumbColor: _selectedColor,
                         activeTrackColor: _selectedColor.withValues(
                           alpha: 0.35,
                         ),
-                        inactiveThumbColor: isDark
-                            ? const Color(0xFF8E8E93)
-                            : const Color(0xFFD1D4DC),
-                        inactiveTrackColor: isDark
-                            ? const Color(0xFF2B2B2B)
-                            : const Color(0xFFE0E3EB),
+                        inactiveThumbColor: _switchOffColor,
+                        inactiveTrackColor: _switchOffColor.withValues(
+                          alpha: 0.35,
+                        ),
+                        trackOutlineColor: const WidgetStatePropertyAll<Color>(
+                          Colors.transparent,
+                        ),
+                        // Ikon transparan: ukuran thumb off jadi sama dengan on.
+                        thumbIcon: const WidgetStatePropertyAll<Icon>(
+                          Icon(Icons.circle, color: Colors.transparent),
+                        ),
                         onChanged: controller.setToolbarVisible,
                       ),
                     ],
