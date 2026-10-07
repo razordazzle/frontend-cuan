@@ -359,9 +359,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
                               if (i == 1) {
                                 // TAB 1 → tetap buka halaman Key Stats terpisah
-                                final keep = controller?.index ?? 0;
+                                final keep = controller.index;
                                 Future.microtask(
-                                  () => controller?.animateTo(keep),
+                                  () => controller.animateTo(keep),
                                 );
 
                                 final res = await Navigator.pushNamed(
@@ -371,7 +371,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                                 );
 
                                 if (res is int) {
-                                  controller?.animateTo(res);
+                                  controller.animateTo(res);
                                   final currentInterval = _intervalForLabel(
                                     _ranges[_rangeIndex],
                                   );
@@ -1438,38 +1438,6 @@ class _CandleChartCardState extends State<_CandleChartCard> {
     );
   }
 
-  double? _lastRsi(List<CandleItem> raw, {int period = 14}) {
-    final closes = raw.map((c) => (c.close ?? 0).toDouble()).toList();
-    if (closes.length < period + 1) return null;
-
-    double gain = 0, loss = 0;
-    for (int i = 1; i <= period; i++) {
-      final diff = closes[i] - closes[i - 1];
-      if (diff > 0) {
-        gain += diff;
-      } else {
-        loss -= diff;
-      }
-    }
-    gain /= period;
-    loss /= period;
-
-    for (int i = period + 1; i < closes.length; i++) {
-      final diff = closes[i] - closes[i - 1];
-      if (diff > 0) {
-        gain = (gain * (period - 1) + diff) / period;
-        loss = (loss * (period - 1)) / period;
-      } else {
-        loss = (loss * (period - 1) - diff) / period;
-        gain = (gain * (period - 1)) / period;
-      }
-    }
-
-    if (loss == 0) return 100;
-    final rs = gain / loss;
-    return 100 - (100 / (1 + rs));
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -1506,13 +1474,11 @@ class _CandleChartCardState extends State<_CandleChartCard> {
     DateTime xMin = _fixTime(raw.first.ts);
     DateTime xMax = _fixTime(raw.last.ts);
     DateTime? visibleMin;
-    DateTime? visibleMax;
 
     if (!xMax.isAfter(xMin)) {
       xMax = xMin.add(const Duration(hours: 1));
     }
 
-    visibleMax = xMax;
 
     if (isIntraday) {
       final latest = _fixTime(raw.last.ts);
@@ -1529,7 +1495,6 @@ class _CandleChartCardState extends State<_CandleChartCard> {
         if (!xMax.isAfter(xMin)) xMax = xMin.add(const Duration(minutes: 5));
 
         visibleMin = null;
-        visibleMax = null;
 
         // const framePoints = 40;
         // visibleMin = raw.length > framePoints
@@ -1565,7 +1530,6 @@ class _CandleChartCardState extends State<_CandleChartCard> {
     double rawMin = double.infinity, rawMax = -double.infinity;
 
     final (macdMin, macdMax) = widget.showMACD ? _macdRange(raw) : (0.0, 1.0);
-    final double? lastRsiValue = widget.showRSI ? _lastRsi(raw) : null;
 
     double maxVol = 0;
 
@@ -1888,15 +1852,15 @@ class _CandleChartCardState extends State<_CandleChartCard> {
                     onTrackballPositionChanging: (args) {
                       final info = args.chartPointInfo;
                       debugPrint(
-                        'TRACKBALL => seriesIndex=${info?.seriesIndex} '
-                        'seriesName=${info?.series?.name} '
-                        'dataPointIndex=${info?.dataPointIndex} '
+                        'TRACKBALL => seriesIndex=${info.seriesIndex} '
+                        'seriesName=${info.series?.name} '
+                        'dataPointIndex=${info.dataPointIndex} '
                         'raw.length=${raw.length}',
                       );
 
-                      if (info?.series?.name != 'price') return;
+                      if (info.series?.name != 'price') return;
 
-                      final i = info?.dataPointIndex;
+                      final i = info.dataPointIndex;
                       if (i != null && i >= 0 && i < raw.length) {
                         debugPrint('  -> setState _selectedIndex = $i');
                         setState(() {
@@ -2061,38 +2025,6 @@ class _CandleChartCardState extends State<_CandleChartCard> {
   }
 }
 
-class _IndicatorBox extends StatelessWidget {
-  final List<String> items;
-  final String? selected;
-  final ValueChanged<String> onSelect;
-  const _IndicatorBox({
-    required this.items,
-    required this.selected,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outline.withOpacity(.25)),
-      ),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: items.map((e) {
-          final on = selected == e;
-          return _Pill(label: e, selected: on, onTap: () => onSelect(e));
-        }).toList(),
-      ),
-    );
-  }
-}
-
 class _Pill extends StatelessWidget {
   final String label;
   final bool selected;
@@ -2229,15 +2161,17 @@ class _IndicatorToolbar extends StatelessWidget {
 }
 
 class _VDivider extends StatelessWidget {
-  final double height;
-  const _VDivider({super.key, this.height = 18});
+  static const double _height = 18;
+
+  const _VDivider();
+
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).colorScheme.outline.withOpacity(.25);
     return SizedBox(
-      height: height,
+      height: _height,
       child: Center(
-        child: Container(width: 1, height: height, color: c),
+        child: Container(width: 1, height: _height, color: c),
       ),
     );
   }
