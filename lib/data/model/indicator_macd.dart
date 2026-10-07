@@ -81,7 +81,7 @@ class MacdHistogramStyle {
 /// (color, lineWidth, lineStyle, isLineVisible), source memakai `source` indikator.
 @immutable
 class MacdSettings {
-  static const List<String> maTypes = <String>['SMA', 'EMA'];
+  static const List<String> maTypes = <String>['EMA', 'SMA'];
 
   final int fastLength;
   final int slowLength;

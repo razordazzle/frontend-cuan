@@ -152,16 +152,6 @@ class _MacdSettingsModalState extends State<MacdSettingsModal> {
       onSave: _save,
       inputs: <Widget>[
         SettingsRow(
-          label: 'Fast Length',
-          control: SettingsNumberField(controller: _fastLengthController),
-        ),
-        const SizedBox(height: 16),
-        SettingsRow(
-          label: 'Slow Length',
-          control: SettingsNumberField(controller: _slowLengthController),
-        ),
-        const SizedBox(height: 16),
-        SettingsRow(
           label: 'Source',
           control: SettingsSelect(
             title: 'Source',
@@ -172,18 +162,28 @@ class _MacdSettingsModalState extends State<MacdSettingsModal> {
         ),
         const SizedBox(height: 16),
         SettingsRow(
-          label: 'Signal Smoothing',
+          label: 'Fast length',
+          control: SettingsNumberField(controller: _fastLengthController),
+        ),
+        const SizedBox(height: 16),
+        SettingsRow(
+          label: 'Slow length',
+          control: SettingsNumberField(controller: _slowLengthController),
+        ),
+        const SizedBox(height: 16),
+        SettingsRow(
+          label: 'Signal length',
           control: SettingsNumberField(controller: _signalLengthController),
         ),
         const SizedBox(height: 16),
         _buildMaTypeRow(
-          label: 'Oscillator MA Type',
+          label: 'Oscillator MA type',
           value: _oscillatorMaType,
           onChanged: (String value) => _oscillatorMaType = value,
         ),
         const SizedBox(height: 16),
         _buildMaTypeRow(
-          label: 'Signal Line MA Type',
+          label: 'Signal MA type',
           value: _signalMaType,
           onChanged: (String value) => _signalMaType = value,
         ),

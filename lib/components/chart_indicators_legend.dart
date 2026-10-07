@@ -461,7 +461,11 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                 ),
               ),
             ),
-            if (values != null) ...<Widget>[const SizedBox(width: 6), values],
+            // Flexible: nilai panjang (mis. precision 8) dipotong, bukan overflow.
+            if (values != null) ...<Widget>[
+              const SizedBox(width: 6),
+              Flexible(child: values),
+            ],
             const SizedBox(width: 6),
             // Purple sync/refresh icon badge ala TradingView (Gambar 1)
             Opacity(
@@ -538,7 +542,11 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                 ),
               ),
             ),
-            if (values != null) ...<Widget>[const SizedBox(width: 6), values],
+            // Flexible: nilai panjang (mis. precision 8) dipotong, bukan overflow.
+            if (values != null) ...<Widget>[
+              const SizedBox(width: 6),
+              Flexible(child: values),
+            ],
             const SizedBox(width: 14),
 
             // 1. Eye Button (Visibility)
@@ -1046,6 +1054,8 @@ class _PlotValuesText extends StatelessWidget {
         if (visiblePlots.isEmpty) return const SizedBox.shrink();
 
         return Text.rich(
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           TextSpan(
             children: <InlineSpan>[
               for (final (int position, (int plotIndex, double value))
