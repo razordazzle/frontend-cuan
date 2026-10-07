@@ -3,10 +3,8 @@ import 'package:flutter/material.dart';
 import '../data/model/chart_timeframe.dart';
 
 /// Sheet pemilih timeframe ala TradingView: daftar per kelompok (MINUTES/HOURS/DAYS),
-/// timeframe aktif diberi tanda centang.
+/// timeframe aktif disorot seperti combobox di settings indikator.
 class ChartTimeframeSheet extends StatelessWidget {
-  static const Color _selectedColor = Color(0xFF2962FF);
-
   final ChartTimeframe selected;
 
   const ChartTimeframeSheet({super.key, required this.selected});
@@ -100,6 +98,7 @@ class ChartTimeframeSheet extends StatelessWidget {
                           timeframe: timeframe,
                           isSelected: timeframe == selected,
                           textColor: textColor,
+                          backgroundColor: sheetBg,
                         ),
                   ],
                 ],
@@ -112,44 +111,43 @@ class ChartTimeframeSheet extends StatelessWidget {
   }
 }
 
+/// Item timeframe; yang aktif = pill terang dengan teks gelap (warna dibalik).
 class _TimeframeTile extends StatelessWidget {
   final ChartTimeframe timeframe;
   final bool isSelected;
   final Color textColor;
+  final Color backgroundColor;
 
   const _TimeframeTile({
     required this.timeframe,
     required this.isSelected,
     required this.textColor,
+    required this.backgroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => Navigator.of(context).pop(timeframe),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                timeframe.title,
-                style: TextStyle(
-                  fontSize: 15.5,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected
-                      ? ChartTimeframeSheet._selectedColor
-                      : textColor,
-                ),
-              ),
+    final BorderRadius radius = BorderRadius.circular(8);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+      child: InkWell(
+        onTap: () => Navigator.of(context).pop(timeframe),
+        borderRadius: radius,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? textColor : Colors.transparent,
+            borderRadius: radius,
+          ),
+          child: Text(
+            timeframe.title,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              color: isSelected ? backgroundColor : textColor,
             ),
-            if (isSelected)
-              const Icon(
-                Icons.check_rounded,
-                size: 20,
-                color: ChartTimeframeSheet._selectedColor,
-              ),
-          ],
+          ),
         ),
       ),
     );

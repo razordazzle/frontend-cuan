@@ -33,7 +33,6 @@ void main() {
       for (final ChartTimeframe timeframe in ChartTimeframe.values) {
         expect(find.text(timeframe.title), findsOneWidget);
       }
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
 
       await tester.tap(find.text(ChartTimeframe.minute15.title));
       await tester.pumpAndSettle();
