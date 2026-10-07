@@ -3,18 +3,9 @@ import 'package:flutter/material.dart';
 import '../data/model/active_chart_indicator.dart';
 import '../data/model/indicator_line_style.dart';
 import 'line_style_picker.dart';
+import 'settings_colors.dart';
 
-/// Token warna modal settings indikator (selaras dengan sheet drawing: #121212 & #1E1E1E).
-abstract final class SettingsColors {
-  static const Color sheetBg = Color(0xFF121212);
-  static const Color cardBg = Color(0xFF1E1E1E);
-  static const Color cardBorder = Color(0xFF2C2C2E);
-  static const Color closeButtonBg = Color(0xFF242426);
-  static const Color subtitle = Color(0xFF8E8E93);
-  static const Color label = Color(0xFFD1D4DC);
-  static const Color disabledLabel = Color(0xFF787B86);
-  static const Color disabledText = Color(0xFF50535E);
-}
+export 'settings_colors.dart';
 
 /// Pilihan dropdown yang dipakai bersama oleh modal settings indikator.
 abstract final class SettingsOptions {
@@ -114,15 +105,14 @@ class _IndicatorSettingsSheetState extends State<IndicatorSettingsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final SettingsColors colors = SettingsColors.of(context);
     return Container(
       height: MediaQuery.of(context).size.height * 0.88,
-      decoration: const BoxDecoration(
-        color: SettingsColors.sheetBg,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        border: Border(
-          top: BorderSide(color: SettingsColors.cardBorder, width: 1),
-        ),
-        boxShadow: <BoxShadow>[
+      decoration: BoxDecoration(
+        color: colors.sheetBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border(top: BorderSide(color: colors.cardBorder, width: 1)),
+        boxShadow: const <BoxShadow>[
           BoxShadow(
             color: Colors.black54,
             blurRadius: 24,
@@ -141,14 +131,14 @@ class _IndicatorSettingsSheetState extends State<IndicatorSettingsSheet> {
                   width: 38,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF3E3E42),
+                    color: colors.handle,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
             ),
-            _buildHeader(),
-            _buildTabBar(),
+            _buildHeader(colors),
+            _buildTabBar(colors),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(
@@ -158,14 +148,14 @@ class _IndicatorSettingsSheetState extends State<IndicatorSettingsSheet> {
                 children: _activeTabIndex == 0 ? widget.inputs : widget.style,
               ),
             ),
-            _buildBottomBar(),
+            _buildBottomBar(colors),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(SettingsColors colors) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
       child: Row(
@@ -173,10 +163,10 @@ class _IndicatorSettingsSheetState extends State<IndicatorSettingsSheet> {
         children: <Widget>[
           Text(
             widget.title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: colors.foreground,
               letterSpacing: -0.3,
               decoration: TextDecoration.none,
             ),
@@ -187,11 +177,11 @@ class _IndicatorSettingsSheetState extends State<IndicatorSettingsSheet> {
             child: Container(
               width: 32,
               height: 32,
-              decoration: const BoxDecoration(
-                color: SettingsColors.closeButtonBg,
+              decoration: BoxDecoration(
+                color: colors.closeButtonBg,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.close, size: 18, color: Colors.white),
+              child: Icon(Icons.close, size: 18, color: colors.foreground),
             ),
           ),
         ],
@@ -199,7 +189,7 @@ class _IndicatorSettingsSheetState extends State<IndicatorSettingsSheet> {
     );
   }
 
-  Widget _buildTabBar() {
+  Widget _buildTabBar(SettingsColors colors) {
     return Column(
       children: <Widget>[
         Padding(
@@ -209,17 +199,21 @@ class _IndicatorSettingsSheetState extends State<IndicatorSettingsSheet> {
               for (final (int index, String title)
                   in _tabs.indexed) ...<Widget>[
                 if (index > 0) const SizedBox(width: 24),
-                _buildTabItem(title: title, index: index),
+                _buildTabItem(title: title, index: index, colors: colors),
               ],
             ],
           ),
         ),
-        Container(height: 1, color: SettingsColors.cardBorder),
+        Container(height: 1, color: colors.cardBorder),
       ],
     );
   }
 
-  Widget _buildTabItem({required String title, required int index}) {
+  Widget _buildTabItem({
+    required String title,
+    required int index,
+    required SettingsColors colors,
+  }) {
     final bool isSelected = _activeTabIndex == index;
     return GestureDetector(
       onTap: () => setState(() => _activeTabIndex = index),
@@ -235,7 +229,7 @@ class _IndicatorSettingsSheetState extends State<IndicatorSettingsSheet> {
                 child: Text(
                   title,
                   style: TextStyle(
-                    color: isSelected ? Colors.white : SettingsColors.subtitle,
+                    color: isSelected ? colors.foreground : colors.subtitle,
                     fontSize: 15,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                     decoration: TextDecoration.none,
@@ -246,7 +240,7 @@ class _IndicatorSettingsSheetState extends State<IndicatorSettingsSheet> {
               Container(
                 height: 2.5,
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : Colors.transparent,
+                  color: isSelected ? colors.foreground : Colors.transparent,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -257,13 +251,11 @@ class _IndicatorSettingsSheetState extends State<IndicatorSettingsSheet> {
     );
   }
 
-  Widget _buildBottomBar() {
+  Widget _buildBottomBar(SettingsColors colors) {
     return Container(
-      decoration: const BoxDecoration(
-        color: SettingsColors.sheetBg,
-        border: Border(
-          top: BorderSide(color: SettingsColors.cardBorder, width: 1),
-        ),
+      decoration: BoxDecoration(
+        color: colors.sheetBg,
+        border: Border(top: BorderSide(color: colors.cardBorder, width: 1)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       child: Row(
@@ -276,13 +268,13 @@ class _IndicatorSettingsSheetState extends State<IndicatorSettingsSheet> {
               height: 38,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: SettingsColors.cardBorder),
+                border: Border.all(color: colors.cardBorder),
               ),
               alignment: Alignment.center,
-              child: const Text(
+              child: Text(
                 'Cancel',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: colors.foreground,
                   fontSize: 14.5,
                   fontWeight: FontWeight.w500,
                   decoration: TextDecoration.none,
@@ -297,14 +289,14 @@ class _IndicatorSettingsSheetState extends State<IndicatorSettingsSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               height: 38,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colors.foreground,
                 borderRadius: BorderRadius.circular(8),
               ),
               alignment: Alignment.center,
-              child: const Text(
+              child: Text(
                 'Ok',
                 style: TextStyle(
-                  color: Colors.black,
+                  color: colors.onForeground,
                   fontSize: 14.5,
                   fontWeight: FontWeight.bold,
                   decoration: TextDecoration.none,
@@ -327,8 +319,8 @@ class SettingsSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: const TextStyle(
-        color: SettingsColors.subtitle,
+      style: TextStyle(
+        color: SettingsColors.of(context).subtitle,
         fontSize: 11.5,
         letterSpacing: 0.8,
         fontWeight: FontWeight.w600,
@@ -353,15 +345,14 @@ class SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final SettingsColors colors = SettingsColors.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: <Widget>[
         Text(
           label,
           style: TextStyle(
-            color: enabled
-                ? SettingsColors.label
-                : SettingsColors.disabledLabel,
+            color: enabled ? colors.label : colors.disabledLabel,
             fontSize: 14,
             fontWeight: FontWeight.w400,
             decoration: TextDecoration.none,
@@ -392,18 +383,17 @@ class SettingsNumberField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final SettingsColors colors = SettingsColors.of(context);
     return Container(
       width: width,
       height: 38,
       decoration: BoxDecoration(
-        color: enabled
-            ? SettingsColors.cardBg
-            : SettingsColors.cardBg.withValues(alpha: 0.5),
+        color: enabled ? colors.cardBg : colors.cardBg.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: enabled
-              ? SettingsColors.cardBorder
-              : SettingsColors.cardBorder.withValues(alpha: 0.6),
+              ? colors.cardBorder
+              : colors.cardBorder.withValues(alpha: 0.6),
         ),
       ),
       alignment: Alignment.centerLeft,
@@ -416,7 +406,7 @@ class SettingsNumberField extends StatelessWidget {
           decimal: allowDecimal,
         ),
         style: TextStyle(
-          color: enabled ? Colors.white : SettingsColors.disabledText,
+          color: enabled ? colors.foreground : colors.disabledText,
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
@@ -453,6 +443,7 @@ class SettingsSelect extends StatelessWidget {
   });
 
   void _openSheet(BuildContext context) {
+    final SettingsColors colors = SettingsColors.of(context);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -462,12 +453,10 @@ class SettingsSelect extends StatelessWidget {
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.68,
         ),
-        decoration: const BoxDecoration(
-          color: SettingsColors.sheetBg,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          border: Border(
-            top: BorderSide(color: SettingsColors.cardBorder, width: 1),
-          ),
+        decoration: BoxDecoration(
+          color: colors.sheetBg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          border: Border(top: BorderSide(color: colors.cardBorder, width: 1)),
         ),
         child: SafeArea(
           child: ListView.builder(
@@ -491,13 +480,17 @@ class SettingsSelect extends StatelessWidget {
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.white : Colors.transparent,
+                      color: isSelected
+                          ? colors.foreground
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       item,
                       style: TextStyle(
-                        color: isSelected ? Colors.black : Colors.white,
+                        color: isSelected
+                            ? colors.onForeground
+                            : colors.foreground,
                         fontSize: 15,
                         fontWeight: isSelected
                             ? FontWeight.w600
@@ -517,6 +510,7 @@ class SettingsSelect extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final SettingsColors colors = SettingsColors.of(context);
     return InkWell(
       onTap: () => _openSheet(context),
       borderRadius: BorderRadius.circular(8),
@@ -525,9 +519,9 @@ class SettingsSelect extends StatelessWidget {
         height: 38,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-          color: SettingsColors.cardBg,
+          color: colors.cardBg,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: SettingsColors.cardBorder),
+          border: Border.all(color: colors.cardBorder),
         ),
         child: Row(
           children: <Widget>[
@@ -536,17 +530,17 @@ class SettingsSelect extends StatelessWidget {
                 value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: colors.foreground,
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
                 ),
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(
+            Icon(
               Icons.keyboard_arrow_down_rounded,
-              color: Color(0xFF868993),
+              color: colors.icon,
               size: 18,
             ),
           ],
@@ -563,20 +557,21 @@ class SettingsCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final SettingsColors colors = SettingsColors.of(context);
     return Container(
       width: 19,
       height: 19,
       decoration: BoxDecoration(
-        color: isChecked ? Colors.white : Colors.transparent,
+        color: isChecked ? colors.foreground : Colors.transparent,
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
-          color: isChecked ? Colors.white : SettingsColors.disabledText,
+          color: isChecked ? colors.foreground : colors.disabledText,
           width: 1.6,
         ),
       ),
       alignment: Alignment.center,
       child: isChecked
-          ? const Icon(Icons.check_rounded, size: 14, color: Colors.black)
+          ? Icon(Icons.check_rounded, size: 14, color: colors.onForeground)
           : null,
     );
   }
@@ -605,8 +600,8 @@ class SettingsCheckboxRow extends StatelessWidget {
           const SizedBox(width: 10),
           Text(
             label,
-            style: const TextStyle(
-              color: SettingsColors.label,
+            style: TextStyle(
+              color: SettingsColors.of(context).label,
               fontSize: 14,
               fontWeight: FontWeight.w400,
               decoration: TextDecoration.none,
@@ -747,8 +742,8 @@ class ToggleStyleRow extends StatelessWidget {
                   child: Text(
                     label,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: SettingsColors.of(context).foreground,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w500,
                       decoration: TextDecoration.none,

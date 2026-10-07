@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/model/chart_timeframe.dart';
+import 'settings_colors.dart';
 
 /// Sheet pemilih timeframe ala TradingView: daftar per kelompok (MINUTES/HOURS/DAYS),
 /// timeframe aktif disorot seperti combobox di settings indikator.
@@ -22,24 +23,17 @@ class ChartTimeframeSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color sheetBg = isDark ? const Color(0xFF121212) : Colors.white;
-    final Color borderColor = isDark
-        ? const Color(0xFF2C2C2E)
-        : const Color(0xFFE0E3EB);
-    final Color textColor = isDark ? Colors.white : const Color(0xFF131722);
-    final Color subtitleColor = isDark
-        ? const Color(0xFF8E8E93)
-        : const Color(0xFF9598A1);
+    // Palet sama dengan combobox settings indikator.
+    final SettingsColors colors = SettingsColors.of(context);
 
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(context).height * 0.75,
       ),
       decoration: BoxDecoration(
-        color: sheetBg,
+        color: colors.sheetBg,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        border: Border(top: BorderSide(color: borderColor)),
+        border: Border(top: BorderSide(color: colors.cardBorder)),
       ),
       child: SafeArea(
         top: false,
@@ -53,9 +47,7 @@ class ChartTimeframeSheet extends StatelessWidget {
                 height: 4,
                 margin: const EdgeInsets.only(top: 10, bottom: 4),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF3E3E42)
-                      : const Color(0xFFD1D4DC),
+                  color: colors.handle,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -67,7 +59,7 @@ class ChartTimeframeSheet extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  color: textColor,
+                  color: colors.foreground,
                   letterSpacing: -0.3,
                 ),
               ),
@@ -87,7 +79,7 @@ class ChartTimeframeSheet extends StatelessWidget {
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.6,
-                          color: subtitleColor,
+                          color: colors.subtitle,
                         ),
                       ),
                     ),
@@ -97,8 +89,8 @@ class ChartTimeframeSheet extends StatelessWidget {
                         _TimeframeTile(
                           timeframe: timeframe,
                           isSelected: timeframe == selected,
-                          textColor: textColor,
-                          backgroundColor: sheetBg,
+                          foreground: colors.foreground,
+                          onForeground: colors.onForeground,
                         ),
                   ],
                 ],
@@ -115,14 +107,14 @@ class ChartTimeframeSheet extends StatelessWidget {
 class _TimeframeTile extends StatelessWidget {
   final ChartTimeframe timeframe;
   final bool isSelected;
-  final Color textColor;
-  final Color backgroundColor;
+  final Color foreground;
+  final Color onForeground;
 
   const _TimeframeTile({
     required this.timeframe,
     required this.isSelected,
-    required this.textColor,
-    required this.backgroundColor,
+    required this.foreground,
+    required this.onForeground,
   });
 
   @override
@@ -137,7 +129,7 @@ class _TimeframeTile extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? textColor : Colors.transparent,
+            color: isSelected ? foreground : Colors.transparent,
             borderRadius: radius,
           ),
           child: Text(
@@ -145,7 +137,7 @@ class _TimeframeTile extends StatelessWidget {
             style: TextStyle(
               fontSize: 15,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              color: isSelected ? backgroundColor : textColor,
+              color: isSelected ? onForeground : foreground,
             ),
           ),
         ),
