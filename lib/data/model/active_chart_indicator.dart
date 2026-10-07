@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../utils/css_color.dart';
 import 'indicator_level.dart';
 import 'indicator_line_style.dart';
+import 'indicator_macd.dart';
 
 /// Nilai plot satu indikator pada bar crosshair (atau bar terakhir).
 class IndicatorPlotSnapshot {
@@ -12,9 +13,16 @@ class IndicatorPlotSnapshot {
   /// Khusus Volume: arah bar (true naik, false turun); null untuk indikator lain.
   final bool? isGrowing;
 
-  const IndicatorPlotSnapshot({required this.values, this.isGrowing});
+  /// Khusus MACD: arah batang histogram (menentukan warnanya); null untuk indikator lain.
+  final MacdTrend? macdTrend;
 
-  /// JSON dari chart: `{ "values": [num|null, ...], "isGrowing"?: bool }`.
+  const IndicatorPlotSnapshot({
+    required this.values,
+    this.isGrowing,
+    this.macdTrend,
+  });
+
+  /// JSON dari chart: `{ "values": [num|null, ...], "isGrowing"?: bool, "macdTrend"?: String }`.
   factory IndicatorPlotSnapshot.fromJson(Map<String, dynamic> json) =>
       IndicatorPlotSnapshot(
         values: <double?>[
@@ -22,6 +30,10 @@ class IndicatorPlotSnapshot {
             (value as num?)?.toDouble(),
         ],
         isGrowing: json['isGrowing'] as bool?,
+        macdTrend: switch (json['macdTrend']) {
+          final String name => MacdTrend.values.byName(name),
+          _ => null,
+        },
       );
 }
 
@@ -74,7 +86,7 @@ class ActiveChartIndicator {
   static const String bollingerSmoothingType = 'SMA + Bollinger Bands';
 
   final String id;
-  final String type; // 'sma', 'rsi', 'vol'
+  final String type; // 'sma', 'rsi', 'vol', 'macd'
   String title;
   bool isVisible;
   int? _period;
@@ -101,6 +113,7 @@ class ActiveChartIndicator {
   Color? _volumeGrowingColor;
   Color? _volumeFallingColor;
   bool? _colorByPreviousClose;
+  MacdSettings? _macd;
   double? _bbStdDev;
   String? _precision; // 'Default', '0', '1', etc.
   bool? _labelsOnPriceScale;
@@ -178,6 +191,9 @@ class ActiveChartIndicator {
   bool get colorByPreviousClose => _colorByPreviousClose ?? false;
   set colorByPreviousClose(bool val) => _colorByPreviousClose = val;
 
+  MacdSettings get macd => _macd ?? const MacdSettings();
+  set macd(MacdSettings val) => _macd = val;
+
   double get bbStdDev => _bbStdDev ?? 2.0;
   set bbStdDev(double val) => _bbStdDev = val;
 
@@ -207,6 +223,7 @@ class ActiveChartIndicator {
     'sma' => 'SMA',
     'rsi' => 'RSI',
     'vol' => 'Vol',
+    'macd' => 'MACD',
     _ => title,
   };
 
@@ -215,6 +232,9 @@ class ActiveChartIndicator {
   String get inputsTitle => switch (type) {
     'sma' || 'rsi' => '$shortTitle $period ${source.toLowerCase()}',
     'vol' => '$shortTitle $period',
+    'macd' =>
+      '$shortTitle ${macd.fastLength} ${macd.slowLength} '
+          '${source.toLowerCase()} ${macd.signalLength}',
     _ => shortTitle,
   };
 
@@ -243,6 +263,7 @@ class ActiveChartIndicator {
     Color? volumeGrowingColor,
     Color? volumeFallingColor,
     bool? colorByPreviousClose,
+    MacdSettings? macd,
     double? bbStdDev,
     String? precision,
     bool? labelsOnPriceScale,
@@ -269,6 +290,7 @@ class ActiveChartIndicator {
        _volumeGrowingColor = volumeGrowingColor ?? defaultVolumeGrowingColor,
        _volumeFallingColor = volumeFallingColor ?? defaultVolumeFallingColor,
        _colorByPreviousClose = colorByPreviousClose ?? false,
+       _macd = macd ?? const MacdSettings(),
        _bbStdDev = bbStdDev ?? 2.0,
        _precision = precision ?? 'Default',
        _labelsOnPriceScale = labelsOnPriceScale ?? false,
@@ -302,6 +324,7 @@ class ActiveChartIndicator {
     Color? volumeGrowingColor,
     Color? volumeFallingColor,
     bool? colorByPreviousClose,
+    MacdSettings? macd,
     double? bbStdDev,
     String? precision,
     bool? labelsOnPriceScale,
@@ -335,6 +358,7 @@ class ActiveChartIndicator {
       volumeGrowingColor: volumeGrowingColor ?? this.volumeGrowingColor,
       volumeFallingColor: volumeFallingColor ?? this.volumeFallingColor,
       colorByPreviousClose: colorByPreviousClose ?? this.colorByPreviousClose,
+      macd: macd ?? this.macd,
       bbStdDev: bbStdDev ?? this.bbStdDev,
       precision: precision ?? this.precision,
       labelsOnPriceScale: labelsOnPriceScale ?? this.labelsOnPriceScale,
@@ -374,6 +398,7 @@ class ActiveChartIndicator {
           volumeGrowingColor == other.volumeGrowingColor &&
           volumeFallingColor == other.volumeFallingColor &&
           colorByPreviousClose == other.colorByPreviousClose &&
+          macd == other.macd &&
           bbStdDev == other.bbStdDev &&
           precision == other.precision &&
           labelsOnPriceScale == other.labelsOnPriceScale &&
@@ -408,6 +433,7 @@ class ActiveChartIndicator {
     volumeGrowingColor,
     volumeFallingColor,
     colorByPreviousClose,
+    macd,
     bbStdDev,
     precision,
     labelsOnPriceScale,
@@ -455,5 +481,6 @@ class ActiveChartIndicator {
         'colorByPreviousClose': colorByPreviousClose,
       },
     },
+    if (type == 'macd') 'macd': macd.toJson(),
   };
 }

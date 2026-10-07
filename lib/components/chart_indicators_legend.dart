@@ -2,7 +2,9 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../controllers/chart_indicators_controller.dart';
 import '../data/model/active_chart_indicator.dart';
+import '../data/model/indicator_macd.dart';
 
 /// Painter untuk menggambar icon baut/mur segi-enam (Nut Icon)
 /// persis seperti icon setting indikator TradingView mobile
@@ -199,61 +201,82 @@ class _RsiIconPainter extends CustomPainter {
   bool shouldRepaint(covariant _RsiIconPainter oldDelegate) => oldDelegate.color != color;
 }
 
+/// Batang-batang ikon di grid 20x20, lebar & jarak seragam supaya rapi.
+/// Tiap batang = (top, bottom) dalam koordinat grid.
+void _paintIconBars(Canvas canvas, Size size, Color color, List<(double, double)> bars) {
+  const double barWidth = 2.6;
+  const double firstX = 3.7;
+  const double step = 4.2;
+  final Paint fill = Paint()..color = color;
+  canvas.save();
+  canvas.scale(size.width / 20.0, size.height / 20.0);
+  for (final (int i, (double top, double bottom)) in bars.indexed) {
+    canvas.drawRRect(
+      RRect.fromLTRBR(firstX + i * step, top, firstX + i * step + barWidth, bottom, const Radius.circular(0.8)),
+      fill,
+    );
+  }
+  canvas.restore();
+}
+
+/// Ikon Volume: 4 batang dari garis dasar yang sama.
 class _VolumeIconPainter extends CustomPainter {
+  static const List<(double, double)> _bars = <(double, double)>[(10, 16.5), (5, 16.5), (8, 16.5), (12, 16.5)];
+
   final Color color;
   const _VolumeIconPainter(this.color);
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2
-      ..strokeCap = StrokeCap.round;
-
-    final double sx = size.width / 20.0;
-    final double sy = size.height / 20.0;
-    canvas.save();
-    canvas.scale(sx, sy);
-
-    canvas.drawLine(const Offset(4, 16), const Offset(4, 10), paint);
-    canvas.drawLine(const Offset(9, 16), const Offset(9, 5), paint);
-    canvas.drawLine(const Offset(14, 16), const Offset(14, 8), paint);
-    canvas.drawLine(const Offset(17, 16), const Offset(17, 12), paint);
-
-    canvas.restore();
-  }
+  void paint(Canvas canvas, Size size) => _paintIconBars(canvas, size, color, _bars);
 
   @override
   bool shouldRepaint(covariant _VolumeIconPainter oldDelegate) => oldDelegate.color != color;
 }
 
+/// Ikon MACD: histogram naik di atas & turun di bawah garis nol.
+class _MacdIconPainter extends CustomPainter {
+  static const double _zeroY = 10.5;
+  static const List<(double, double)> _bars = <(double, double)>[(7, _zeroY), (4, _zeroY), (_zeroY, 13.5), (_zeroY, 16)];
+
+  final Color color;
+  const _MacdIconPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    _paintIconBars(canvas, size, color, _bars);
+    final double sx = size.width / 20.0;
+    final double sy = size.height / 20.0;
+    canvas.drawLine(
+      Offset(2.5 * sx, _zeroY * sy),
+      Offset(17.5 * sx, _zeroY * sy),
+      Paint()
+        ..color = color
+        ..strokeWidth = 1.2
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _MacdIconPainter oldDelegate) => oldDelegate.color != color;
+}
+
 /// Widget Legend Indikator Aktif di Pojok Kiri Atas Chart
 /// Menampilkan indikator yang sedang aktif ala TradingView mobile
+///
+/// Daftar, seleksi, visibilitas & nilai plot dibaca langsung dari [controller], supaya
+/// modal Object tree tetap sinkron walau widget legend di-rebuild/di-mount ulang.
 class ChartIndicatorsLegend extends StatefulWidget {
+  final ChartIndicatorsController controller;
   final String symbol;
   final String timeframe;
-  final List<ActiveChartIndicator> activeIndicators;
-  final ValueChanged<String>? onToggleIndicatorVisibility;
-  final ValueChanged<String>? onDeleteIndicator;
-  final String? selectedId;
-  final ValueChanged<String?>? onSelectionChanged;
-  final ValueChanged<String>? onOpenSettings;
-
-  /// Nilai plot terkini per indikator untuk status line (opsional).
-  final ValueListenable<IndicatorPlotValues>? plotValues;
+  final ValueChanged<String> onOpenSettings;
 
   const ChartIndicatorsLegend({
     super.key,
-    this.symbol = 'IHSG',
-    this.timeframe = '1D',
-    required this.activeIndicators,
-    this.onToggleIndicatorVisibility,
-    this.onDeleteIndicator,
-    this.selectedId,
-    this.onSelectionChanged,
-    this.onOpenSettings,
-    this.plotValues,
+    required this.controller,
+    required this.symbol,
+    required this.timeframe,
+    required this.onOpenSettings,
   });
 
   @override
@@ -261,21 +284,13 @@ class ChartIndicatorsLegend extends StatefulWidget {
 }
 
 class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
-  String? _internalSelectedId;
-  String? get _effectiveSelectedId => widget.selectedId ?? _internalSelectedId;
-
-  void _setSelectedId(String? id) {
-    setState(() {
-      _internalSelectedId = id;
-    });
-    widget.onSelectionChanged?.call(id);
-  }
-
   bool _isCollapsed = false;
+
+  ChartIndicatorsController get _controller => widget.controller;
 
   @override
   Widget build(BuildContext context) {
-    final List<ActiveChartIndicator> indicators = widget.activeIndicators;
+    final List<ActiveChartIndicator> indicators = _controller.indicators;
     if (indicators.isEmpty) return const SizedBox.shrink();
 
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -284,9 +299,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
 
     return TapRegion(
       onTapOutside: (PointerDownEvent _) {
-        if (_effectiveSelectedId != null) {
-          _setSelectedId(null);
-        }
+        _controller.select(null);
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -341,18 +354,17 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
     final String id = indicator.id;
     final String title = indicator.inputsInStatusLine ? indicator.title : indicator.shortTitle;
     final bool isHidden = !indicator.isVisible;
-    final ValueListenable<IndicatorPlotValues>? plotValues = widget.plotValues;
-    final Widget? values = (plotValues != null && !isHidden)
-        ? _PlotValuesText(
+    final Widget? values = isHidden
+        ? null
+        : _PlotValuesText(
             indicator: indicator,
-            plotValues: plotValues,
+            plotValues: _controller.plotValues,
             fallbackColor: textColor,
-          )
-        : null;
+          );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-      child: _effectiveSelectedId == id
+      child: _controller.selectedId == id
           ? _buildSelectedRow(
               id: id,
               title: title,
@@ -360,12 +372,9 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
               values: values,
               textColor: textColor,
               mutedColor: mutedColor,
-              onToggleEye: () => widget.onToggleIndicatorVisibility?.call(id),
-              onDelete: () {
-                _setSelectedId(null);
-                widget.onDeleteIndicator?.call(id);
-              },
-              onSettings: () => widget.onOpenSettings?.call(id),
+              onToggleEye: () => _controller.toggleVisibility(id),
+              onDelete: () => _controller.remove(id),
+              onSettings: () => widget.onOpenSettings(id),
             )
           : _buildNormalRow(
               id: id,
@@ -381,6 +390,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
   static CustomPainter _indicatorIconPainter(String type, Color color) => switch (type) {
     'sma' => _SmaIconPainter(color),
     'rsi' => _RsiIconPainter(color),
+    'macd' => _MacdIconPainter(color),
     _ => _VolumeIconPainter(color),
   };
 
@@ -395,7 +405,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
   }) {
     return GestureDetector(
       onTap: () {
-        _setSelectedId(id);
+        _controller.select(id);
       },
       behavior: HitTestBehavior.opaque,
       child: Container(
@@ -420,7 +430,11 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                 ),
               ),
             ),
-            if (values != null) ...<Widget>[const SizedBox(width: 6), values],
+            // Flexible: nilai panjang (mis. precision 8) dipotong, bukan overflow.
+            if (values != null) ...<Widget>[
+              const SizedBox(width: 6),
+              Flexible(child: values),
+            ],
             const SizedBox(width: 6),
             // Purple sync/refresh icon badge ala TradingView (Gambar 1)
             Opacity(
@@ -460,7 +474,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
     return GestureDetector(
       onTap: () {
         // Klik ulang untuk deselect
-        _setSelectedId(null);
+        _controller.select(null);
       },
       behavior: HitTestBehavior.opaque,
       child: Container(
@@ -497,7 +511,11 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                 ),
               ),
             ),
-            if (values != null) ...<Widget>[const SizedBox(width: 6), values],
+            // Flexible: nilai panjang (mis. precision 8) dipotong, bukan overflow.
+            if (values != null) ...<Widget>[
+              const SizedBox(width: 6),
+              Flexible(child: values),
+            ],
             const SizedBox(width: 14),
 
             // 1. Eye Button (Visibility)
@@ -744,9 +762,14 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
 
         final Color neutralIconColor = isDark ? const Color(0xFFD1D4DC) : const Color(0xFF131722);
 
-        return StatefulBuilder(
-          builder: (BuildContext bCtx, void Function(void Function()) setModalState) {
-            final List<ActiveChartIndicator> indicators = widget.activeIndicators;
+        // Simbol & timeframe tidak berubah selama modal terbuka; daftar indikator ikut controller.
+        final String chartInfo = '${widget.symbol}, ${widget.timeframe}';
+        final ChartIndicatorsController controller = _controller;
+
+        return ListenableBuilder(
+          listenable: controller,
+          builder: (BuildContext bCtx, _) {
+            final List<ActiveChartIndicator> indicators = controller.indicators;
 
             return Container(
               height: MediaQuery.of(context).size.height * 0.80,
@@ -818,7 +841,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                               ),
                               const SizedBox(width: 12),
                               Text(
-                                '${widget.symbol}, ${widget.timeframe}',
+                                chartInfo,
                                 style: TextStyle(
                                   color: textColor,
                                   fontSize: 15,
@@ -848,16 +871,6 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                               size: const Size(18, 18),
                               painter: _indicatorIconPainter(indicator.type, neutralIconColor),
                             );
-                            void onToggleEye() {
-                              widget.onToggleIndicatorVisibility?.call(indicator.id);
-                              setModalState(() {});
-                            }
-
-                            void onDelete() {
-                              widget.onDeleteIndicator?.call(indicator.id);
-                              setModalState(() {});
-                            }
-
                             return Container(
                               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                               decoration: BoxDecoration(
@@ -901,7 +914,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                                         // Eye button
                                         GestureDetector(
                                           behavior: HitTestBehavior.opaque,
-                                          onTap: onToggleEye,
+                                          onTap: () => controller.toggleVisibility(indicator.id),
                                           child: Padding(
                                             padding: const EdgeInsets.all(4),
                                             child: Icon(
@@ -917,7 +930,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
                                         // Trash button
                                         GestureDetector(
                                           behavior: HitTestBehavior.opaque,
-                                          onTap: onDelete,
+                                          onTap: () => controller.remove(indicator.id),
                                           child: Padding(
                                             padding: const EdgeInsets.all(4),
                                             child: Icon(
@@ -966,17 +979,24 @@ class _PlotValuesText extends StatelessWidget {
 
   /// Urutan plot dari chart: [garis utama, smoothing/Volume MA, Bollinger atas, Bollinger bawah].
   /// Nilai Volume ikut warna bar-nya (dibuat opaque agar teks tetap terbaca).
-  Color _plotColor(int plotIndex, bool? isGrowing) =>
+  /// MACD: [Histogram (warna ikut arah batang), MACD, Signal].
+  Color _plotColor(int plotIndex, IndicatorPlotSnapshot snapshot) =>
       switch ((indicator.type, plotIndex)) {
-        ('vol', 0) => switch (isGrowing) {
+        ('vol', 0) => switch (snapshot.isGrowing) {
           true => indicator.volumeGrowingColor.withValues(alpha: 1),
           false => indicator.volumeFallingColor.withValues(alpha: 1),
           null => fallbackColor,
         },
+        ('macd', 0) => switch (snapshot.macdTrend) {
+          final MacdTrend trend => indicator.macd.histogram.colorOf(trend),
+          null => fallbackColor,
+        },
+        ('macd', 1) => indicator.color ?? fallbackColor,
+        ('macd', _) => indicator.macd.signalStyle.color,
         (_, 0) => indicator.color ?? fallbackColor,
-    (_, 1) => indicator.smoothingStyle.color,
-    _ => indicator.bollingerStyle.color,
-  };
+        (_, 1) => indicator.smoothingStyle.color,
+        _ => indicator.bollingerStyle.color,
+      };
 
   String _format(double value) => indicator.type == 'vol'
       ? _volumeFormat.format(value)
@@ -998,6 +1018,8 @@ class _PlotValuesText extends StatelessWidget {
         if (visiblePlots.isEmpty) return const SizedBox.shrink();
 
         return Text.rich(
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           TextSpan(
             children: <InlineSpan>[
               for (final (int position, (int plotIndex, double value))
@@ -1005,7 +1027,7 @@ class _PlotValuesText extends StatelessWidget {
                 TextSpan(
                   text: '${position > 0 ? ' ' : ''}${_format(value)}',
                   style: TextStyle(
-                    color: _plotColor(plotIndex, snapshot.isGrowing),
+                    color: _plotColor(plotIndex, snapshot),
                   ),
                 ),
             ],

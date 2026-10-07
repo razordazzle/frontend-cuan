@@ -63,6 +63,10 @@ int parsePositiveInt(String text, int fallback) {
 double parseNumber(String text, double fallback) =>
     double.tryParse(text.trim().replaceAll(',', '.')) ?? fallback;
 
+/// Teks awal field angka: bilangan bulat tanpa ".0" (70, bukan 70.0).
+String formatNumber(double value) =>
+    value == value.roundToDouble() ? value.toInt().toString() : '$value';
+
 /// Kerangka modal settings indikator ala TradingView: header, tab Inputs/Style, tombol Cancel/Ok.
 class IndicatorSettingsSheet extends StatefulWidget {
   final String title;
@@ -677,6 +681,35 @@ class FillColorSwatch extends StatelessWidget {
       value: IndicatorLineStyle(color: color),
       showLineOptions: false,
       onChanged: (IndicatorLineStyle value) => onChanged(value.color),
+    );
+  }
+}
+
+/// Sub-baris warna di bawah [ToggleStyleRow] (mis. Growing/Falling Volume),
+/// menjorok sejajar dengan label baris induknya.
+class SettingsColorSubRow extends StatelessWidget {
+  /// Lebar checkbox (19) + jarak ke label (10) di [ToggleStyleRow].
+  static const EdgeInsets _indent = EdgeInsets.only(left: 29);
+
+  final String label;
+  final Color color;
+  final ValueChanged<Color> onChanged;
+
+  const SettingsColorSubRow({
+    super.key,
+    required this.label,
+    required this.color,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: _indent,
+      child: SettingsRow(
+        label: label,
+        control: FillColorSwatch(color: color, onChanged: onChanged),
+      ),
     );
   }
 }

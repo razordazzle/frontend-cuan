@@ -1,10 +1,9 @@
-import 'dart:collection';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
 import '../data/model/active_chart_indicator.dart';
 import '../data/model/indicator_line_style.dart';
+import 'persisted_favorites.dart';
 
 /// State indikator teknikal di halaman chart TradingView (saham & IHSG).
 ///
@@ -24,6 +23,7 @@ class ChartIndicatorsController extends ChangeNotifier {
     Color(0xFFFFD600),
   ];
   static const Color _defaultRsiColor = Color(0xFFE91E63);
+  static const Color _defaultMacdColor = Color(0xFF2962FF);
   static const int _defaultVolumeMaLength = 20;
 
   /// Garis Volume MA default biru & tersembunyi (volume tampil seperti sebelumnya).
@@ -41,11 +41,22 @@ class ChartIndicatorsController extends ChangeNotifier {
 
   List<ActiveChartIndicator> _indicators = const <ActiveChartIndicator>[];
   String? _selectedId;
-  final Set<String> _favorites = <String>{
-    'Moving Average',
-    'Relative Strength Index',
-    'Volume',
-  };
+
+  final PersistedFavorites<String> _favorites = PersistedFavorites<String>(
+    storageKey: 'chart.indicatorFavorites',
+    defaults: const <String>[
+      'Moving Average',
+      'Relative Strength Index',
+      'Volume',
+    ],
+    encode: (String name) => name,
+    decode: (String name) => name,
+  );
+
+  /// Favorit hanya dibaca saat sheet indikator dibuka, jadi selesai dimuat tidak perlu rebuild.
+  ChartIndicatorsController() {
+    _favorites.load();
+  }
 
   List<ActiveChartIndicator> get indicators => _indicators;
   int get count => _indicators.length;
@@ -53,7 +64,7 @@ class ChartIndicatorsController extends ChangeNotifier {
   /// Id indikator yang sedang terseleksi di legend chart.
   String? get selectedId => _selectedId;
 
-  Set<String> get favorites => UnmodifiableSetView<String>(_favorites);
+  Set<String> get favorites => _favorites.items;
 
   ActiveChartIndicator? findById(String id) {
     final int index = _indexOf(id);
@@ -103,9 +114,8 @@ class ChartIndicatorsController extends ChangeNotifier {
   }
 
   /// Favorit hanya dibaca saat sheet indikator dibuka, jadi tidak perlu memicu rebuild chart.
-  void toggleFavorite(String name) {
-    if (!_favorites.remove(name)) _favorites.add(name);
-  }
+  /// Disimpan di device supaya tetap ada saat halaman chart dibuka lagi.
+  void toggleFavorite(String name) => _favorites.toggle(name);
 
   @override
   void dispose() {
@@ -155,6 +165,15 @@ class ChartIndicatorsController extends ChangeNotifier {
         title: '',
         period: _defaultVolumeMaLength,
         smoothingStyle: _defaultVolumeMaStyle,
+        labelsOnPriceScale: true,
+      ),
+      // Default MACD ala TradingView: 12 26 close 9 (EMA), garis MACD biru tebal 1.
+      'macd' => ActiveChartIndicator(
+        id: id,
+        type: type,
+        title: '',
+        color: _defaultMacdColor,
+        lineWidth: 1,
         labelsOnPriceScale: true,
       ),
       _ => null,

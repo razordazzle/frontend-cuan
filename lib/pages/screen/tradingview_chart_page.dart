@@ -308,21 +308,18 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
                     // Active Indicators Legend di Pojok Kiri Atas Chart (ala TradingView)
                     if (!_isChartModalOpen)
                       // right membatasi lebar legend supaya judul panjang terpotong, bukan keluar layar.
+                      // Key: overlay tap-outside di atas muncul/hilang mengikuti seleksi;
+                      // tanpa key, posisi anak Stack bergeser dan state legend dibuat ulang.
                       Positioned(
+                        key: const ValueKey<String>('indicators-legend'),
                         top: 10,
                         left: 10,
                         right: 10,
                         child: ChartIndicatorsLegend(
-                          selectedId: _indicators.selectedId,
-                          onSelectionChanged: _indicators.select,
-                          activeIndicators: _indicators.indicators,
-                          onToggleIndicatorVisibility:
-                              _indicators.toggleVisibility,
-                          onDeleteIndicator: _indicators.remove,
+                          controller: _indicators,
                           symbol: source.symbol,
                           timeframe: source.resolution,
                           onOpenSettings: _openIndicatorSettings,
-                          plotValues: _indicators.plotValues,
                         ),
                       ),
 

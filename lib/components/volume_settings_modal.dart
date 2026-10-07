@@ -29,9 +29,6 @@ class VolumeSettingsModal extends StatefulWidget {
 }
 
 class _VolumeSettingsModalState extends State<VolumeSettingsModal> {
-  /// Indent baris Growing/Falling agar sejajar label "Volume" (checkbox 19 + jarak 10).
-  static const EdgeInsets _subRowPadding = EdgeInsets.only(left: 29);
-
   // Inputs
   late final TextEditingController _maLengthController;
   late bool _colorByPreviousClose;
@@ -77,23 +74,6 @@ class _VolumeSettingsModalState extends State<VolumeSettingsModal> {
     widget.onSave(updated.copyWith(title: updated.inputsTitle));
   }
 
-  Widget _buildColorRow({
-    required String label,
-    required Color color,
-    required ValueChanged<Color> onChanged,
-  }) {
-    return Padding(
-      padding: _subRowPadding,
-      child: SettingsRow(
-        label: label,
-        control: FillColorSwatch(
-          color: color,
-          onChanged: (Color value) => setState(() => onChanged(value)),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return IndicatorSettingsSheet(
@@ -122,16 +102,16 @@ class _VolumeSettingsModalState extends State<VolumeSettingsModal> {
           controls: const <Widget>[],
         ),
         const SizedBox(height: 12),
-        _buildColorRow(
+        SettingsColorSubRow(
           label: 'Growing',
           color: _growingColor,
-          onChanged: (Color color) => _growingColor = color,
+          onChanged: (Color color) => setState(() => _growingColor = color),
         ),
         const SizedBox(height: 12),
-        _buildColorRow(
+        SettingsColorSubRow(
           label: 'Falling',
           color: _fallingColor,
-          onChanged: (Color color) => _fallingColor = color,
+          onChanged: (Color color) => setState(() => _fallingColor = color),
         ),
         const SizedBox(height: 16),
         PlotStyleRow(

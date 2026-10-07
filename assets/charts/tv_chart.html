@@ -4551,6 +4551,13 @@
             </svg>`;
         }
 
+        // Ikon hapus = Material `delete_outline_rounded`, sama dengan Object tree indikator di Flutter.
+        function getMaterialDeleteSvg(size = 18) {
+            return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v10zm3-10h6c.55 0 1 .45 1 1v8c0 .55-.45 1-1 1H9c-.55 0-1-.45-1-1v-8c0-.55.45-1 1-1zm6.5-5l-.71-.71c-.18-.18-.44-.29-.7-.29H9.91c-.26 0-.52.11-.7.29L8.5 4H6c-.55 0-1 .45-1 1s.45 1 1 1h12c.55 0 1-.45 1-1s-.45-1-1-1h-2.5z"></path>
+            </svg>`;
+        }
+
         function refreshObjectTree() {
             const body = document.getElementById('tv-object-tree-body');
             if (!body) return;
@@ -4633,11 +4640,7 @@
                                 ${getMaterialEyeSvg(isHidden, 18)}
                             </button>
                             <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
-                                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-                                    <path d="M3.5 5.5h13" />
-                                    <path d="M7.5 3.5h5" />
-                                    <path d="M5.5 5.5l.8 10a1.5 1.5 0 0 0 1.5 1.4h4.4a1.5 1.5 0 0 0 1.5-1.4l.8-10" />
-                                </svg>
+                                ${getMaterialDeleteSvg(18)}
                             </button>
                         </div>
                     `;
@@ -4750,11 +4753,7 @@
                                 ${getMaterialEyeSvg(isHidden, 18)}
                             </button>
                             <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
-                                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-                                    <path d="M3.5 5.5h13" />
-                                    <path d="M7.5 3.5h5" />
-                                    <path d="M5.5 5.5l.8 10a1.5 1.5 0 0 0 1.5 1.4h4.4a1.5 1.5 0 0 0 1.5-1.4l.8-10" />
-                                </svg>
+                                ${getMaterialDeleteSvg(18)}
                             </button>
                         </div>
                     `;
@@ -4870,11 +4869,7 @@
                                 ${getMaterialEyeSvg(isHidden, 18)}
                             </button>
                             <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
-                                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-                                    <path d="M3.5 5.5h13" />
-                                    <path d="M7.5 3.5h5" />
-                                    <path d="M5.5 5.5l.8 10a1.5 1.5 0 0 0 1.5 1.4h4.4a1.5 1.5 0 0 0 1.5-1.4l.8-10" />
-                                </svg>
+                                ${getMaterialDeleteSvg(18)}
                             </button>
                         </div>
                     `;
@@ -4995,11 +4990,7 @@
                                 ${getMaterialEyeSvg(isHidden, 18)}
                             </button>
                             <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
-                                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-                                    <path d="M3.5 5.5h13" />
-                                    <path d="M7.5 3.5h5" />
-                                    <path d="M5.5 5.5l.8 10a1.5 1.5 0 0 0 1.5 1.4h4.4a1.5 1.5 0 0 0 1.5-1.4l.8-10" />
-                                </svg>
+                                ${getMaterialDeleteSvg(18)}
                             </button>
                         </div>
                     `;
@@ -9958,6 +9949,131 @@
             return entry;
         }
 
+        // Default MACD mengikuti TradingView (12 26 close 9, EMA).
+        const MACD_DEFAULTS = Object.freeze({
+            fastLength: 12,
+            slowLength: 26,
+            signalLength: 9,
+            oscillatorMaType: 'EMA',
+            signalMaType: 'EMA',
+            color: '#2962FF',
+            signalStyle: Object.freeze({ color: '#FF6D00', lineWidth: 1, lineStyle: 0, isVisible: true }),
+            zeroLine: Object.freeze({ value: 0, color: 'rgba(120, 123, 134, 0.5)', lineWidth: 1, lineStyle: 0, isVisible: true }),
+            histogramColors: Object.freeze({
+                growAbove: '#26A69A',
+                fallAbove: '#B2DFDB',
+                growBelow: '#FFCDD2',
+                fallBelow: '#FF5252',
+            }),
+        });
+
+        function normalizeMacdConfig(item) {
+            const macd = item.macd || {};
+            return {
+                fastLength: macd.fastLength || MACD_DEFAULTS.fastLength,
+                slowLength: macd.slowLength || MACD_DEFAULTS.slowLength,
+                signalLength: macd.signalLength || MACD_DEFAULTS.signalLength,
+                source: item.source || 'Close',
+                oscillatorMaType: macd.oscillatorMaType || MACD_DEFAULTS.oscillatorMaType,
+                signalMaType: macd.signalMaType || MACD_DEFAULTS.signalMaType,
+                histogramColors: { ...MACD_DEFAULTS.histogramColors, ...macd.histogram?.colors },
+            };
+        }
+
+        function updateMacdData(entry) {
+            const cfg = entry.macdConfig;
+            const { macd, signal, histogram } = Indicators.macdPoints(rawCandlesData, cfg);
+            entry.series.setData(histogram.map((point) => ({
+                time: point.time,
+                value: point.value,
+                color: cfg.histogramColors[point.trend],
+            })));
+            entry.macdSeries.setData(macd);
+            entry.signalSeries.setData(signal);
+            entry.zeroHost.setData(macd);
+        }
+
+        // Arah batang histogram dari warnanya (untuk warna nilai di legend Flutter).
+        function macdTrendOf(entry, point) {
+            const colors = entry.macdConfig.histogramColors;
+            return Object.keys(colors).find((trend) => colors[trend] === point.color) ?? null;
+        }
+
+        function syncMacdIndicator(item, entry, paneIndex) {
+            const cfg = normalizeMacdConfig(item);
+            const isVisible = item.isVisible !== false;
+            const priceFormat = buildPriceFormat(item.precisionDigits);
+            const labels = Boolean(item.labelsOnPriceScale);
+            const macd = item.macd || {};
+            const signalStyle = { ...MACD_DEFAULTS.signalStyle, ...macd.signalStyle };
+            const zeroLine = { ...MACD_DEFAULTS.zeroLine, ...macd.zeroLine };
+
+            const histogramOptions = {
+                title: '',
+                priceLineVisible: false,
+                lastValueVisible: labels,
+                priceFormat: priceFormat,
+                visible: isVisible && macd.histogram?.isVisible !== false,
+            };
+            const macdOptions = lineSeriesOptions(
+                { color: item.color || MACD_DEFAULTS.color, lineWidth: item.lineWidth || 1, lineStyle: item.lineStyle },
+                isVisible && item.isLineVisible !== false,
+                priceFormat,
+                labels,
+            );
+            const signalOptions = lineSeriesOptions(signalStyle, isVisible && signalStyle.isVisible !== false, priceFormat, labels);
+            // Zero line menempel ke series penampung transparan supaya tetap tampil walau garis MACD disembunyikan.
+            const zeroHostOptions = {
+                color: 'rgba(0, 0, 0, 0)',
+                lineWidth: 1,
+                title: '',
+                priceLineVisible: false,
+                lastValueVisible: false,
+                crosshairMarkerVisible: false,
+                priceFormat: priceFormat,
+                visible: isVisible,
+                autoscaleInfoProvider: autoscaleWithValues(isVisible && zeroLine.isVisible !== false ? [zeroLine.value] : []),
+            };
+
+            if (entry) {
+                entry.series.applyOptions(histogramOptions);
+                entry.macdSeries.applyOptions(macdOptions);
+                entry.signalSeries.applyOptions(signalOptions);
+                entry.zeroHost.applyOptions(zeroHostOptions);
+                entry.zeroLine.applyOptions(levelLineOptions(zeroLine, isVisible, labels));
+                for (const series of allSeriesOf(entry)) moveSeriesToPane(series, paneIndex);
+            } else {
+                const pane = paneIndex ?? 1;
+                const priceScaleId = 'macd-scale-' + item.id;
+                const add = (seriesType, options) =>
+                    chart.addSeries(seriesType, { ...options, priceScaleId: priceScaleId }, pane);
+                const zeroHost = add(LightweightCharts.LineSeries, zeroHostOptions);
+                zeroHost.priceScale().applyOptions({ scaleMargins: { top: 0.1, bottom: 0.1 } });
+                entry = {
+                    type: 'macd',
+                    series: add(LightweightCharts.HistogramSeries, histogramOptions),
+                    macdSeries: add(LightweightCharts.LineSeries, macdOptions),
+                    signalSeries: add(LightweightCharts.LineSeries, signalOptions),
+                    zeroHost: zeroHost,
+                    zeroLine: zeroHost.createPriceLine(levelLineOptions(zeroLine, isVisible, labels)),
+                    macdConfig: null,
+                    calcKey: null,
+                };
+                // Urutan legend sama dengan TradingView: Histogram, MACD, Signal.
+                entry.plots = [entry.series, entry.macdSeries, entry.signalSeries];
+                entry.extraSeries = [zeroHost];
+            }
+
+            // Warna histogram ikut di-bake ke data, jadi perubahan warna juga memicu hitung ulang.
+            const calcKey = JSON.stringify(cfg);
+            if (entry.calcKey !== calcKey) {
+                entry.calcKey = calcKey;
+                entry.macdConfig = cfg;
+                updateMacdData(entry);
+            }
+            return entry;
+        }
+
         function allSeriesOf(entry) {
             return entry.extraSeries ? [...entry.plots, ...entry.extraSeries] : entry.plots;
         }
@@ -9994,6 +10110,8 @@
                 const snapshot = { values: points.map(point => point ? point.value : null) };
                 if (entry.type === 'vol' && points[0]) {
                     snapshot.isGrowing = points[0].color === entry.volumeConfig.growingColor;
+                } else if (entry.type === 'macd' && points[0]) {
+                    snapshot.macdTrend = macdTrendOf(entry, points[0]);
                 }
                 values[id] = snapshot;
             }
@@ -10013,6 +10131,8 @@
                     updateRsiData(entry);
                 } else if (entry.type === 'vol') {
                     updateVolumeData(entry);
+                } else if (entry.type === 'macd') {
+                    updateMacdData(entry);
                 }
             }
             if (!isCrosshairActive) emitIndicatorValues(null);
@@ -10044,6 +10164,8 @@
                     activeIndicatorSeriesMap[item.id] = syncRsiIndicator(item, entry, paneIndex);
                 } else if (item.type === 'vol') {
                     activeIndicatorSeriesMap[item.id] = syncVolumeIndicator(item, entry, paneIndex);
+                } else if (item.type === 'macd') {
+                    activeIndicatorSeriesMap[item.id] = syncMacdIndicator(item, entry, paneIndex);
                 }
             }
 
