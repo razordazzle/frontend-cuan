@@ -2830,7 +2830,7 @@
                     style: 'solid',
                     opacity: 1.0,
                     text: '',
-                    textColor: '#FFFFFF',
+                    textColor: null,
                     textSize: 14,
                     textBold: false,
                     textItalic: false,
@@ -2849,7 +2849,7 @@
                     style: item.style || 'solid',
                     opacity: item.opacity !== undefined ? item.opacity : 1.0,
                     text: item.text || '',
-                    textColor: item.textColor || '#FFFFFF',
+                    textColor: item.textColor || null,
                     textSize: item.textSize || 14,
                     textBold: !!item.textBold,
                     textItalic: !!item.textItalic,
@@ -2874,7 +2874,7 @@
                     fillColor: item.fillColor || DRAWING_COLORS.rectangle,
                     fillOpacity: item.fillOpacity !== undefined ? item.fillOpacity : 0.2,
                     text: item.text || '',
-                    textColor: item.textColor || '#FFFFFF',
+                    textColor: item.textColor || null,
                     textSize: item.textSize || 14,
                     textBold: !!item.textBold,
                     textItalic: !!item.textItalic,
@@ -2903,7 +2903,7 @@
             if (!toolbar) return;
 
             const lineColor = h.color || DRAWING_COLORS.horizontalLine;
-            const textColor = h.textColor || '#FFFFFF';
+            const textColor = h.textColor || defaultDrawingTextColor();
             const width = h.width || 2;
             const style = h.style || 'solid';
 
@@ -2971,7 +2971,7 @@
             if (!toolbar) return;
 
             const lineColor = t.color || DRAWING_COLORS.trendline;
-            const textColor = t.textColor || '#FFFFFF';
+            const textColor = t.textColor || defaultDrawingTextColor();
             const width = t.width || 2;
             const style = t.style || 'solid';
 
@@ -3042,7 +3042,7 @@
             const lineColor = r.color || DRAWING_COLORS.rectangle;
             const fillColor = r.fillColor || DRAWING_COLORS.rectangle;
             const fillOpacity = (r.fillOpacity !== undefined) ? r.fillOpacity : 0.2;
-            const textColor = r.textColor || '#FFFFFF';
+            const textColor = r.textColor || defaultDrawingTextColor();
             const width = r.width || 2;
             const style = r.style || 'solid';
 
@@ -3277,7 +3277,7 @@
             }, 240);
         }
 
-        let modalPendingTextColor = '#FFFFFF';
+        let modalPendingTextColor = null; // null = ikut tema
 
         function toggleSizeDropdown(e) {
             if (e) {
@@ -3485,9 +3485,9 @@
             closeAlignDropdowns();
 
             // Populate current values
-            modalPendingTextColor = drawing.textColor || '#FFFFFF';
+            modalPendingTextColor = drawing.textColor || null;
             const colorPreview = document.getElementById('tv-text-color-preview');
-            if (colorPreview) colorPreview.style.backgroundColor = modalPendingTextColor;
+            if (colorPreview) colorPreview.style.backgroundColor = modalPendingTextColor || defaultDrawingTextColor();
 
             const curSize = drawing.textSize || 14;
             const sizeVal = document.getElementById('tv-text-size-val');
@@ -3571,7 +3571,7 @@
             drawing.textHalign = halignSelect ? halignSelect.value : 'center';
 
             const textInd = document.getElementById('tv-indicator-text-color');
-            if (textInd && drawing.textColor) textInd.style.backgroundColor = drawing.textColor;
+            if (textInd) textInd.style.backgroundColor = drawing.textColor || defaultDrawingTextColor();
 
             closeTrendlineSettingsModal();
             renderFib();
@@ -5222,9 +5222,9 @@
                     modalPendingTextColor = colorHex;
                 }
                 const textInd = document.getElementById('tv-indicator-text-color');
-                if (textInd && drawing.textColor) textInd.style.backgroundColor = drawing.textColor;
+                if (textInd) textInd.style.backgroundColor = drawing.textColor || defaultDrawingTextColor();
                 const preview = document.getElementById('tv-text-color-preview');
-                if (preview && drawing.textColor) preview.style.backgroundColor = drawing.textColor;
+                if (preview) preview.style.backgroundColor = drawing.textColor || defaultDrawingTextColor();
             }
 
             // Update swatch selection highlight
@@ -5234,7 +5234,7 @@
             } else if (activeColorPickerTarget === 'fill') {
                 activeColor = drawing.fillColor || DRAWING_COLORS.rectangle;
             } else {
-                activeColor = drawing.textColor || '#FFFFFF';
+                activeColor = drawing.textColor || defaultDrawingTextColor();
             }
             document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
                 sw.classList.toggle('selected', sw.getAttribute('data-color')?.toUpperCase() === activeColor.toUpperCase());
@@ -5423,7 +5423,7 @@
                     style: src.style || 'solid',
                     opacity: src.opacity !== undefined ? src.opacity : 1.0,
                     text: src.text || '',
-                    textColor: src.textColor || '#FFFFFF',
+                    textColor: src.textColor || null,
                     textSize: src.textSize || 14,
                     textBold: !!src.textBold,
                     textItalic: !!src.textItalic,
@@ -5468,7 +5468,7 @@
                     style: src.style || 'solid',
                     opacity: src.opacity !== undefined ? src.opacity : 1.0,
                     text: src.text || '',
-                    textColor: src.textColor || '#FFFFFF',
+                    textColor: src.textColor || null,
                     textSize: src.textSize || 14,
                     textBold: !!src.textBold,
                     textItalic: !!src.textItalic,
@@ -5516,7 +5516,7 @@
                     fillColor: src.fillColor || DRAWING_COLORS.rectangle,
                     fillOpacity: (src.fillOpacity !== undefined) ? src.fillOpacity : 0.2,
                     text: src.text || '',
-                    textColor: src.textColor || '#FFFFFF',
+                    textColor: src.textColor || null,
                     textSize: src.textSize || 14,
                     textBold: !!src.textBold,
                     textItalic: !!src.textItalic,
@@ -5737,7 +5737,7 @@
                     const active = getActiveDrawing();
                     if (active) {
                         const d = active.drawing;
-                        const curColor = d.textColor || '#FFFFFF';
+                        const curColor = d.textColor || defaultDrawingTextColor();
                         updateSliderGradient(curColor);
 
                         document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
@@ -6161,7 +6161,7 @@
                     hideAllPopovers();
                     activeColorPickerTarget = 'text';
                     popColor.style.zIndex = '1070';
-                    const curColor = modalPendingTextColor || '#FFFFFF';
+                    const curColor = modalPendingTextColor || defaultDrawingTextColor();
                     updateSliderGradient(curColor);
                     document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
                         sw.classList.toggle('selected', sw.getAttribute('data-color')?.toUpperCase() === curColor.toUpperCase());
@@ -6829,7 +6829,7 @@
                             style: lastHLineStyle.style || 'solid',
                             opacity: lastHLineStyle.opacity !== undefined ? lastHLineStyle.opacity : 1.0,
                             text: '',
-                            textColor: '#FFFFFF',
+                            textColor: null,
                             textSize: 14,
                             textBold: false,
                             textItalic: false,
@@ -6928,7 +6928,7 @@
                                     width: lastTrendlineStyle.width || 2,
                                     style: lastTrendlineStyle.style || 'solid',
                                     opacity: lastTrendlineStyle.opacity !== undefined ? lastTrendlineStyle.opacity : 1.0,
-                                    textColor: '#FFFFFF',
+                                    textColor: null,
                                     lockAngle: false
                                 };
                                 trendlines.push(newLine);
@@ -6986,7 +6986,7 @@
                                     fillColor: DRAWING_COLORS.rectangle,
                                     fillOpacity: 0.2,
                                     text: '',
-                                    textColor: '#FFFFFF',
+                                    textColor: null,
                                     textSize: 14,
                                     textBold: false,
                                     textItalic: false,
@@ -7765,7 +7765,7 @@
                             width: lastTrendlineStyle.width || 2,
                             style: lastTrendlineStyle.style || 'solid',
                             opacity: lastTrendlineStyle.opacity !== undefined ? lastTrendlineStyle.opacity : 1.0,
-                            textColor: '#FFFFFF',
+                            textColor: null,
                             lockAngle: false
                         };
                         trendlines.push(newLine);
@@ -7813,7 +7813,7 @@
                             fillColor: DRAWING_COLORS.rectangle,
                             fillOpacity: 0.2,
                             text: '',
-                            textColor: '#FFFFFF',
+                            textColor: null,
                             textSize: 14,
                             textBold: false,
                             textItalic: false,
@@ -8026,7 +8026,7 @@
                         const isBold = !!h.textBold;
                         const isItalic = !!h.textItalic;
                         ctx.font = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : '500 '}${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-                        ctx.fillStyle = h.textColor || '#FFFFFF';
+                        ctx.fillStyle = h.textColor || defaultDrawingTextColor();
                         ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
                         ctx.shadowBlur = 4;
 
@@ -8135,7 +8135,7 @@
                         const isBold = !!t.textBold;
                         const isItalic = !!t.textItalic;
                         ctx.font = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : '500 '}${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-                        ctx.fillStyle = t.textColor || '#FFFFFF';
+                        ctx.fillStyle = t.textColor || defaultDrawingTextColor();
                         ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
                         ctx.shadowBlur = 4;
 
@@ -8368,7 +8368,7 @@
                         const fontSize = r.textSize || 14;
                         const fontStyle = (r.textItalic ? 'italic ' : '') + (r.textBold ? 'bold ' : '');
                         ctx.font = `${fontStyle}${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-                        ctx.fillStyle = r.textColor || '#FFFFFF';
+                        ctx.fillStyle = r.textColor || defaultDrawingTextColor();
                         ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
                         ctx.shadowBlur = 3;
 
@@ -9172,8 +9172,10 @@
         }
 
         function initChart(upColor, downColor, gridColor, interactive, crosshairColor) {
+            // Chart sudah auto-init saat halaman dimuat; panggilan dari Flutter cukup menerapkan tema.
             if (chart) {
                 applyThemeColors(upColor, downColor, gridColor);
+                setCrosshairColor(crosshairColor);
                 return;
             }
             upColor = upColor || '#21C07A';
@@ -9392,6 +9394,12 @@
         // Tema UI drawing (dark/light) mengikuti tema app; warnanya di token CSS --tv-*.
         function setThemeMode(mode) {
             document.documentElement.dataset.theme = mode === 'light' ? 'light' : 'dark';
+            renderFib(); // teks drawing berwarna default ikut berganti
+        }
+
+        // Warna teks drawing yang belum dipilih user (textColor null): kontras dengan latar chart.
+        function defaultDrawingTextColor() {
+            return document.documentElement.dataset.theme === 'light' ? '#131722' : '#FFFFFF';
         }
 
         // Warna tema app: naik/turun (hex) untuk candle & area; grid (rgba). Warna volume diatur per indikator.
