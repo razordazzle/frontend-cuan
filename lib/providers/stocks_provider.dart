@@ -410,7 +410,7 @@ class StocksProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Candles IHSG untuk halaman IhsgTradingViewPage.
+  /// Candles IHSG untuk halaman TradingViewChartPage (IHSG).
   /// interval yang dikirim ke backend = resolusi asli (1d/1w/1M), BUKAN mapping
   /// window kayak di fetchIndexCandles() — biar konsisten sama SOP trading chart:
   /// tiap candle merepresentasikan 1 resolusi tsb, history-nya panjang (bukan dipotong per-chip).

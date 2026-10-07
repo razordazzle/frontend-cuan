@@ -5,7 +5,8 @@ import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/data/model/broker_summary_row.dart';
 import 'package:cuan_app/data/model/candle_item.dart';
 import 'package:cuan_app/data/services/stocks_service.dart';
-import 'package:cuan_app/pages/screen/stock_tradingview_page.dart';
+import 'package:cuan_app/controllers/chart_data_source.dart';
+import 'package:cuan_app/pages/screen/tradingview_chart_page.dart';
 import 'package:cuan_app/providers/stock_detail_provider.dart';
 import 'package:cuan_app/providers/stocks_provider.dart';
 import 'package:flutter/material.dart';
@@ -1631,9 +1632,13 @@ class _CandleChartCardState extends State<_CandleChartCard> {
                         ),
                         onPressed: () => Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                StockTradingViewPage(ticker: widget.ticker),
+                          MaterialPageRoute<void>(
+                            builder: (_) => TradingViewChartPage(
+                              source: StockChartDataSource(
+                                context.read<StockDetailProvider>(),
+                                widget.ticker,
+                              ),
+                            ),
                           ),
                         ),
                       ),

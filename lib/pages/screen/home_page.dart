@@ -6,7 +6,8 @@ import 'package:cuan_app/config/app_config.dart';
 import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/data/model/stock_list_item.dart';
 import 'package:cuan_app/pages/screen/global_search_page.dart';
-import 'package:cuan_app/pages/screen/ihsg_tradingview_page.dart';
+import 'package:cuan_app/controllers/chart_data_source.dart';
+import 'package:cuan_app/pages/screen/tradingview_chart_page.dart';
 import 'package:cuan_app/pages/screen/stock_detail_page.dart';
 import 'package:cuan_app/providers/stocks_provider.dart';
 import 'package:flutter/material.dart';
@@ -573,9 +574,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _openTradingViewPage(BuildContext context) {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const IhsgTradingViewPage()));
+    final ChartDataSource<ChangeNotifier> source = IhsgChartDataSource(
+      context.read<StocksProvider>(),
+    );
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => TradingViewChartPage(source: source),
+      ),
+    );
   }
 }
 
