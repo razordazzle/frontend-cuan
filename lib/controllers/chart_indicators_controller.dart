@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/model/active_chart_indicator.dart';
 import '../data/model/indicator_line_style.dart';
@@ -11,6 +12,7 @@ import '../data/model/indicator_line_style.dart';
 /// [indicators] selalu diganti instance list baru setiap ada perubahan,
 /// supaya perbandingan old/new widget di `TvChartWidget` tetap akurat.
 class ChartIndicatorsController extends ChangeNotifier {
+  static const String _favoritesKey = 'chart.indicatorFavorites';
   static const int _defaultSmaPeriod = 20;
   static const int _defaultRsiPeriod = 14;
   static const int _defaultRsiSmoothingLength = 14;
@@ -42,11 +44,20 @@ class ChartIndicatorsController extends ChangeNotifier {
 
   List<ActiveChartIndicator> _indicators = const <ActiveChartIndicator>[];
   String? _selectedId;
+
+  /// Default favorit; diganti dengan yang tersimpan di device begitu selesai dimuat.
   final Set<String> _favorites = <String>{
     'Moving Average',
     'Relative Strength Index',
     'Volume',
   };
+
+  /// True kalau user sudah mengubah favorit sebelum data tersimpan selesai dimuat.
+  bool _hasFavoriteChanges = false;
+
+  ChartIndicatorsController() {
+    _loadFavorites();
+  }
 
   List<ActiveChartIndicator> get indicators => _indicators;
   int get count => _indicators.length;
@@ -104,14 +115,29 @@ class ChartIndicatorsController extends ChangeNotifier {
   }
 
   /// Favorit hanya dibaca saat sheet indikator dibuka, jadi tidak perlu memicu rebuild chart.
+  /// Disimpan di device supaya tetap ada saat halaman chart dibuka lagi.
   void toggleFavorite(String name) {
     if (!_favorites.remove(name)) _favorites.add(name);
+    _hasFavoriteChanges = true;
+    final List<String> snapshot = _favorites.toList();
+    SharedPreferences.getInstance().then(
+      (SharedPreferences prefs) => prefs.setStringList(_favoritesKey, snapshot),
+    );
   }
 
   @override
   void dispose() {
     plotValues.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadFavorites() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final List<String>? saved = prefs.getStringList(_favoritesKey);
+    if (saved == null || _hasFavoriteChanges) return;
+    _favorites
+      ..clear()
+      ..addAll(saved);
   }
 
   int _indexOf(String id) =>

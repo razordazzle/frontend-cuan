@@ -200,68 +200,59 @@ class _RsiIconPainter extends CustomPainter {
   bool shouldRepaint(covariant _RsiIconPainter oldDelegate) => oldDelegate.color != color;
 }
 
+/// Batang-batang ikon di grid 20x20, lebar & jarak seragam supaya rapi.
+/// Tiap batang = (top, bottom) dalam koordinat grid.
+void _paintIconBars(Canvas canvas, Size size, Color color, List<(double, double)> bars) {
+  const double barWidth = 2.6;
+  const double firstX = 3.7;
+  const double step = 4.2;
+  final Paint fill = Paint()..color = color;
+  canvas.save();
+  canvas.scale(size.width / 20.0, size.height / 20.0);
+  for (final (int i, (double top, double bottom)) in bars.indexed) {
+    canvas.drawRRect(
+      RRect.fromLTRBR(firstX + i * step, top, firstX + i * step + barWidth, bottom, const Radius.circular(0.8)),
+      fill,
+    );
+  }
+  canvas.restore();
+}
+
+/// Ikon Volume: 4 batang dari garis dasar yang sama.
 class _VolumeIconPainter extends CustomPainter {
+  static const List<(double, double)> _bars = <(double, double)>[(10, 16.5), (5, 16.5), (8, 16.5), (12, 16.5)];
+
   final Color color;
   const _VolumeIconPainter(this.color);
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2
-      ..strokeCap = StrokeCap.round;
-
-    final double sx = size.width / 20.0;
-    final double sy = size.height / 20.0;
-    canvas.save();
-    canvas.scale(sx, sy);
-
-    canvas.drawLine(const Offset(4, 16), const Offset(4, 10), paint);
-    canvas.drawLine(const Offset(9, 16), const Offset(9, 5), paint);
-    canvas.drawLine(const Offset(14, 16), const Offset(14, 8), paint);
-    canvas.drawLine(const Offset(17, 16), const Offset(17, 12), paint);
-
-    canvas.restore();
-  }
+  void paint(Canvas canvas, Size size) => _paintIconBars(canvas, size, color, _bars);
 
   @override
   bool shouldRepaint(covariant _VolumeIconPainter oldDelegate) => oldDelegate.color != color;
 }
 
-/// Ikon MACD: histogram di sekitar garis nol + garis osilator.
+/// Ikon MACD: histogram naik di atas & turun di bawah garis nol.
 class _MacdIconPainter extends CustomPainter {
+  static const double _zeroY = 10.5;
+  static const List<(double, double)> _bars = <(double, double)>[(7, _zeroY), (4, _zeroY), (_zeroY, 13.5), (_zeroY, 16)];
+
   final Color color;
   const _MacdIconPainter(this.color);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint bar = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round;
-    final Paint line = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    canvas.save();
-    canvas.scale(size.width / 20.0, size.height / 20.0);
-    canvas.drawLine(const Offset(5, 12), const Offset(5, 9), bar);
-    canvas.drawLine(const Offset(10, 12), const Offset(10, 7), bar);
-    canvas.drawLine(const Offset(15, 12), const Offset(15, 15), bar);
-    canvas.drawPath(
-      Path()
-        ..moveTo(2.5, 8)
-        ..lineTo(8, 4)
-        ..lineTo(13, 9)
-        ..lineTo(17.5, 13),
-      line,
+    _paintIconBars(canvas, size, color, _bars);
+    final double sx = size.width / 20.0;
+    final double sy = size.height / 20.0;
+    canvas.drawLine(
+      Offset(2.5 * sx, _zeroY * sy),
+      Offset(17.5 * sx, _zeroY * sy),
+      Paint()
+        ..color = color
+        ..strokeWidth = 1.2
+        ..strokeCap = StrokeCap.round,
     );
-    canvas.restore();
   }
 
   @override
