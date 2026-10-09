@@ -19,12 +19,7 @@ class ChartDrawingsController extends ChangeNotifier {
   final PersistedFavorites<ChartDrawingTool> _favoriteTools =
       PersistedFavorites<ChartDrawingTool>(
         storageKey: 'chart.drawingFavorites',
-        defaults: const <ChartDrawingTool>[
-          ChartDrawingTool.rectangle,
-          ChartDrawingTool.trendline,
-          ChartDrawingTool.horizontalLine,
-          ChartDrawingTool.fibonacci,
-        ],
+        defaults: const <ChartDrawingTool>[],
         encode: (ChartDrawingTool tool) => tool.name,
         decode: (String name) => ChartDrawingTool.values.asNameMap()[name],
       );

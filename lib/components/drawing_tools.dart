@@ -90,7 +90,11 @@ class _DrawingToolsSheetState extends State<DrawingToolsSheet> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   String _searchQuery = '';
-  _DrawingFilter _selectedFilter = _DrawingFilter.favorites;
+
+  /// Tab awal: Favorites kalau sudah ada favorit, selain itu semua tool.
+  late _DrawingFilter _selectedFilter = widget.controller.favoriteTools.isEmpty
+      ? _DrawingFilter.all
+      : _DrawingFilter.favorites;
   bool _isSearching = false;
 
   bool get _isSearchMode => _isSearching || _searchQuery.isNotEmpty;

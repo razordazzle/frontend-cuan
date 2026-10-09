@@ -7,14 +7,12 @@ class IndicatorItem {
   final String name;
   final String category;
   final String description;
-  final bool isSupported;
 
   const IndicatorItem({
     required this.id,
     required this.name,
     this.category = 'Indicators',
     required this.description,
-    this.isSupported = true,
   });
 }
 
@@ -43,26 +41,8 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
   final TextEditingController _techSearchCtrl = TextEditingController();
   final TextEditingController _favSearchCtrl = TextEditingController();
 
-  // 8 Indikator: 3 yang sudah berfungsi + 5 yang menyusul sesuai instruksi user
+  // Hanya indikator yang sudah berfungsi di chart.
   static const List<IndicatorItem> _allIndicators = <IndicatorItem>[
-    IndicatorItem(
-      id: 'atr',
-      name: 'Average True Range',
-      description: 'Indikator volatilitas pasar yang mengukur rentang rata-rata pergerakan harga saham.',
-      isSupported: false,
-    ),
-    IndicatorItem(
-      id: 'bb',
-      name: 'Bollinger Bands',
-      description: 'Pita volatilitas atas dan bawah di sekitar moving average harga untuk melihat deviasi standar.',
-      isSupported: false,
-    ),
-    IndicatorItem(
-      id: 'ema',
-      name: 'Exponential Moving Average',
-      description: 'Rata-rata pergerakan harga dengan pembobotan lebih besar pada pergerakan data harga terbaru.',
-      isSupported: false,
-    ),
     IndicatorItem(
       id: 'macd',
       name: 'Moving Average Convergence Divergence',
@@ -72,25 +52,16 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
       id: 'sma',
       name: 'Moving Average',
       description: 'Rata-rata pergerakan harga sederhana selama 20 periode terakhir.',
-      isSupported: true,
     ),
     IndicatorItem(
       id: 'rsi',
       name: 'Relative Strength Index',
       description: 'Oscillator momentum untuk mengidentifikasi kondisi Overbought (>70) dan Oversold (<30).',
-      isSupported: true,
-    ),
-    IndicatorItem(
-      id: 'stoch',
-      name: 'Stochastic Oscillator',
-      description: 'Oscillator momentum yang membandingkan harga penutupan dengan rentang harga dalam periode tertentu.',
-      isSupported: false,
     ),
     IndicatorItem(
       id: 'vol',
       name: 'Volume',
       description: 'Volume perdagangan kumulatif yang menunjukkan aktivitas transaksi pasar dan likuiditas.',
-      isSupported: true,
     ),
   ];
 
@@ -129,17 +100,6 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
   }
 
   void _addIndicator(IndicatorItem item) {
-    if (!item.isSupported) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Indikator "${item.name}" akan segera hadir.'),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
     widget.onAddIndicator(item.id);
     _showToast();
   }

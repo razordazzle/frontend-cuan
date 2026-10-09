@@ -44,11 +44,7 @@ class ChartIndicatorsController extends ChangeNotifier {
 
   final PersistedFavorites<String> _favorites = PersistedFavorites<String>(
     storageKey: 'chart.indicatorFavorites',
-    defaults: const <String>[
-      'Moving Average',
-      'Relative Strength Index',
-      'Volume',
-    ],
+    defaults: const <String>[],
     encode: (String name) => name,
     decode: (String name) => name,
   );

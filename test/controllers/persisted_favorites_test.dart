@@ -9,6 +9,15 @@ Future<void> _flush() => Future<void>.delayed(Duration.zero);
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 
+  test('default favorit kosong', () {
+    final ChartDrawingsController drawings = ChartDrawingsController();
+    final ChartIndicatorsController indicators = ChartIndicatorsController();
+    expect(drawings.favoriteTools, isEmpty);
+    expect(indicators.favorites, isEmpty);
+    drawings.dispose();
+    indicators.dispose();
+  });
+
   test('favorit drawing tetap ada saat controller dibuat ulang', () async {
     final ChartDrawingsController first = ChartDrawingsController();
     await _flush();
@@ -22,9 +31,7 @@ void main() {
     await _flush();
 
     expect(second.favoriteTools, <ChartDrawingTool>[
-      ChartDrawingTool.rectangle,
-      ChartDrawingTool.horizontalLine,
-      ChartDrawingTool.fibonacci,
+      ChartDrawingTool.trendline,
     ]);
     expect(notifications, 1, reason: 'toolbar harus rebuild setelah dimuat');
     second.dispose();
@@ -42,8 +49,7 @@ void main() {
     final ChartIndicatorsController second = ChartIndicatorsController();
     await _flush();
     expect(second.favorites, <String>[
-      'Moving Average',
-      'Relative Strength Index',
+      'Volume',
       'Moving Average Convergence Divergence',
     ]);
     second.dispose();
@@ -58,9 +64,7 @@ void main() {
     await _flush();
 
     expect(controller.favoriteTools, <ChartDrawingTool>[
-      ChartDrawingTool.trendline,
-      ChartDrawingTool.horizontalLine,
-      ChartDrawingTool.fibonacci,
+      ChartDrawingTool.rectangle,
     ]);
     controller.dispose();
   });
