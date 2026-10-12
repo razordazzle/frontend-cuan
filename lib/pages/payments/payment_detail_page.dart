@@ -285,6 +285,15 @@ class _QrisSection extends StatelessWidget {
             alignment: Alignment.center,
             child: q.loading
                 ? const CircularProgressIndicator()
+                : q.expired
+                ? const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      'QR sudah kedaluwarsa. Silakan kembali dan ulangi checkout.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.black),
+                    ),
+                  )
                 : (q.error != null
                       ? Padding(
                           padding: const EdgeInsets.all(16),

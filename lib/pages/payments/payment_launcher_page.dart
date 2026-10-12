@@ -57,13 +57,16 @@ class _PaymentLauncherPageState extends State<PaymentLauncherPage> {
 
       if (q.current == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal membuat invoice QRIS')),
+          SnackBar(content: Text(q.error ?? 'Gagal membuat invoice QRIS')),
         );
         Navigator.pop(context, false);
         return;
       }
 
       final amount = (double.tryParse(q.current?.amount ?? '0') ?? 0).round();
+      // Countdown ikut batas bayar invoice dari backend (INVOICE_EXPIRE_SECONDS)
+      final expiresAt = q.current?.expiresAt;
+      final timeLimit = expiresAt?.difference(DateTime.now());
 
       // Navigator.pushReplacement(
       //   context,
@@ -78,11 +81,18 @@ class _PaymentLauncherPageState extends State<PaymentLauncherPage> {
       final result = await Navigator.push<bool>(
         context,
         MaterialPageRoute(
-          builder: (_) => PaymentDetailPage(
-            method: method,
-            amount: amount,
-            invoiceId: q.current?.invoiceId ?? '',
-          ),
+          builder: (_) => timeLimit == null
+              ? PaymentDetailPage(
+                  method: method,
+                  amount: amount,
+                  invoiceId: q.current?.invoiceId ?? '',
+                )
+              : PaymentDetailPage(
+                  method: method,
+                  amount: amount,
+                  invoiceId: q.current?.invoiceId ?? '',
+                  timeLimit: timeLimit.isNegative ? Duration.zero : timeLimit,
+                ),
         ),
       );
 

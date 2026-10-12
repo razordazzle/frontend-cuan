@@ -21,6 +21,9 @@ class CheckoutService {
         'valid_time': validTime,
         'reuse_if_pending': reuseIfPending,
       },
+      // Checkout nunggu gateway QRIS (backend kasih batas 15 detik). Default 20 detik terlalu
+      // mepet: FE keburu timeout sebelum sempat nerima pesan error dari backend.
+      options: Options(receiveTimeout: const Duration(seconds: 30)),
     );
     debugPrint('CHECKOUT RAW: ${res.data}');
     return CheckoutResponse.fromJson(res.data as Map<String, dynamic>);
