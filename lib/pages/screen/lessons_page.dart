@@ -5,6 +5,7 @@ import 'package:cuan_app/data/model/lesson.dart';
 import 'package:cuan_app/data/model/vbl_models.dart';
 import 'package:cuan_app/providers/vbl_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
@@ -161,6 +162,10 @@ class _LessonsPageState extends State<LessonsPage> {
     _autoSaveTimer?.cancel();
     _ytController?.removeListener(_onPlayerStateChange);
     _ytController?.dispose();
+    // Keluar halaman saat (atau setelah) fullscreen: lepas kunci orientasi dari
+    // toggleFullScreenMode() & munculkan lagi status/navigation bar
+    SystemChrome.setPreferredOrientations([]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 
@@ -173,6 +178,33 @@ class _LessonsPageState extends State<LessonsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final controller = _ytController;
+    // Controller baru ada setelah video_url ke-fetch -> sebelum itu tampilkan halaman + placeholder
+    if (controller == null) return _buildPage(context, null);
+
+    final cs = Theme.of(context).colorScheme;
+    // YoutubePlayerBuilder WAJIB buat fullscreen: saat landscape dia ganti seluruh halaman
+    // (AppBar, ListView) dengan player saja, sembunyikan status bar & urus tombol back.
+    // Tanpa ini player tetap kecil di dalam ListView walau layar sudah diputar.
+    return YoutubePlayerBuilder(
+      player: YoutubePlayer(
+        controller: controller,
+        showVideoProgressIndicator: true,
+        progressIndicatorColor: cs.primary,
+        bottomActions: [
+          CurrentPosition(),
+          const SizedBox(width: 8),
+          ProgressBar(isExpanded: true),
+          const SizedBox(width: 8),
+          RemainingDuration(),
+          FullScreenButton(),
+        ],
+      ),
+      builder: (context, player) => _buildPage(context, player),
+    );
+  }
+
+  Widget _buildPage(BuildContext context, Widget? player) {
     final t = Theme.of(context);
     final cs = t.colorScheme;
 
@@ -219,22 +251,10 @@ class _LessonsPageState extends State<LessonsPage> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               children: [
                 // ======= Header 16:9 (cover) + progress UI =======
-                if (_ytController != null)
+                if (player != null)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(16),
-                    child: YoutubePlayer(
-                      controller: _ytController!,
-                      showVideoProgressIndicator: true,
-                      progressIndicatorColor: cs.primary,
-                      bottomActions: [
-                        CurrentPosition(),
-                        const SizedBox(width: 8),
-                        ProgressBar(isExpanded: true),
-                        const SizedBox(width: 8),
-                        RemainingDuration(),
-                        FullScreenButton(),
-                      ],
-                    ),
+                    child: player,
                   )
                 else
                   // fallback loading state sementara nunggu video_url & controller siap
