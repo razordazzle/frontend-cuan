@@ -9,15 +9,19 @@ class CheckoutService {
   CheckoutService(AuthInterceptor interceptor)
     : _dio = ApiClient.instance(interceptor);
 
+  /// Isi [packageCode] untuk beli membership, atau [journalId] untuk unlock satu journal premium.
   Future<CheckoutResponse> checkout({
-    required String packageCode, // DAY/MONTH/YEAR
+    String? packageCode,
+    String? journalId,
     int validTime = 9000,
     bool reuseIfPending = true,
   }) async {
     final res = await _dio.post(
       '/checkout',
       data: {
-        'package_code': packageCode,
+        'item_type': journalId != null ? 'journal' : 'subscription',
+        if (packageCode != null) 'package_code': packageCode,
+        if (journalId != null) 'journal_id': journalId,
         'valid_time': validTime,
         'reuse_if_pending': reuseIfPending,
       },

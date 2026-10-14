@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 
 // pages
 import 'package:cuan_app/pages/payments/payment_detail_page.dart';
-import 'package:cuan_app/pages/payments/payment_method_page.dart';
+import 'package:cuan_app/pages/payments/premium_agreement_page.dart';
 import 'package:cuan_app/pages/screen/research_page.dart' show ResearchItem;
 
 // payments
@@ -15,6 +15,7 @@ import 'package:cuan_app/data/model/payment_method.dart';
 
 // provider & models
 import 'package:cuan_app/providers/journals_provider.dart';
+import 'package:cuan_app/data/services/journals_service.dart' show JournalPaywalled;
 
 class ResearchContentPage extends StatefulWidget {
   const ResearchContentPage({
@@ -46,6 +47,7 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
   String? _content; // isi markdown
   bool?
   _locked; // null = belum diketahui; true=premium terkunci, false=akses penuh
+  int? _priceIdr; // harga unlock dari API (402); null = cuma bisa lewat membership
 
   // dummy plans
   late final List<_Plan> _plans = [
@@ -64,6 +66,7 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
   @override
   void initState() {
     super.initState();
+    _priceIdr = widget.item.priceIdr; // hint dari list, ditimpa hasil 402 detail
     // kalau caller sudah kirim content siap pakai, gunakan itu
     if (widget.content != null && widget.content!.trim().isNotEmpty) {
       _content = widget.content;
@@ -91,23 +94,27 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
         _locked = false;
         _loading = false;
       });
-    } catch (e) {
-      // 2) kalau gagal (mis. 402), fallback preview
-      try {
-        final p = await jp.fetchPreview(widget.item.id);
-        if (!mounted) return;
-        setState(() {
-          _content = p.previewMd;
-          _locked = true; // tampil mode locked
-          _loading = false;
-        });
-      } catch (e2) {
-        if (!mounted) return;
-        setState(() {
-          _err = e2.toString();
-          _loading = false;
-        });
+    } on JournalPaywalled catch (e) {
+      // 2) 402: premium belum kebuka -> response-nya sudah bawa preview + harga unlock
+      String preview = e.preview;
+      if (preview.trim().isEmpty) {
+        try {
+          preview = (await jp.fetchPreview(widget.item.id)).previewMd;
+        } catch (_) {}
       }
+      if (!mounted) return;
+      setState(() {
+        _content = preview;
+        _priceIdr = e.priceIdr;
+        _locked = true; // tampil mode locked
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _err = 'Gagal memuat konten. Silakan coba lagi.';
+        _loading = false;
+      });
     }
   }
 
@@ -140,49 +147,65 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
       'leo ante pretium nisl, in mattis libero lectus faucibus orci. Mauris eget '
       'fermentum nunc, ut sodales neque.';
 
-  Future<void> _startCheckout() async {
-    // 1) pilih metode pembayaran
-    final method = await Navigator.push<PaymentMethod>(
-      context,
-      MaterialPageRoute(builder: (_) => const PaymentMethodPage()),
-    );
-    if (!mounted || method == null) return;
+  static const _qrisMethod = PaymentMethod(
+    id: 'qris',
+    label: 'QRIS',
+    logoAsset: 'assets/payments/qris.png',
+    group: PaymentGroup.qris,
+  );
 
-    // subscription hanya 1 jenis (sementara)
-    const packageCode =
-        'YEAR'; // sesuaikan dengan SubscriptionPackage.code di backend
-
-    // 2) kalau QRIS → start checkout (generate invoice + qr)
-    if (method.group == PaymentGroup.qris) {
-      await context.read<QrisProvider>().startCheckout(
-        packageCode: packageCode,
-      );
-    }
-    if (!mounted) return;
-    // ambil data dari provider
+  /// User regular: beli akses journal ini saja (berlaku selamanya).
+  Future<void> _buyJournal() async {
     final q = context.read<QrisProvider>();
-    final invoiceId = q.current?.invoiceId ?? '';
-    final amount =
-        int.tryParse((q.current?.amount ?? '0').split('.').first) ?? 0;
+    await q.startCheckout(journalId: widget.item.id);
+    if (!mounted) return;
 
-    // 3) navigasi ke detail bayar
+    final cur = q.current;
+    if (cur == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(q.error ?? 'Gagal membuat invoice QRIS')),
+      );
+      return;
+    }
+
+    final amount = (double.tryParse(cur.amount) ?? 0).round();
+    // countdown ikut batas bayar invoice dari backend
+    final left = cur.expiresAt?.difference(DateTime.now());
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => PaymentDetailPage(
-          method: method,
-          invoiceId: invoiceId,
-          amount: amount == 0
-              ? 100000
-              : amount, // fallback kalau backend belum benar
-          accountNumber: null, // sementara, karena fokus QRIS
-        ),
+        builder: (_) => left == null
+            ? PaymentDetailPage(
+                method: _qrisMethod,
+                invoiceId: cur.invoiceId,
+                amount: amount,
+              )
+            : PaymentDetailPage(
+                method: _qrisMethod,
+                invoiceId: cur.invoiceId,
+                amount: amount,
+                timeLimit: left.isNegative ? Duration.zero : left,
+              ),
       ),
     );
 
-    // 4) setelah balik, refresh konten (kalau sudah paid maka unlock)
+    // Balik dari halaman bayar: kalau sudah paid, detail sekarang kebuka
     if (!mounted) return;
-    await context.read<AuthProvider>().refreshMe();
+    await _loadContent();
+  }
+
+  /// Jadi member: semua journal premium + video kebuka. Pakai alur membership yang sama
+  /// dengan halaman Community (persetujuan -> QRIS paket AppConfig.membershipPackageCode).
+  Future<void> _becomeMember() async {
+    final paid = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const PremiumAgreementPage()),
+    );
+    if (!mounted) return;
+    if (paid == true) {
+      await context.read<AuthProvider>().refreshMe();
+      if (!mounted) return;
+    }
     await _loadContent();
   }
 
@@ -347,21 +370,35 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
           // ===== PREMIUM OFFER =====
           if (locked) ...[
             const SizedBox(height: 20),
-            _JoinPremiumCallout(),
+            _JoinPremiumCallout(canBuy: _priceIdr != null),
             const SizedBox(height: 16),
 
+            // Opsi 1: beli journal ini saja (cuma kalau admin sudah atur harganya)
+            if (_priceIdr != null) ...[
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: FilledButton(
+                  onPressed: q.loading ? null : _buyJournal,
+                  child: q.loading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text('Beli Journal Ini – ${_rupiah(_priceIdr!)}'),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+
+            // Opsi 2: jadi member -> semua journal premium & video
             SizedBox(
               width: double.infinity,
               height: 52,
-              child: FilledButton(
-                onPressed: q.loading ? null : _startCheckout,
-                child: q.loading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Berlangganan Premium'),
+              child: OutlinedButton(
+                onPressed: q.loading ? null : _becomeMember,
+                child: const Text('Jadi Member – Akses Semua Konten'),
               ),
             ),
           ],
@@ -374,6 +411,10 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
 /* ==================== WIDGETS ==================== */
 
 class _JoinPremiumCallout extends StatelessWidget {
+  const _JoinPremiumCallout({required this.canBuy});
+
+  final bool canBuy; // journal ini punya harga -> bisa dibeli satuan
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -385,7 +426,9 @@ class _JoinPremiumCallout extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          'Bergabung premium untuk\nbaca selengkapnya',
+          canBuy
+              ? 'Beli journal ini atau jadi member\nuntuk baca selengkapnya'
+              : 'Jadi member untuk\nbaca selengkapnya',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurface,

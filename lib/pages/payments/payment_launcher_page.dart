@@ -1,3 +1,4 @@
+import 'package:cuan_app/config/app_config.dart';
 import 'package:cuan_app/providers/qris_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:cuan_app/data/model/payment_method.dart';
@@ -38,7 +39,7 @@ class _PaymentLauncherPageState extends State<PaymentLauncherPage> {
     setState(() => _isLoading = true);
 
     try {
-      const packageCode = 'WEEK';
+      const packageCode = AppConfig.membershipPackageCode;
 
       const method = PaymentMethod(
         id: 'qris',

@@ -1,3 +1,4 @@
+import 'package:cuan_app/utils/currency.dart';
 import 'package:cuan_app/pages/screen/research_content_page.dart';
 import 'package:cuan_app/providers/journals_provider.dart';
 import 'package:flutter/material.dart';
@@ -73,6 +74,8 @@ class _ResearchPageState extends State<ResearchPage> {
         publishedAt: j.publishedAt,
         duration: const Duration(minutes: 30), // API tdk ada durasi → dummy
         isPremium: j.isPaid,
+        priceIdr: j.priceIdr,
+        hasAccess: j.hasAccess,
         isBookmarked: _bookmarks[j.journalId] ?? false,
       );
     }).toList();
@@ -90,6 +93,23 @@ class _ResearchPageState extends State<ResearchPage> {
           e.category.toLowerCase().contains(q);
       return okTab && okPrem && okQ;
     }).toList();
+  }
+
+  Future<void> _openContent(ResearchItem item, {required int total}) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ResearchContentPage(
+          item: item,
+          index: 1,
+          total: total,
+          // hint awal saja; status akses final tetap dari API detail
+          isSubscriber: !item.isLocked,
+        ),
+      ),
+    );
+    // Balik dari konten (mungkin habis beli journal / jadi member): refresh status kunci di list
+    if (!mounted) return;
+    context.read<JournalsProvider>().fetchList();
   }
 
   @override
@@ -229,17 +249,7 @@ class _ResearchPageState extends State<ResearchPage> {
               //     ),
               //   ));
               // }
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ResearchContentPage(
-                    item: item,
-                    index: 1,
-                    total: all.length,
-                    isSubscriber: _isSubscriber && !item.isPremium,
-                    // content: ... // isi dari provider kalau mau
-                  ),
-                ),
-              );
+              _openContent(item, total: all.length);
             },
           ),
           const SizedBox(height: 18),
@@ -255,16 +265,7 @@ class _ResearchPageState extends State<ResearchPage> {
               _bookmarks[item.id] = now;
             }),
             onOpen: (item) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ResearchContentPage(
-                    item: item,
-                    index: 1,
-                    total: free.length,
-                    isSubscriber: true, // free selalu terbuka
-                  ),
-                ),
-              );
+              _openContent(item, total: free.length);
             },
           ),
           const SizedBox(height: 18),
@@ -280,17 +281,7 @@ class _ResearchPageState extends State<ResearchPage> {
               _bookmarks[item.id] = now;
             }),
             onOpen: (item) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ResearchContentPage(
-                    item: item,
-                    index: 1,
-                    total: premium.length,
-                    isSubscriber:
-                        _isSubscriber, // kalau bukan subscriber → terkunci
-                  ),
-                ),
-              );
+              _openContent(item, total: premium.length);
             },
           ),
 
@@ -428,10 +419,13 @@ class _ResearchCard extends StatelessWidget {
                             color: Colors.black.withValues(alpha: .35),
                             shape: BoxShape.circle,
                           ),
-                          child: const Padding(
-                            padding: EdgeInsets.all(6),
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
                             child: Icon(
-                              Icons.workspace_premium_rounded,
+                              // premium yang sudah kebuka (member / sudah beli) -> gembok terbuka
+                              item.hasAccess
+                                  ? Icons.lock_open_rounded
+                                  : Icons.workspace_premium_rounded,
                               size: 16,
                               color: Colors.white,
                             ),
@@ -499,6 +493,18 @@ class _ResearchCard extends StatelessWidget {
                           height: 1.1,
                         ),
                       ),
+                      if (item.isLocked && item.priceIdr != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          formatRupiah(item.priceIdr!),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            height: 1.1,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -588,6 +594,8 @@ class ResearchItem {
     required this.publishedAt,
     required this.duration,
     required this.isPremium,
+    this.priceIdr,
+    this.hasAccess = true,
     this.isBookmarked = false,
   });
 
@@ -598,5 +606,10 @@ class ResearchItem {
   DateTime publishedAt;
   Duration duration;
   bool isPremium;
+  int? priceIdr; // harga unlock (premium); null = free / belum diatur admin
+  bool hasAccess; // free, member, atau sudah dibeli
   bool isBookmarked;
+
+  /// Premium yang belum kebuka buat user ini
+  bool get isLocked => isPremium && !hasAccess;
 }

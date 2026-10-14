@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/data/model/lesson.dart';
 import 'package:cuan_app/data/model/vbl_models.dart';
+import 'package:cuan_app/pages/payments/premium_agreement_page.dart';
+import 'package:cuan_app/providers/auth_provider.dart';
 import 'package:cuan_app/providers/vbl_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -44,28 +46,43 @@ class _LessonsPageState extends State<LessonsPage> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final p = context.read<VblProvider>();
-      await p.fetchVideo(widget.videoId); // GET /vbl/videos/{video_id}
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initVideo());
+  }
 
-      final prog = await p.fetchProgressForVideo(widget.videoId);
-      if (prog != null && !prog.isCompleted) {
-        // kalau video udah pernah completed, mulai dari 0 lagi (rewatch), bukan resume
-        _resumePct = prog.progressPct;
-        setState(() => _progressPct = prog.progressPct);
+  // Ambil video + progress lalu siapkan player. Dipanggil lagi setelah user jadi member.
+  Future<void> _initVideo() async {
+    final p = context.read<VblProvider>();
+    await p.fetchVideo(widget.videoId); // GET /vbl/videos/{video_id}
+    if (!mounted || p.videoLocked) return; // user regular: video khusus member
+
+    final prog = await p.fetchProgressForVideo(widget.videoId);
+    if (prog != null && !prog.isCompleted) {
+      // kalau video udah pernah completed, mulai dari 0 lagi (rewatch), bukan resume
+      _resumePct = prog.progressPct;
+      setState(() => _progressPct = prog.progressPct);
+    }
+    final videoUrl = p.video?.videoUrl;
+    if (videoUrl != null && videoUrl.isNotEmpty) {
+      final ytId = YoutubePlayer.convertUrlToId(videoUrl);
+      if (ytId != null) {
+        _ytController = YoutubePlayerController(
+          initialVideoId: ytId,
+          flags: const YoutubePlayerFlags(autoPlay: false, mute: false),
+        )..addListener(_onPlayerStateChange);
+        setState(() {});
       }
-      final videoUrl = p.video?.videoUrl;
-      if (videoUrl != null && videoUrl.isNotEmpty) {
-        final ytId = YoutubePlayer.convertUrlToId(videoUrl);
-        if (ytId != null) {
-          _ytController = YoutubePlayerController(
-            initialVideoId: ytId,
-            flags: const YoutubePlayerFlags(autoPlay: false, mute: false),
-          )..addListener(_onPlayerStateChange);
-          setState(() {});
-        }
-      }
-    });
+    }
+  }
+
+  Future<void> _becomeMember() async {
+    final paid = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const PremiumAgreementPage()),
+    );
+    if (!mounted || paid != true) return;
+    await context.read<AuthProvider>().refreshMe();
+    if (!mounted) return;
+    await _initVideo();
   }
 
   //Dipanggil tiap ada perubahan state player (posisi, play/pause, dll)
@@ -232,6 +249,8 @@ class _LessonsPageState extends State<LessonsPage> {
       ),
       body: loading && vd == null
           ? const Center(child: CircularProgressIndicator())
+          : p.videoLocked
+          ? _MemberOnlyView(onJoin: _becomeMember)
           : error != null && vd == null
           ? Center(
               child: Column(
@@ -378,6 +397,55 @@ class _LessonsPageState extends State<LessonsPage> {
                 ),
               ],
             ),
+    );
+  }
+}
+
+/// Ditampilkan ke user regular: video cuma bisa diakses member.
+class _MemberOnlyView extends StatelessWidget {
+  const _MemberOnlyView({required this.onJoin});
+
+  final VoidCallback onJoin;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final cs = t.colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_rounded, size: 56, color: cs.primary),
+            const SizedBox(height: 16),
+            Text(
+              'Video khusus member',
+              textAlign: TextAlign.center,
+              style: t.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Jadi member untuk menonton semua video dan membaca semua journal premium.',
+              textAlign: TextAlign.center,
+              style: t.textTheme.bodyMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: FilledButton(
+                onPressed: onJoin,
+                child: const Text('Jadi Member'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
