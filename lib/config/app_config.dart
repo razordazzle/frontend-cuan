@@ -3,6 +3,11 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 class AppConfig {
+  /// Kode paket membership yang dibeli dari app (SubscriptionPackage.code di backend).
+  /// Sementara pakai paket WEEK yang ada di database; di V1 ganti jadi 'LIFETIME'.
+  /// Satu-satunya tempat kode paket ditulis — semua halaman checkout membership pakai ini.
+  static const membershipPackageCode = 'WEEK';
+
   // static const baseUrl = String.fromEnvironment(
   //   'API_BASE_URL',
   //   defaultValue: 'http://127.0.0.1:8000',

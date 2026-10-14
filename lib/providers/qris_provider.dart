@@ -22,8 +22,10 @@ class QrisProvider extends ChangeNotifier {
 
   Timer? _pollTimer;
 
+  /// Isi [packageCode] untuk beli membership, atau [journalId] untuk unlock satu journal premium.
   Future<void> startCheckout({
-    required String packageCode, // DAY/MONTH/YEAR
+    String? packageCode,
+    String? journalId,
     int validTime = 9000,
     bool reuseIfPending = true,
   }) async {
@@ -41,6 +43,7 @@ class QrisProvider extends ChangeNotifier {
     try {
       current = await _checkout.checkout(
         packageCode: packageCode,
+        journalId: journalId,
         validTime: validTime,
         reuseIfPending: reuseIfPending,
       );

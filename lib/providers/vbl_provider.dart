@@ -1,4 +1,5 @@
 // lib/providers/vbl_provider.dart
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:cuan_app/data/services/vbl_service.dart';
 import 'package:cuan_app/data/model/vbl_models.dart';
@@ -133,13 +134,23 @@ class VblProvider extends ChangeNotifier {
   bool loadingVideo = false;
   String? errVideo;
   VblVideoDetailResponse? video;
+  bool videoLocked = false; // 402 dari backend: video khusus member
 
   Future<void> fetchVideo(String videoId) async {
     loadingVideo = true;
     errVideo = null;
+    videoLocked = false;
+    // Kosongkan video sebelumnya: kalau yang ini terkunci, jangan sampai URL video lama yang diputar
+    video = null;
     notifyListeners();
     try {
       video = await _svc.videoDetail(videoId);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 402) {
+        videoLocked = true;
+      } else {
+        errVideo = 'Gagal memuat video';
+      }
     } catch (e) {
       errVideo = 'Gagal memuat video';
     } finally {

@@ -4,10 +4,11 @@ import 'package:cuan_app/data/core/api_client.dart';
 import 'package:cuan_app/config/api_paths.dart';
 import 'package:cuan_app/data/model/journal_models.dart';
 
-/// 402 Payment Required dari backend → lempar exception ini berisi preview
+/// 402 Payment Required dari backend → lempar exception ini berisi preview & harga unlock
 class JournalPaywalled implements Exception {
   final String preview;
-  JournalPaywalled(this.preview);
+  final int? priceIdr; // null = harga belum diatur admin (cuma bisa lewat membership)
+  JournalPaywalled(this.preview, {this.priceIdr});
   @override
   String toString() => 'PAYWALLED: $preview';
 }
@@ -43,14 +44,18 @@ class JournalsService {
     } on DioException catch (e) {
       final code = e.response?.statusCode ?? 0;
       if (code == 402) {
-        // backend kirim: {"detail":{"is_premium":true,"preview":"...","cta":"subscribe"}}
+        // backend kirim: {"detail":{"is_premium":true,"preview":"...","price_idr":25000,
+        //                           "cta":"purchase_or_subscribe"}}
+        // (Dulu throw-nya di dalam try, jadi selalu ketangkep catch sendiri & preview asli hilang.)
         final data = e.response?.data;
-        try {
-          final preview = (data?['detail']?['preview'] ?? '') as String;
-          throw JournalPaywalled(preview);
-        } catch (_) {
-          throw JournalPaywalled('Konten premium. Silakan berlangganan.');
+        final detail = data is Map ? data['detail'] : null;
+        if (detail is Map) {
+          throw JournalPaywalled(
+            detail['preview']?.toString() ?? '',
+            priceIdr: (detail['price_idr'] as num?)?.toInt(),
+          );
         }
+        throw JournalPaywalled('Konten premium. Silakan berlangganan.');
       }
       rethrow;
     }

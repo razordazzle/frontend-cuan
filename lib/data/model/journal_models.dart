@@ -6,6 +6,8 @@ class JournalListItem {
   final DateTime publishedAt;
   final String? thumbnailUrl;
   final String? author;
+  final int? priceIdr; // harga unlock journal premium; null = free / belum diatur admin
+  final bool hasAccess; // sudah kebuka buat user ini (free / member / sudah beli)
 
   JournalListItem({
     required this.journalId,
@@ -15,6 +17,8 @@ class JournalListItem {
     required this.publishedAt,
     this.thumbnailUrl,
     this.author,
+    this.priceIdr,
+    this.hasAccess = true,
   });
 
   factory JournalListItem.fromJson(Map<String, dynamic> j) => JournalListItem(
@@ -25,6 +29,9 @@ class JournalListItem {
         publishedAt: DateTime.parse(j['published_at'] as String),
         thumbnailUrl: j['thumbnail_url'] as String?,
         author: j['author'] as String?,
+        priceIdr: (j['price_idr'] as num?)?.toInt(),
+        // backend lama belum kirim has_access: anggap kebuka kalau bukan premium
+        hasAccess: j['has_access'] as bool? ?? !(j['is_paid'] as bool),
       );
 }
 
@@ -90,8 +97,18 @@ class JournalPreviewResponse {
 
 class JournalAccessResponse {
   final bool hasAccess;
-  JournalAccessResponse({required this.hasAccess});
+  final bool isMember;
+  final int? priceIdr;
+  JournalAccessResponse({
+    required this.hasAccess,
+    this.isMember = false,
+    this.priceIdr,
+  });
 
   factory JournalAccessResponse.fromJson(Map<String, dynamic> j) =>
-      JournalAccessResponse(hasAccess: j['has_access'] as bool);
+      JournalAccessResponse(
+        hasAccess: j['has_access'] as bool,
+        isMember: j['is_member'] as bool? ?? false,
+        priceIdr: (j['price_idr'] as num?)?.toInt(),
+      );
 }
