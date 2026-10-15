@@ -1,3 +1,4 @@
+import 'package:cuan_app/utils/wib_time.dart';
 import 'dart:ui' show ImageFilter;
 import 'package:cuan_app/components/html_content.dart';
 import 'package:cuan_app/providers/auth_provider.dart';
@@ -129,7 +130,8 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
     return 'Rp ${buf.toString()}';
   }
 
-  String _fmtDate(DateTime dt) {
+  String _fmtDate(DateTime publishedAt) {
+    final dt = toWib(publishedAt);
     final dd = dt.day.toString().padLeft(2, '0');
     final mm = dt.month.toString().padLeft(2, '0');
     final yyyy = dt.year.toString();
