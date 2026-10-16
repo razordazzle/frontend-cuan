@@ -204,7 +204,14 @@ class _PaymentDetailPageState extends State<PaymentDetailPage> {
         centerTitle: false,
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+        // + inset bawah: app digambar edge-to-edge (Android 15+), tanpa ini konten paling
+        // bawah ketutup navigation bar HP. Sama seperti payment_status_page.dart.
+        padding: EdgeInsets.fromLTRB(
+          16,
+          12,
+          16,
+          20 + MediaQuery.of(context).padding.bottom,
+        ),
         children: [
           header,
           const SizedBox(height: 16),

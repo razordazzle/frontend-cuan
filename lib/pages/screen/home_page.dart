@@ -207,10 +207,10 @@ class _HomePageState extends State<HomePage> {
               icon: Icon(Icons.settings_outlined, color: cs.onSurface),
               onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
             ),
-            IconButton(
-              icon: Icon(Icons.notifications_none, color: cs.onSurface),
-              onPressed: () {},
-            ),
+            // IconButton(
+            //   icon: Icon(Icons.notifications_none, color: cs.onSurface),
+            //   onPressed: () {},
+            // ),
             const SizedBox(width: 8),
           ],
         ),

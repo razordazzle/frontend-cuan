@@ -282,7 +282,12 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          12,
+          16,
+          24 + MediaQuery.of(context).padding.bottom,
+        ),
         children: [
           // ===== COVER =====
           Container(

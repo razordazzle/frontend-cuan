@@ -81,7 +81,12 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          0,
+          20,
+          MediaQuery.of(context).padding.bottom,
+        ),
         children: [
           const SizedBox(height: 12),
 

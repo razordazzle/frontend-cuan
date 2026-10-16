@@ -49,7 +49,7 @@ class _MainPageState extends State<MainPage> {
     NavItem(
       icon: Icons.science_outlined,
       selectedIcon: Icons.science,
-      label: 'Research',
+      label: 'Journal',
     ),
     NavItem(
       icon: Icons.people,

@@ -64,7 +64,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Scaffold(
       appBar: AppBar(leading: const BackButton(), title: const Text('Profil')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          12,
+          16,
+          28 + MediaQuery.of(context).padding.bottom,
+        ),
         children: [
           // Header kecil (avatar + title)
           Row(

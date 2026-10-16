@@ -267,7 +267,12 @@ class _LessonsPageState extends State<LessonsPage> {
               ),
             )
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                8,
+                16,
+                24 + MediaQuery.of(context).padding.bottom,
+              ),
               children: [
                 // ======= Header 16:9 (cover) + progress UI =======
                 if (player != null)
