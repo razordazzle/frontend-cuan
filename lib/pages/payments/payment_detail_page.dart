@@ -20,6 +20,8 @@ class PaymentDetailPage extends StatefulWidget {
     this.amount = 100000,
     this.accountNumber, // wajib untuk Bank/VA
     this.timeLimit = const Duration(minutes: 20, seconds: 20),
+    this.planTitle = 'Membership',
+    this.isJournal = false,
   });
 
   final PaymentMethod method;
@@ -27,6 +29,8 @@ class PaymentDetailPage extends StatefulWidget {
   final int amount;
   final String? accountNumber;
   final Duration timeLimit;
+  final String planTitle; // yang dibeli: "Membership" / judul journal (tampil di struk)
+  final bool isJournal; // beli satu journal, bukan membership
 
   @override
   State<PaymentDetailPage> createState() => _PaymentDetailPageState();
@@ -76,9 +80,16 @@ class _PaymentDetailPageState extends State<PaymentDetailPage> {
             methodLabel: widget.method.label,
             status: PaymentState.success,
             transTime: DateTime.now(),
-            planTitle: 'Reading Corner',
+            // dulu hardcode 'Reading Corner' -> beli journal pun tampil seperti langganan
+            planTitle: widget.planTitle,
+            itemLabel: widget.isJournal
+                ? 'Journal yang dibeli'
+                : 'Langganan yang dibeli',
             orderId: widget.invoiceId,
           ),
+          subtitleOverride: widget.isJournal
+              ? 'Pembayaran berhasil! Journal sudah bisa dibaca.'
+              : null,
         ),
       ),
     );

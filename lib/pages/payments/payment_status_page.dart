@@ -8,7 +8,8 @@ class PaymentReceipt {
     required this.methodLabel, // e.g. BCA / BCA VA / OVO
     required this.status, // success / pending / failed
     required this.transTime, // DateTime transaksi
-    required this.planTitle, // e.g. Reading Corner / Premium 30 Hari
+    required this.planTitle, // nama yang dibeli: paket membership / judul journal
+    this.itemLabel = 'Langganan yang dibeli', // label baris planTitle di struk
     this.accountNumber, // tampil hanya untuk Bank/VA
     this.orderId, // optional: untuk referensi
   });
@@ -18,6 +19,7 @@ class PaymentReceipt {
   final PaymentState status;
   final DateTime transTime;
   final String planTitle;
+  final String itemLabel;
   final String? accountNumber;
   final String? orderId;
 }
@@ -138,6 +140,7 @@ class PaymentStatusPage extends StatelessWidget {
             amountText: _rupiah(receipt.amount),
             status: receipt.status,
             plan: receipt.planTitle,
+            planLabel: receipt.itemLabel,
             method: receipt.methodLabel,
             accountNumber: receipt.accountNumber,
             timeText: _fmtDateTime(receipt.transTime),
@@ -170,6 +173,7 @@ class _ReceiptCard extends StatelessWidget {
     required this.amountText,
     required this.status,
     required this.plan,
+    required this.planLabel,
     required this.method,
     required this.timeText,
     this.accountNumber,
@@ -179,6 +183,7 @@ class _ReceiptCard extends StatelessWidget {
   final String amountText;
   final PaymentState status;
   final String plan;
+  final String planLabel;
   final String method;
   final String timeText;
   final String? accountNumber;
@@ -264,7 +269,7 @@ class _ReceiptCard extends StatelessWidget {
           if (accountNumber != null) row('No Rek', valueText(accountNumber!)),
           row('Metode Pembayaran', valueText(method)),
           row('Waktu Transaksi', valueText(timeText, bold: false)),
-          row('Langganan yang dibeli', valueText(plan)),
+          row(planLabel, valueText(plan)),
           if (orderId != null)
             row('Order ID', valueText(orderId!, bold: false)),
           const SizedBox(height: 8),

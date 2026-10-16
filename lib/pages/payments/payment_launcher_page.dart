@@ -87,11 +87,13 @@ class _PaymentLauncherPageState extends State<PaymentLauncherPage> {
                   method: method,
                   amount: amount,
                   invoiceId: q.current?.invoiceId ?? '',
+                  planTitle: 'Membership',
                 )
               : PaymentDetailPage(
                   method: method,
                   amount: amount,
                   invoiceId: q.current?.invoiceId ?? '',
+                  planTitle: 'Membership',
                   timeLimit: timeLimit.isNegative ? Duration.zero : timeLimit,
                 ),
         ),

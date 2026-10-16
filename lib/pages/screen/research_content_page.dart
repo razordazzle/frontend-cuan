@@ -158,6 +158,13 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
 
   /// User regular: beli akses journal ini saja (berlaku selamanya).
   Future<void> _buyJournal() async {
+    // T&C dulu; checkout baru jalan kalau user setuju
+    final agreed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const PremiumAgreementPage.journal()),
+    );
+    if (!mounted || agreed != true) return;
+
     final q = context.read<QrisProvider>();
     await q.startCheckout(journalId: widget.item.id);
     if (!mounted) return;
@@ -181,11 +188,15 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
                 method: _qrisMethod,
                 invoiceId: cur.invoiceId,
                 amount: amount,
+                planTitle: widget.item.title,
+                isJournal: true,
               )
             : PaymentDetailPage(
                 method: _qrisMethod,
                 invoiceId: cur.invoiceId,
                 amount: amount,
+                planTitle: widget.item.title,
+                isJournal: true,
                 timeLimit: left.isNegative ? Duration.zero : left,
               ),
       ),
