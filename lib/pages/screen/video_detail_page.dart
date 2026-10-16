@@ -83,7 +83,7 @@ class _VideoDetailPageState extends State<VideoDetailPage> {
     return Scaffold(
       body: ListView(
         // atas tetap 0 (cover sengaja sampai ke belakang status bar), bawah + inset nav bar HP
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
+        padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
         children: [
           // ================= Header (cover + judul dari API) =================
           Stack(

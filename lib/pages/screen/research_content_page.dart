@@ -297,7 +297,7 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
           16,
           12,
           16,
-          24 + MediaQuery.of(context).padding.bottom,
+          24 + MediaQuery.paddingOf(context).bottom,
         ),
         children: [
           // ===== COVER =====

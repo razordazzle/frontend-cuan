@@ -221,7 +221,7 @@ class _PaymentDetailPageState extends State<PaymentDetailPage> {
           16,
           12,
           16,
-          20 + MediaQuery.of(context).padding.bottom,
+          20 + MediaQuery.paddingOf(context).bottom,
         ),
         children: [
           header,

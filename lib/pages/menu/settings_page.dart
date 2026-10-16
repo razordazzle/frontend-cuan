@@ -85,7 +85,7 @@ class _SettingsPageState extends State<SettingsPage> {
           20,
           0,
           20,
-          MediaQuery.of(context).padding.bottom,
+          MediaQuery.paddingOf(context).bottom,
         ),
         children: [
           const SizedBox(height: 12),
@@ -278,7 +278,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   spacing: 12,
                   children: [
                     TextButton(
-                      onPressed: () {},
+                      // Belum ada halaman terpisah: diarahkan ke Terms & Condition
+                      onPressed: () =>
+                          Navigator.pushNamed(context, AppRoutes.terms),
                       child: const Text('Terms of use'),
                     ),
                     Text(
@@ -288,7 +290,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      // Belum ada halaman terpisah: diarahkan ke Terms & Condition
+                      onPressed: () =>
+                          Navigator.pushNamed(context, AppRoutes.terms),
                       child: const Text('Privacy policy'),
                     ),
                   ],

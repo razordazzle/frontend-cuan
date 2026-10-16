@@ -271,7 +271,7 @@ class _LessonsPageState extends State<LessonsPage> {
                 16,
                 8,
                 16,
-                24 + MediaQuery.of(context).padding.bottom,
+                24 + MediaQuery.paddingOf(context).bottom,
               ),
               children: [
                 // ======= Header 16:9 (cover) + progress UI =======
