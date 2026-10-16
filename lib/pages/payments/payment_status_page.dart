@@ -52,11 +52,27 @@ class PaymentStatusPage extends StatelessWidget {
     return 'Rp ${buf.toString()}';
   }
 
+  static const _bulan = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'Mei',
+    'Jun',
+    'Jul',
+    'Agu',
+    'Sep',
+    'Okt',
+    'Nov',
+    'Des',
+  ];
+
+  // "Okt 16, 2026, 10:30:45" (dulu bulannya angka: "10 16, 2026, 10:30:45")
   String _fmtDateTime(DateTime dt) {
     String two(int v) => v.toString().padLeft(2, '0');
-    final d = two(dt.day), m = two(dt.month), y = dt.year;
+    final mon = _bulan[dt.month - 1], d = two(dt.day), y = dt.year;
     final hh = two(dt.hour), mm = two(dt.minute), ss = two(dt.second);
-    return '$m $d, $y, $hh:$mm:$ss';
+    return '$mon $d, $y, $hh:$mm:$ss';
   }
 
   (String, IconData, Color) _visual(BuildContext ctx) {
@@ -208,20 +224,31 @@ class _ReceiptCard extends StatelessWidget {
     Widget row(String label, Widget value) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: t.bodyMedium?.copyWith(
-                  color: cs.onSurface.withOpacity(.75),
-                  fontWeight: FontWeight.w600,
+        // Dulu label Expanded & value gak dibatasi: nilai panjang (Order ID/UUID, judul journal)
+        // makan semua lebar sampai label pecah per huruf ("Ord/er/ID"). Sekarang label pakai lebar
+        // alaminya (maks 45% baris), value ambil sisanya & turun baris kalau kepanjangan.
+        child: LayoutBuilder(
+          builder: (context, constraints) => Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: constraints.maxWidth * .45,
+                ),
+                child: Text(
+                  label,
+                  style: t.bodyMedium?.copyWith(
+                    color: cs.onSurface.withOpacity(.75),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 16),
-            value,
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Align(alignment: Alignment.topRight, child: value),
+              ),
+            ],
+          ),
         ),
       );
     }
