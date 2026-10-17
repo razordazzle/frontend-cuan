@@ -5,7 +5,7 @@ import 'dart:ui' show FontFeature;
 import 'package:cuan_app/config/app_config.dart';
 import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/data/model/stock_list_item.dart';
-import 'package:cuan_app/pages/screen/global_search_page.dart';
+import 'package:cuan_app/pages/screen/market_search_page.dart';
 import 'package:cuan_app/controllers/chart_data_source.dart';
 import 'package:cuan_app/pages/screen/tradingview_chart_page.dart';
 import 'package:cuan_app/pages/screen/stock_detail_page.dart';
@@ -193,13 +193,13 @@ class _HomePageState extends State<HomePage> {
           actions: [
             IconButton(
               icon: Icon(Icons.search, color: cs.onSurface),
+              // Samakan dengan Market: cari saham -> langsung ke halaman detail saham.
+              // (GlobalSearchPage lama: saham dibuka ke Key Statistics & journal ke rute
+              // '/journal_detail' yang tidak terdaftar -> error.)
               onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const GlobalSearchPage(
-                      defaultTypes: 'stock|journal|playlist',
-                    ),
-                  ),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MarketSearchPage()),
                 );
               },
             ),
