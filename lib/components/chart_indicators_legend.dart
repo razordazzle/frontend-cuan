@@ -260,6 +260,43 @@ class _MacdIconPainter extends CustomPainter {
   bool shouldRepaint(covariant _MacdIconPainter oldDelegate) => oldDelegate.color != color;
 }
 
+/// Warna latar baris legend per tema (teks/ikon memakai warna teks legend).
+@immutable
+class _LegendColors {
+  final Color rowBg;
+  final Color selectedRowBg;
+  final Color selectedShadow;
+  final Color badgeBg;
+  final Color badgeIcon;
+
+  const _LegendColors({
+    required this.rowBg,
+    required this.selectedRowBg,
+    required this.selectedShadow,
+    required this.badgeBg,
+    required this.badgeIcon,
+  });
+
+  static const _LegendColors _dark = _LegendColors(
+    rowBg: Color(0x59000000), // hitam 35%
+    selectedRowBg: Color(0xEB131722), // navy 92%
+    selectedShadow: Color(0x73000000),
+    badgeBg: Color(0xFF332042),
+    badgeIcon: Color(0xFFB07FE8),
+  );
+
+  static const _LegendColors _light = _LegendColors(
+    rowBg: Color(0xBFFFFFFF), // putih 75%, chart di belakang tetap samar terlihat
+    selectedRowBg: Color(0xF2FFFFFF), // putih 95%
+    selectedShadow: Color(0x26000000),
+    badgeBg: Color(0xFFEFE5FB),
+    badgeIcon: Color(0xFF8E44D9),
+  );
+
+  static _LegendColors of(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? _dark : _light;
+}
+
 /// Widget Legend Indikator Aktif di Pojok Kiri Atas Chart
 /// Menampilkan indikator yang sedang aktif ala TradingView mobile
 ///
@@ -403,6 +440,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
     required Color textColor,
     required Color mutedColor,
   }) {
+    final _LegendColors colors = _LegendColors.of(context);
     return GestureDetector(
       onTap: () {
         _controller.select(id);
@@ -411,7 +449,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.35),
+          color: colors.rowBg,
           borderRadius: BorderRadius.circular(4),
         ),
         child: Row(
@@ -442,14 +480,14 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
               child: Container(
                 width: 16,
                 height: 16,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF332042),
+                decoration: BoxDecoration(
+                  color: colors.badgeBg,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.sync_rounded,
                   size: 11,
-                  color: Color(0xFFB07FE8),
+                  color: colors.badgeIcon,
                 ),
               ),
             ),
@@ -471,6 +509,7 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
     required VoidCallback onDelete,
     required VoidCallback onSettings,
   }) {
+    final _LegendColors colors = _LegendColors.of(context);
     return GestureDetector(
       onTap: () {
         // Klik ulang untuk deselect
@@ -480,17 +519,17 @@ class _ChartIndicatorsLegendState extends State<ChartIndicatorsLegend> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: const Color(0xFF131722).withValues(alpha: 0.92),
+          color: colors.selectedRowBg,
           borderRadius: BorderRadius.circular(4),
           border: Border.all(
             color: const Color(0xFF2962FF),
             width: 1.5,
           ),
-          boxShadow: const <BoxShadow>[
+          boxShadow: <BoxShadow>[
             BoxShadow(
-              color: Colors.black45,
+              color: colors.selectedShadow,
               blurRadius: 6,
-              offset: Offset(0, 2),
+              offset: const Offset(0, 2),
             ),
           ],
         ),
