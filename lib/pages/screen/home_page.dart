@@ -22,8 +22,18 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
   late StocksProvider _stocksProvider;
+  late final TabController _tabController = TabController(
+    length: 4,
+    vsync: this,
+  )..addListener(_onTabChanged);
+
+  /// Tab yang harga live-nya sedang dilanggan; null = belum berlangganan.
+  int? _subscribedTab;
+
+  static String get _wsBaseUrl => AppConfig.baseUrl.replaceFirst('http', 'ws');
   bool _isCandle = false;
 
   @override
@@ -47,27 +57,8 @@ class _HomePageState extends State<HomePage> {
 
       if (!mounted) return;
 
-      // kumpulin symbols dari semua tab (biar 1 WS doang)
-      final syms = <String>{};
-
-      for (final s in (p.watchlist ?? const <StockListItem>[]))
-        syms.add(s.ticker);
-      for (final s in (p.topGainers ?? const <StockListItem>[]))
-        syms.add(s.ticker);
-      for (final s in (p.topLosers ?? const <StockListItem>[]))
-        syms.add(s.ticker);
-      for (final s in (p.topVolume ?? const <StockListItem>[]))
-        syms.add(s.ticker);
-
-      // ganti sesuai environment kamu
-      // - Android emulator: ws://10.0.2.2:8000
-      // - iOS simulator: ws://127.0.0.1:8000
-      // - device fisik: ws://IP-LAN-KOMPUTER:8000
-      // const wsBaseUrl = 'ws://10.0.2.2:8000';
-      final wsBaseUrl = AppConfig.baseUrl.replaceFirst('http', 'ws');
-
-      p.startLivePrices(wsBaseUrl: wsBaseUrl, symbols: syms.toList());
-      p.startIhsgLive(wsBaseUrl: wsBaseUrl);
+      await _subscribeActiveTab();
+      p.startIhsgLive(wsBaseUrl: _wsBaseUrl);
     });
   }
 
@@ -135,25 +126,37 @@ class _HomePageState extends State<HomePage> {
     return '$s0  ($s1)';
   }
 
-  Future<void> _restartWs() async {
-    final p = context.read<StocksProvider>();
+  /// Saham di tab daftar yang sedang tampil (WatchList / Top Gainers / Top Losers / Top Volume).
+  List<StockListItem> _activeTabStocks(StocksProvider p) =>
+      switch (_tabController.index) {
+        0 => p.watchlist,
+        1 => p.topGainers,
+        2 => p.topLosers,
+        _ => p.topVolume,
+      } ??
+      const <StockListItem>[];
 
-    // p.stopLivePrices();
+  /// Harga live hanya untuk tab yang tampil. Tiap ticker di WebSocket memicu refresh harga
+  /// ke Invezgo di backend, jadi berlangganan 4 tab sekaligus (~130 saham) boros kuota.
+  Future<void> _subscribeActiveTab() async {
+    final StocksProvider p = _stocksProvider;
+    _subscribedTab = _tabController.index;
     await p.stopLivePrices();
+    if (!mounted) return;
+    p.startLivePrices(
+      wsBaseUrl: _wsBaseUrl,
+      symbols: <String>[
+        for (final StockListItem s in _activeTabStocks(p)) s.ticker,
+      ],
+    );
+  }
 
-    final syms = <String>{};
-    for (final s in (p.watchlist ?? const <StockListItem>[]))
-      syms.add(s.ticker);
-    for (final s in (p.topGainers ?? const <StockListItem>[]))
-      syms.add(s.ticker);
-    for (final s in (p.topLosers ?? const <StockListItem>[]))
-      syms.add(s.ticker);
-    for (final s in (p.topVolume ?? const <StockListItem>[]))
-      syms.add(s.ticker);
-
-    // const wsBaseUrl = 'ws://10.0.2.2:8000';
-    final wsBaseUrl = AppConfig.baseUrl.replaceFirst('http', 'ws');
-    p.startLivePrices(wsBaseUrl: wsBaseUrl, symbols: syms.toList());
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging ||
+        _tabController.index == _subscribedTab) {
+      return;
+    }
+    _subscribeActiveTab();
   }
 
   @override
@@ -162,6 +165,7 @@ class _HomePageState extends State<HomePage> {
     // context.read<StocksProvider>().stopLivePrices();
     _stocksProvider.stopIhsgLive();
     _stocksProvider.stopLivePrices();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -173,384 +177,392 @@ class _HomePageState extends State<HomePage> {
     const upColor = Color(0xFF21C07A);
     final downColor = Colors.red.shade600;
 
-    return DefaultTabController(
-      length: 4,
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          toolbarHeight: 64,
-          titleSpacing: 16,
-          centerTitle: false,
-          title: Text(
-            'Cuan Apps',
-            style: t.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: cs.onSurface,
-            ),
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 64,
+        titleSpacing: 16,
+        centerTitle: false,
+        title: Text(
+          'Cuan Apps',
+          style: t.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: cs.onSurface,
           ),
-          actions: [
-            IconButton(
-              icon: Icon(Icons.search, color: cs.onSurface),
-              // Samakan dengan Market: cari saham -> langsung ke halaman detail saham.
-              // (GlobalSearchPage lama: saham dibuka ke Key Statistics & journal ke rute
-              // '/journal_detail' yang tidak terdaftar -> error.)
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MarketSearchPage()),
-                );
-              },
-            ),
-            IconButton(
-              icon: Icon(Icons.settings_outlined, color: cs.onSurface),
-              onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
-            ),
-            // IconButton(
-            //   icon: Icon(Icons.notifications_none, color: cs.onSurface),
-            //   onPressed: () {},
-            // ),
-            const SizedBox(width: 8),
-          ],
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.search, color: cs.onSurface),
+            // Samakan dengan Market: cari saham -> langsung ke halaman detail saham.
+            // (GlobalSearchPage lama: saham dibuka ke Key Statistics & journal ke rute
+            // '/journal_detail' yang tidak terdaftar -> error.)
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MarketSearchPage()),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.settings_outlined, color: cs.onSurface),
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
+          ),
+          // IconButton(
+          //   icon: Icon(Icons.notifications_none, color: cs.onSurface),
+          //   onPressed: () {},
+          // ),
+          const SizedBox(width: 8),
+        ],
+      ),
 
-        // 👇 PERMINTAAN 2: UBAH JADI NESTED SCROLL VIEW BIAR BISA DI-SCROLL FULL
-        body: SafeArea(
-          bottom: false,
-          child: NestedScrollView(
-            headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
-              return <Widget>[
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Consumer<StocksProvider>(
-                      builder: (context, p, _) {
-                        final loading = p.loadingIndex;
-                        final error = p.errIndex;
-                        final data = p.ihsgCandles;
+      // 👇 PERMINTAAN 2: UBAH JADI NESTED SCROLL VIEW BIAR BISA DI-SCROLL FULL
+      body: SafeArea(
+        bottom: false,
+        child: NestedScrollView(
+          headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+            return <Widget>[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Consumer<StocksProvider>(
+                    builder: (context, p, _) {
+                      final loading = p.loadingIndex;
+                      final error = p.errIndex;
+                      final data = p.ihsgCandles;
 
-                        final useDummy = data.isEmpty;
+                      final useDummy = data.isEmpty;
 
-                        final candles = useDummy
-                            ? makeDummyCandles(60)
-                            : data
-                                  .map(
-                                    (c) => Ohlc(
-                                      time: c.ts,
-                                      open: c.open ?? c.close ?? 0,
-                                      high: c.high ?? c.close ?? 0,
-                                      low: c.low ?? c.close ?? 0,
-                                      close: c.close ?? 0,
-                                      volume: (c.volume ?? 0).toDouble(),
-                                    ),
-                                  )
-                                  .toList();
-
-                        if (candles.isNotEmpty && p.ihsgLast != null) {
-                          final lastCandle = candles.last;
-                          final livePrice = p.ihsgLast!;
-                          candles[candles.length - 1] = Ohlc(
-                            time: lastCandle.time,
-                            open: lastCandle.open,
-                            high: math.max(lastCandle.high, livePrice),
-                            low: math.min(lastCandle.low, livePrice),
-                            close: livePrice,
-                            volume: lastCandle.volume,
-                          );
-                        }
-
-                        final hasData = candles.isNotEmpty;
-
-                        final isUp = () {
-                          if (!hasData) return true;
-                          if (p.indexInterval == '1D') {
-                            if (p.ihsgChangePoint != null) {
-                              return p.ihsgChangePoint! >= 0;
-                            }
-
-                            // Samakan dengan logika Delta 1D: Cek apakah data hari ini
-                            final now = DateTime.now();
-                            final todayCandles = candles
-                                .where(
-                                  (c) =>
-                                      c.time.year == now.year &&
-                                      c.time.month == now.month &&
-                                      c.time.day == now.day,
+                      final candles = useDummy
+                          ? makeDummyCandles(60)
+                          : data
+                                .map(
+                                  (c) => Ohlc(
+                                    time: c.ts,
+                                    open: c.open ?? c.close ?? 0,
+                                    high: c.high ?? c.close ?? 0,
+                                    low: c.low ?? c.close ?? 0,
+                                    close: c.close ?? 0,
+                                    volume: (c.volume ?? 0).toDouble(),
+                                  ),
                                 )
                                 .toList();
 
-                            if (todayCandles.isNotEmpty) {
-                              return todayCandles.last.close >=
-                                  todayCandles.first.open;
-                            }
-                            return true;
+                      if (candles.isNotEmpty && p.ihsgLast != null) {
+                        final lastCandle = candles.last;
+                        final livePrice = p.ihsgLast!;
+                        candles[candles.length - 1] = Ohlc(
+                          time: lastCandle.time,
+                          open: lastCandle.open,
+                          high: math.max(lastCandle.high, livePrice),
+                          low: math.min(lastCandle.low, livePrice),
+                          close: livePrice,
+                          volume: lastCandle.volume,
+                        );
+                      }
+
+                      final hasData = candles.isNotEmpty;
+
+                      final isUp = () {
+                        if (!hasData) return true;
+                        if (p.indexInterval == '1D') {
+                          if (p.ihsgChangePoint != null) {
+                            return p.ihsgChangePoint! >= 0;
                           }
-                          return candles.last.close >= candles.first.close;
-                        }();
 
-                        final baselinePrice = hasData
-                            ? candles.first.open
-                            : null;
+                          // Samakan dengan logika Delta 1D: Cek apakah data hari ini
+                          final now = DateTime.now();
+                          final todayCandles = candles
+                              .where(
+                                (c) =>
+                                    c.time.year == now.year &&
+                                    c.time.month == now.month &&
+                                    c.time.day == now.day,
+                              )
+                              .toList();
 
-                        return Card(
-                          color: cs.surface,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      'CHART IHSG',
-                                      style: t.textTheme.labelLarge?.copyWith(
-                                        color: cs.onSurface.withOpacity(.8),
-                                        letterSpacing: .5,
-                                      ),
+                          if (todayCandles.isNotEmpty) {
+                            return todayCandles.last.close >=
+                                todayCandles.first.open;
+                          }
+                          return true;
+                        }
+                        return candles.last.close >= candles.first.close;
+                      }();
+
+                      final baselinePrice = hasData
+                          ? candles.first.open
+                          : null;
+
+                      return Card(
+                        color: cs.surface,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'CHART IHSG',
+                                    style: t.textTheme.labelLarge?.copyWith(
+                                      color: cs.onSurface.withOpacity(.8),
+                                      letterSpacing: .5,
                                     ),
-                                    IconButton(
-                                      visualDensity: VisualDensity.compact,
-                                      icon: Icon(
-                                        Icons.open_in_full,
-                                        color: cs.onSurface.withOpacity(.6),
-                                        size: 18,
-                                      ),
-                                      onPressed: () =>
-                                          _openTradingViewPage(context),
+                                  ),
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    icon: Icon(
+                                      Icons.open_in_full,
+                                      color: cs.onSurface.withOpacity(.6),
+                                      size: 18,
                                     ),
-                                    IconButton(
-                                      visualDensity: VisualDensity.compact,
-                                      icon: Icon(
-                                        _isCandle
-                                            ? Icons.show_chart
-                                            : Icons.candlestick_chart,
-                                        color: cs.onSurface.withOpacity(.6),
-                                        size: 20,
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _isCandle = !_isCandle;
-                                        });
-                                      },
+                                    onPressed: () =>
+                                        _openTradingViewPage(context),
+                                  ),
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    icon: Icon(
+                                      _isCandle
+                                          ? Icons.show_chart
+                                          : Icons.candlestick_chart,
+                                      color: cs.onSurface.withOpacity(.6),
+                                      size: 20,
                                     ),
-                                    const Spacer(),
-                                    if (loading && !hasData)
-                                      const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    else if (error != null && !hasData)
-                                      Icon(
-                                        Icons.error_outline,
-                                        color: cs.error,
-                                        size: 18,
-                                      )
-                                    else if (hasData)
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            (p.ihsgLast ?? candles.last.close)
-                                                .toStringAsFixed(0),
-                                            style: t.textTheme.titleMedium
-                                                ?.copyWith(
-                                                  fontWeight: FontWeight.w800,
-                                                  color: isUp
-                                                      ? upColor
-                                                      : downColor,
-                                                ),
-                                          ),
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                isUp
-                                                    ? Icons.arrow_drop_up
-                                                    : Icons.arrow_drop_down,
+                                    onPressed: () {
+                                      setState(() {
+                                        _isCandle = !_isCandle;
+                                      });
+                                    },
+                                  ),
+                                  const Spacer(),
+                                  if (loading && !hasData)
+                                    const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  else if (error != null && !hasData)
+                                    Icon(
+                                      Icons.error_outline,
+                                      color: cs.error,
+                                      size: 18,
+                                    )
+                                  else if (hasData)
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          (p.ihsgLast ?? candles.last.close)
+                                              .toStringAsFixed(0),
+                                          style: t.textTheme.titleMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w800,
                                                 color: isUp
                                                     ? upColor
                                                     : downColor,
                                               ),
-                                              Text(
-                                                (p.indexInterval == '1D')
-                                                    ? (p.ihsgChangePoint != null
-                                                          ? _fmtIhsgDelta(p)
-                                                          : _deltaText(candles))
-                                                    : _deltaText(candles),
-                                                style: t.textTheme.labelSmall
-                                                    ?.copyWith(
-                                                      color: isUp
-                                                          ? upColor
-                                                          : downColor,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                    ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
+                                        ),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              isUp
+                                                  ? Icons.arrow_drop_up
+                                                  : Icons.arrow_drop_down,
+                                              color: isUp
+                                                  ? upColor
+                                                  : downColor,
+                                            ),
+                                            Text(
+                                              (p.indexInterval == '1D')
+                                                  ? (p.ihsgChangePoint != null
+                                                        ? _fmtIhsgDelta(p)
+                                                        : _deltaText(candles))
+                                                  : _deltaText(candles),
+                                              style: t.textTheme.labelSmall
+                                                  ?.copyWith(
+                                                    color: isUp
+                                                        ? upColor
+                                                        : downColor,
+                                                    fontWeight:
+                                                        FontWeight.w600,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    _chip(context, p, '1D', '1D'),
+                                    const SizedBox(width: 6),
+                                    _chip(context, p, '1W', '1W'),
+                                    const SizedBox(width: 6),
+                                    _chip(context, p, '1M', '1M'),
+                                    const SizedBox(width: 6),
+                                    _chip(context, p, '3M', '3M'),
+                                    const SizedBox(width: 6),
+                                    _chip(context, p, 'YTD', 'YTD'),
+                                    const SizedBox(width: 6),
+                                    _chip(context, p, '1Y', '1Y'),
                                   ],
                                 ),
-                                const SizedBox(height: 8),
-                                SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: Row(
-                                    children: [
-                                      _chip(context, p, '1D', '1D'),
-                                      const SizedBox(width: 6),
-                                      _chip(context, p, '1W', '1W'),
-                                      const SizedBox(width: 6),
-                                      _chip(context, p, '1M', '1M'),
-                                      const SizedBox(width: 6),
-                                      _chip(context, p, '3M', '3M'),
-                                      const SizedBox(width: 6),
-                                      _chip(context, p, 'YTD', 'YTD'),
-                                      const SizedBox(width: 6),
-                                      _chip(context, p, '1Y', '1Y'),
-                                    ],
+                              ),
+                              const SizedBox(height: 10),
+                              if (error != null && !hasData)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 24,
                                   ),
-                                ),
-                                const SizedBox(height: 10),
-                                if (error != null && !hasData)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 24,
-                                    ),
-                                    child: Text(
-                                      error,
-                                      style: t.textTheme.bodySmall?.copyWith(
-                                        color: cs.error,
-                                      ),
+                                  child: Text(
+                                    error,
+                                    style: t.textTheme.bodySmall?.copyWith(
+                                      color: cs.error,
                                     ),
                                   ),
-                                GestureDetector(
-                                  onTap: () => _openTradingViewPage(context),
-                                  child: _IhsgCandleChart(
-                                    candles: candles,
-                                    upColor: upColor,
-                                    downColor: downColor,
-                                    gridColor: cs.outline.withOpacity(.15),
-                                    isUp: isUp,
-                                    baselinePrice: baselinePrice,
-                                    isCandle: _isCandle,
-                                    currentRange: p.indexInterval,
-                                    prevClose:
-                                        (p.ihsgLast != null &&
-                                            p.ihsgChangePoint != null)
-                                        ? (p.ihsgLast! - p.ihsgChangePoint!)
-                                        : null,
-                                  ),
                                 ),
-                                // else
-                                //   GestureDetector(
-                                //     onTap: () => _openTradingViewPage(context),
-                                //     child: SizedBox(
-                                //       height: 140,
-                                //       child: TvChartWidget(
-                                //         candles: candles,
-                                //         isCandle: _isCandle,
-                                //         upColor: upColor,
-                                //         downColor: downColor,
-                                //         gridColor: cs.outline.withOpacity(.15),
-                                //         interactive: false,
-                                //       ),
-                                //     ),
-                                //   ),
+                              GestureDetector(
+                                onTap: () => _openTradingViewPage(context),
+                                child: _IhsgCandleChart(
+                                  candles: candles,
+                                  upColor: upColor,
+                                  downColor: downColor,
+                                  gridColor: cs.outline.withOpacity(.15),
+                                  isUp: isUp,
+                                  baselinePrice: baselinePrice,
+                                  isCandle: _isCandle,
+                                  currentRange: p.indexInterval,
+                                  prevClose:
+                                      (p.ihsgLast != null &&
+                                          p.ihsgChangePoint != null)
+                                      ? (p.ihsgLast! - p.ihsgChangePoint!)
+                                      : null,
+                                ),
+                              ),
+                              // else
+                              //   GestureDetector(
+                              //     onTap: () => _openTradingViewPage(context),
+                              //     child: SizedBox(
+                              //       height: 140,
+                              //       child: TvChartWidget(
+                              //         candles: candles,
+                              //         isCandle: _isCandle,
+                              //         upColor: upColor,
+                              //         downColor: downColor,
+                              //         gridColor: cs.outline.withOpacity(.15),
+                              //         interactive: false,
+                              //       ),
+                              //     ),
+                              //   ),
 
-                                // _IhsgCandleChart(
-                                //     candles: candles,
-                                //     upColor: upColor,
-                                //     downColor: downColor,
-                                //     gridColor: cs.outline.withOpacity(.15),
-                                //     isUp: isUp,
-                                //     baselinePrice: baselinePrice,
-                                //     isCandle: _isCandle,
-                                //     currentRange: p.indexInterval,
-                                //     prevClose:
-                                //         (p.ihsgLast != null &&
-                                //             p.ihsgChangePoint != null)
-                                //         ? (p.ihsgLast! - p.ihsgChangePoint!)
-                                //         : null,
-                                //   ),
-                              ],
-                            ),
+                              // _IhsgCandleChart(
+                              //     candles: candles,
+                              //     upColor: upColor,
+                              //     downColor: downColor,
+                              //     gridColor: cs.outline.withOpacity(.15),
+                              //     isUp: isUp,
+                              //     baselinePrice: baselinePrice,
+                              //     isCandle: _isCandle,
+                              //     currentRange: p.indexInterval,
+                              //     prevClose:
+                              //         (p.ihsgLast != null &&
+                              //             p.ihsgChangePoint != null)
+                              //         ? (p.ihsgLast! - p.ihsgChangePoint!)
+                              //         : null,
+                              //   ),
+                            ],
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _SliverAppBarDelegate(
-                    TabBar(
-                      isScrollable: false,
-                      labelPadding: EdgeInsets.zero,
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      indicatorColor: cs.primary,
-                      indicatorWeight: 2,
-                      labelColor: cs.onSurface,
-                      unselectedLabelColor: cs.onSurface.withValues(alpha: .6),
-                      labelStyle: t.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                      tabs: const [
-                        Tab(text: 'WatchList'),
-                        Tab(text: 'Top Gainers'),
-                        Tab(text: 'Top Losers'),
-                        Tab(text: 'Top Volume'),
-                      ],
-                    ),
-                    cs.surface, // Warna background tab bar saat terscroll
-                  ),
-                ),
-              ];
-            },
-            body: Consumer<StocksProvider>(
-              builder: (_, p, __) => TabBarView(
-                children: [
-                  _TabList(
-                    loading: p.loadingWatch,
-                    error: p.errWatch,
-                    data: p.watchlist,
-                    onRefresh: () async {
-                      await p.fetchWatchlist(force: true);
-                      await _restartWs();
+                        ),
+                      );
                     },
                   ),
-                  _TabList(
-                    loading: p.loadingGainers,
-                    error: p.errGainers,
-                    data: p.topGainers,
-                    onRefresh: () => p.fetchGainers(force: true),
-                  ),
-                  _TabList(
-                    loading: p.loadingLosers,
-                    error: p.errLosers,
-                    data: p.topLosers,
-                    onRefresh: () => p.fetchLosers(force: true),
-                  ),
-                  _TabList(
-                    loading: p.loadingVolume,
-                    error: p.errVolume,
-                    data: p.topVolume,
-                    onRefresh: () => p.fetchVolume(force: true),
-                  ),
-                ],
+                ),
               ),
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _SliverAppBarDelegate(
+                  TabBar(
+                    controller: _tabController,
+                    isScrollable: false,
+                    labelPadding: EdgeInsets.zero,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicatorColor: cs.primary,
+                    indicatorWeight: 2,
+                    labelColor: cs.onSurface,
+                    unselectedLabelColor: cs.onSurface.withValues(alpha: .6),
+                    labelStyle: t.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    tabs: const [
+                      Tab(text: 'WatchList'),
+                      Tab(text: 'Top Gainers'),
+                      Tab(text: 'Top Losers'),
+                      Tab(text: 'Top Volume'),
+                    ],
+                  ),
+                  cs.surface, // Warna background tab bar saat terscroll
+                ),
+              ),
+            ];
+          },
+          body: Consumer<StocksProvider>(
+            builder: (_, p, __) => TabBarView(
+              controller: _tabController,
+              children: [
+                _TabList(
+                  loading: p.loadingWatch,
+                  error: p.errWatch,
+                  data: p.watchlist,
+                  onRefresh: () async {
+                    await p.fetchWatchlist(force: true);
+                    await _subscribeActiveTab();
+                  },
+                ),
+                _TabList(
+                  loading: p.loadingGainers,
+                  error: p.errGainers,
+                  data: p.topGainers,
+                  onRefresh: () async {
+                    await p.fetchGainers(force: true);
+                    await _subscribeActiveTab();
+                  },
+                ),
+                _TabList(
+                  loading: p.loadingLosers,
+                  error: p.errLosers,
+                  data: p.topLosers,
+                  onRefresh: () async {
+                    await p.fetchLosers(force: true);
+                    await _subscribeActiveTab();
+                  },
+                ),
+                _TabList(
+                  loading: p.loadingVolume,
+                  error: p.errVolume,
+                  data: p.topVolume,
+                  onRefresh: () async {
+                    await p.fetchVolume(force: true);
+                    await _subscribeActiveTab();
+                  },
+                ),
+              ],
             ),
           ),
         ),
