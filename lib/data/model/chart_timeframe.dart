@@ -11,10 +11,24 @@ enum ChartTimeframeGroup {
 
 /// Timeframe (resolusi candle) chart TradingView.
 ///
-/// Sengaja dibatasi ke timeframe yang umum dipakai belajar analisis teknikal saham:
-/// tanpa tick/detik/range (data & audiensnya untuk scalper/pro trader) dan tanpa 1m/4h
-/// (1m terlalu noisy untuk belajar; sesi bursa IDX ~6,5 jam sehingga bar 4h terpotong).
+/// Tanpa tick/detik/range (data & audiensnya untuk scalper/pro trader). 3m, 2h, 4h,
+/// 3M, 6M & 1Y tidak tersedia langsung di Invezgo; backend menggabungkannya dari candle
+/// yang lebih kecil. Riwayat Invezgo ±2 tahun, jadi 3M/6M/1Y hanya beberapa batang.
 enum ChartTimeframe {
+  minute1(
+    label: '1m',
+    title: '1 minute',
+    group: ChartTimeframeGroup.minutes,
+    apiInterval: '1m',
+    limit: 300,
+  ),
+  minute3(
+    label: '3m',
+    title: '3 minutes',
+    group: ChartTimeframeGroup.minutes,
+    apiInterval: '3m',
+    limit: 300,
+  ),
   minute5(
     label: '5m',
     title: '5 minutes',
@@ -43,6 +57,20 @@ enum ChartTimeframe {
     apiInterval: '1h',
     limit: 300,
   ),
+  hour2(
+    label: '2h',
+    title: '2 hours',
+    group: ChartTimeframeGroup.hours,
+    apiInterval: '2h',
+    limit: 200,
+  ),
+  hour4(
+    label: '4h',
+    title: '4 hours',
+    group: ChartTimeframeGroup.hours,
+    apiInterval: '4h',
+    limit: 150,
+  ),
   day1(
     label: '1D',
     title: '1 day',
@@ -63,6 +91,27 @@ enum ChartTimeframe {
     group: ChartTimeframeGroup.days,
     apiInterval: '1M',
     limit: 24, // 2 tahun candle bulanan
+  ),
+  month3(
+    label: '3M',
+    title: '3 months',
+    group: ChartTimeframeGroup.days,
+    apiInterval: '3M',
+    limit: 12,
+  ),
+  month6(
+    label: '6M',
+    title: '6 months',
+    group: ChartTimeframeGroup.days,
+    apiInterval: '6M',
+    limit: 6,
+  ),
+  year1(
+    label: '1Y',
+    title: '1 year',
+    group: ChartTimeframeGroup.days,
+    apiInterval: '1Y',
+    limit: 3,
   );
 
   const ChartTimeframe({
