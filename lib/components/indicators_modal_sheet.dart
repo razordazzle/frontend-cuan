@@ -231,15 +231,17 @@ class _IndicatorsModalSheetState extends State<IndicatorsModalSheet> {
               ],
             ),
 
-            // Top Floating Notification Toast (Indicator added to chart)
-            IgnorePointer(
-              ignoring: !_isToastVisible,
-              child: AnimatedPositioned(
-                duration: const Duration(milliseconds: 260),
-                curve: Curves.easeOutCubic,
-                top: _isToastVisible ? 14 : -60,
-                left: 0,
-                right: 0,
+            // Top Floating Notification Toast (Indicator added to chart).
+            // AnimatedPositioned harus anak langsung Stack (IgnorePointer di dalamnya);
+            // kebalikannya error ParentDataWidget yang di build release tampil sebagai lapisan abu-abu.
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              top: _isToastVisible ? 14 : -60,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                ignoring: !_isToastVisible,
                 child: AnimatedOpacity(
                   duration: const Duration(milliseconds: 200),
                   opacity: _isToastVisible ? 1.0 : 0.0,
