@@ -726,18 +726,23 @@ class _BrokerTabState extends State<_BrokerTab> {
     }
   }
 
+  // index dropdown -> jenis broker yang dikirim ke backend (broker_type)
+  static String _brokerTypeKey(int index) => switch (index) {
+    1 => 'foreign',
+    2 => 'local',
+    3 => 'bumn',
+    _ => 'all',
+  };
+
   Future<List<BrokerSummaryRow>> _load() async {
     final svc = context.read<StocksService>();
-    final investor = switch (_investor) {
-      1 => 'foreign',
-      2 => 'local',
-      _ => 'all',
-    };
     final rows = await svc.fetchBrokerSummary(
       _ticker,
       tradeDate:
           _tradeDate, // null = backend yg resolve (coba hari ini dulu, else mundur)
-      investor: investor,
+      // Filter jenis BROKER (kategori di tabel brokers). Dulu dikirim sebagai "investor"
+      // (jenis investor), jadi filter Lokal masih memuat broker asing seperti YU.
+      brokerType: _brokerTypeKey(_investor),
       net: _net,
       limit: 300,
     );
@@ -849,7 +854,7 @@ class _BrokerTabState extends State<_BrokerTab> {
     }
 
     Widget investorDropdown() {
-      const labels = {0: 'Semua Investor', 1: 'Asing', 2: 'Lokal'};
+      const labels = {0: 'Semua Broker', 1: 'Asing', 2: 'Lokal', 3: 'BUMN'};
       return PopupMenuButton<int>(
         initialValue: _investor,
         onSelected: (v) {
@@ -857,9 +862,10 @@ class _BrokerTabState extends State<_BrokerTab> {
           _refresh();
         },
         itemBuilder: (context) => const [
-          PopupMenuItem(value: 0, child: Text('Semua Investor')),
+          PopupMenuItem(value: 0, child: Text('Semua Broker')),
           PopupMenuItem(value: 1, child: Text('Asing')),
           PopupMenuItem(value: 2, child: Text('Lokal')),
+          PopupMenuItem(value: 3, child: Text('BUMN')),
         ],
         child: Container(
           height: 36,
@@ -873,7 +879,7 @@ class _BrokerTabState extends State<_BrokerTab> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                labels[_investor] ?? 'Semua Investor',
+                labels[_investor] ?? 'Semua Broker',
                 style: t.labelMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: cs.onSurface.withOpacity(.85),
@@ -1245,7 +1251,7 @@ class _BrokerTabState extends State<_BrokerTab> {
                       'tradeDate':
                           _resolvedDate ??
                           _tradeDate, // 👈 pakai hasil fix sebelumnya juga
-                      'investor': _investor,
+                      'brokerType': _brokerTypeKey(_investor),
                       'net': _net,
                     },
                   );

@@ -151,7 +151,8 @@ class StocksService {
   Future<List<BrokerSummaryRow>> fetchBrokerSummary(
     String ticker, {
     DateTime? tradeDate,
-    String investor = 'all', // 'all' | 'foreign' | 'local'
+    String investor = 'all', // jenis INVESTOR: 'all' | 'foreign' | 'local'
+    String brokerType = 'all', // jenis BROKER: 'all' | 'foreign' | 'local' | 'bumn'
     bool net = false,
     int limit = 300,
   }) async {
@@ -159,6 +160,7 @@ class StocksService {
       final qp = <String, dynamic>{
         'limit': limit,
         if (investor.isNotEmpty && investor != 'all') 'investor': investor,
+        if (brokerType.isNotEmpty && brokerType != 'all') 'broker_type': brokerType,
         if (net)
           'net':
               true, // 👈 BARU — cukup kirim kalau true, biar query string bersih

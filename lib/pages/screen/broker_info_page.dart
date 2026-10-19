@@ -21,7 +21,7 @@ class _BrokerInfoPageState extends State<BrokerInfoPage> {
   num? _changePct;
 
   DateTime? _tradeDate;
-  String _investor = 'all';
+  String _brokerType = 'all'; // jenis broker: all | foreign | local | bumn
   bool _net = false;
   Future<_BrokerPageData>? _future;
 
@@ -40,6 +40,7 @@ class _BrokerInfoPageState extends State<BrokerInfoPage> {
       _change = args?['change'] as num? ?? 0;
       _changePct = args?['changePct'] as num? ?? 0;
       _net = args?['net'] as bool? ?? false;
+      _brokerType = args?['brokerType'] as String? ?? 'all';
       _tradeDate = args?['tradeDate'] as DateTime?;
     }
 
@@ -53,7 +54,9 @@ class _BrokerInfoPageState extends State<BrokerInfoPage> {
     final rows = await svc.fetchBrokerSummary(
       _ticker!,
       tradeDate: _tradeDate, // <--- Cukup kirim null kalau user ga milih
-      investor: _investor, // 'all' | 'foreign' | 'local'
+      // Filter jenis BROKER (kategori di tabel brokers). Dulu dikirim sebagai "investor"
+      // (jenis investor), jadi filter Lokal masih memuat broker asing seperti YU.
+      brokerType: _brokerType,
       net: _net,
       limit: 300,
     );
@@ -222,43 +225,29 @@ class _BrokerInfoPageState extends State<BrokerInfoPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           // mainAxisSize: MainAxisSize.min,
                           children: [
-                            // ===== BARIS 1: filter investor + date picker =====
+                            // ===== BARIS 1: filter jenis broker + date picker =====
                             Row(
                               children: [
                                 Expanded(
                                   child: Wrap(
                                     spacing: 8,
                                     children: [
-                                      _pill(
-                                        context,
-                                        'Semua',
-                                        'all',
-                                        _investor == 'all',
-                                        () {
-                                          setState(() => _investor = 'all');
-                                          _refresh();
-                                        },
-                                      ),
-                                      _pill(
-                                        context,
-                                        'Asing',
-                                        'foreign',
-                                        _investor == 'foreign',
-                                        () {
-                                          setState(() => _investor = 'foreign');
-                                          _refresh();
-                                        },
-                                      ),
-                                      _pill(
-                                        context,
-                                        'Lokal',
-                                        'local',
-                                        _investor == 'local',
-                                        () {
-                                          setState(() => _investor = 'local');
-                                          _refresh();
-                                        },
-                                      ),
+                                      for (final (label, key) in const [
+                                        ('Semua', 'all'),
+                                        ('Asing', 'foreign'),
+                                        ('Lokal', 'local'),
+                                        ('BUMN', 'bumn'),
+                                      ])
+                                        _pill(
+                                          context,
+                                          label,
+                                          key,
+                                          _brokerType == key,
+                                          () {
+                                            setState(() => _brokerType = key);
+                                            _refresh();
+                                          },
+                                        ),
                                       // 👈 pill 'Net' DIHAPUS dari sini
                                     ],
                                   ),
