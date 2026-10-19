@@ -104,18 +104,23 @@ class _StockDetailPageState extends State<StockDetailPage> {
     }
   }
 
+  /// Candle ekstra untuk intraday: chart menampilkan candle hari ini saja, candle sebelumnya
+  /// jadi warm-up indikator (MACD 12/26/9 butuh ~35 candle sebelum nilai pertamanya).
+  static const int _indicatorWarmupBars = 60;
+
   int _limitForLabel(String label) {
     switch (label) {
       case '1m':
-        return 195; // sliding window, sama pola kayak IHSG 1D
+        // sliding window, sama pola kayak IHSG 1D
+        return 195 + _indicatorWarmupBars;
       case '5m':
-        return 100;
+        return 100 + _indicatorWarmupBars;
       case '15m':
-        return 60;
+        return 60 + _indicatorWarmupBars;
       case '30m':
-        return 48;
+        return 48 + _indicatorWarmupBars;
       case '1H':
-        return 48;
+        return 48 + _indicatorWarmupBars;
       case '1D':
         return 500; // intraday hari ini
       case '1W':
@@ -1479,7 +1484,7 @@ class _CandleChartCardState extends State<_CandleChartCard> {
 
     DateTime xMin = _fixTime(raw.first.ts);
     DateTime xMax = _fixTime(raw.last.ts);
-    DateTime? visibleMin;
+    DateTime visibleMin;
 
     if (!xMax.isAfter(xMin)) {
       xMax = xMin.add(const Duration(hours: 1));
@@ -1487,27 +1492,16 @@ class _CandleChartCardState extends State<_CandleChartCard> {
 
 
     if (isIntraday) {
-      final latest = _fixTime(raw.last.ts);
-      raw = raw.where((c) {
-        final t = _fixTime(c.ts);
-        return t.year == latest.year &&
-            t.month == latest.month &&
-            t.day == latest.day;
-      }).toList();
-
-      if (raw.isNotEmpty) {
-        xMin = _fixTime(raw.first.ts);
-        xMax = _fixTime(raw.last.ts);
-        if (!xMax.isAfter(xMin)) xMax = xMin.add(const Duration(minutes: 5));
-
-        visibleMin = null;
-
-        // const framePoints = 40;
-        // visibleMin = raw.length > framePoints
-        //     ? _fixTime(raw[raw.length - framePoints].ts)
-        //     : xMin;
-        // visibleMax = xMax;
-      }
+      // Frame awal = candle hari ini saja. Candle hari-hari sebelumnya tetap masuk series
+      // (bisa digeser) supaya indikator punya warm-up dan langsung tampil seperti Volume.
+      final DateTime latest = _fixTime(raw.last.ts);
+      visibleMin = _fixTime(
+        raw
+            .firstWhere(
+              (CandleItem c) => DateUtils.isSameDay(_fixTime(c.ts), latest),
+            )
+            .ts,
+      );
     } else if (range == '1W') {
       // 👇 GANTI: frame awal nampilin 52 candle TERAKHIR
       // data yang di-fetch tetap penuh (~104 candle / 2 tahun), sisanya diakses lewat geser
@@ -1526,7 +1520,7 @@ class _CandleChartCardState extends State<_CandleChartCard> {
       visibleMin = xMax.subtract(const Duration(days: 90));
     }
 
-    if (visibleMin != null && visibleMin.isBefore(xMin)) {
+    if (visibleMin.isBefore(xMin)) {
       visibleMin = xMin;
     }
 
@@ -1539,7 +1533,13 @@ class _CandleChartCardState extends State<_CandleChartCard> {
 
     double maxVol = 0;
 
-    for (final d in raw) {
+    // Index candle pertama di frame awal. Intraday: skala harga & volume dari candle yang
+    // tampil saja, bukan dari candle warm-up hari sebelumnya.
+    final int visibleStart = raw
+        .indexWhere((CandleItem c) => !_fixTime(c.ts).isBefore(visibleMin))
+        .clamp(0, raw.length - 1);
+
+    for (final d in isIntraday ? raw.skip(visibleStart) : raw) {
       if (d.low! < rawMin) rawMin = d.low!.toDouble();
       if (d.high! > rawMax) rawMax = d.high!.toDouble();
       if ((d.volume ?? 0) > maxVol) maxVol = (d.volume ?? 0).toDouble();
@@ -1560,12 +1560,7 @@ class _CandleChartCardState extends State<_CandleChartCard> {
     _lastRaw = raw;
     _lastIsIntraday = isIntraday;
 
-    final double? _visibleMinIndex = visibleMin != null
-        ? raw
-              .indexWhere((c) => !_fixTime(c.ts).isBefore(visibleMin!))
-              .toDouble()
-              .clamp(0, raw.length - 1)
-        : null;
+    final double _visibleMinIndex = visibleStart.toDouble();
     final double _visibleMaxIndex = (raw.length - 1).toDouble();
     return Card(
       elevation: 0,
@@ -1622,6 +1617,15 @@ class _CandleChartCardState extends State<_CandleChartCard> {
                       ? 280
                       : 200,
                   child: SfCartesianChart(
+                    // initialVisibleMinimum/Maximum hanya dipakai saat chart dibuat; key baru
+                    // tiap data dimuat ulang (ganti ticker/timeframe) supaya frame awal ikut reset.
+                    // Update harga live tidak mengubah key, jadi geseran user tidak ter-reset.
+                    key: ValueKey<(String, String, DateTime, int)>((
+                      widget.ticker,
+                      range,
+                      raw.first.ts,
+                      raw.length,
+                    )),
                     plotAreaBorderWidth: 0,
                     backgroundColor: Colors.transparent,
                     primaryXAxis: NumericAxis(
@@ -1873,7 +1877,7 @@ class _CandleChartCardState extends State<_CandleChartCard> {
                           _selectedIndex = i;
                           // kalau candle di paruh KIRI data → box tampil di KANAN, dan sebaliknya
                           // _boxOnRight = i < (raw.length / 2);
-                          final visMin = _visibleMinIndex ?? 0;
+                          final visMin = _visibleMinIndex;
                           final mid = (visMin + _visibleMaxIndex) / 2;
                           _boxOnRight = i < mid;
                         });
