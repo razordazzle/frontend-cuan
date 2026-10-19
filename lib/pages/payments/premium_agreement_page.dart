@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:cuan_app/pages/payments/payment_launcher_page.dart';
 
+/// Halaman persetujuan (T&C) sebelum bayar.
+/// - `PremiumAgreementPage()`: membership -> lanjut ke QRIS membership, pop hasil bayar.
+/// - `PremiumAgreementPage.journal()`: beli satu journal premium -> cuma pop `true` kalau user
+///   setuju; checkout journal-nya dijalankan halaman pemanggil (research_content_page.dart).
 class PremiumAgreementPage extends StatefulWidget {
-  const PremiumAgreementPage({super.key});
+  const PremiumAgreementPage({super.key}) : forJournal = false;
+  const PremiumAgreementPage.journal({super.key}) : forJournal = true;
+
+  final bool forJournal;
 
   @override
   State<PremiumAgreementPage> createState() => _PremiumAgreementPageState();
@@ -12,6 +19,11 @@ class _PremiumAgreementPageState extends State<PremiumAgreementPage> {
   bool _agreed = false;
 
   Future<void> _goToPayment() async {
+    if (widget.forJournal) {
+      Navigator.pop(context, true);
+      return;
+    }
+
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
@@ -29,10 +41,13 @@ class _PremiumAgreementPageState extends State<PremiumAgreementPage> {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
+    final forJournal = widget.forJournal;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Persetujuan Membership'),
+        title: Text(
+          forJournal ? 'Persetujuan Pembayaran' : 'Persetujuan Membership',
+        ),
       ),
       body: SafeArea(
         child: Padding(
@@ -49,7 +64,7 @@ class _PremiumAgreementPageState extends State<PremiumAgreementPage> {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Premium Community',
+                      forJournal ? 'Journal Premium' : 'Premium Community',
                       textAlign: TextAlign.center,
                       style: t.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w800,
@@ -63,11 +78,13 @@ class _PremiumAgreementPageState extends State<PremiumAgreementPage> {
                     ),
                     const SizedBox(height: 24),
 
-                    _InfoTile(
-                      title: 'Akses membership',
-                      description:
-                          'Setelah pembayaran berhasil dan terverifikasi, akun Anda akan mendapatkan akses ke komunitas premium.',
-                    ),
+                    // Beli journal bukan membership -> tidak ada akses komunitas premium
+                    if (!forJournal)
+                      _InfoTile(
+                        title: 'Akses membership',
+                        description:
+                            'Setelah pembayaran berhasil dan terverifikasi, akun Anda akan mendapatkan akses ke komunitas premium.',
+                      ),
                     _InfoTile(
                       title: 'Metode pembayaran',
                       description:
@@ -76,12 +93,12 @@ class _PremiumAgreementPageState extends State<PremiumAgreementPage> {
                     _InfoTile(
                       title: 'Proses verifikasi',
                       description:
-                          'Status membership dapat membutuhkan beberapa saat untuk diperbarui setelah pembayaran berhasil.',
+                          'Status ${forJournal ? 'pembayaran' : 'membership'} dapat membutuhkan beberapa saat untuk diperbarui setelah pembayaran berhasil.',
                     ),
                     _InfoTile(
                       title: 'Persetujuan',
                       description:
-                          'Dengan melanjutkan, Anda menyetujui ketentuan membership yang berlaku di aplikasi ini.',
+                          'Dengan melanjutkan, Anda menyetujui ketentuan ${forJournal ? 'pembayaran' : 'membership'} yang berlaku di aplikasi ini.',
                     ),
 
                     const SizedBox(height: 20),

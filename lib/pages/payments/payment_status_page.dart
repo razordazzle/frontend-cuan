@@ -8,7 +8,8 @@ class PaymentReceipt {
     required this.methodLabel, // e.g. BCA / BCA VA / OVO
     required this.status, // success / pending / failed
     required this.transTime, // DateTime transaksi
-    required this.planTitle, // e.g. Reading Corner / Premium 30 Hari
+    required this.planTitle, // nama yang dibeli: paket membership / judul journal
+    this.itemLabel = 'Langganan yang dibeli', // label baris planTitle di struk
     this.accountNumber, // tampil hanya untuk Bank/VA
     this.orderId, // optional: untuk referensi
   });
@@ -18,6 +19,7 @@ class PaymentReceipt {
   final PaymentState status;
   final DateTime transTime;
   final String planTitle;
+  final String itemLabel;
   final String? accountNumber;
   final String? orderId;
 }
@@ -50,11 +52,27 @@ class PaymentStatusPage extends StatelessWidget {
     return 'Rp ${buf.toString()}';
   }
 
+  static const _bulan = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'Mei',
+    'Jun',
+    'Jul',
+    'Agu',
+    'Sep',
+    'Okt',
+    'Nov',
+    'Des',
+  ];
+
+  // "Okt 16, 2026, 10:30:45" (dulu bulannya angka: "10 16, 2026, 10:30:45")
   String _fmtDateTime(DateTime dt) {
     String two(int v) => v.toString().padLeft(2, '0');
-    final d = two(dt.day), m = two(dt.month), y = dt.year;
+    final mon = _bulan[dt.month - 1], d = two(dt.day), y = dt.year;
     final hh = two(dt.hour), mm = two(dt.minute), ss = two(dt.second);
-    return '$m $d, $y, $hh:$mm:$ss';
+    return '$mon $d, $y, $hh:$mm:$ss';
   }
 
   (String, IconData, Color) _visual(BuildContext ctx) {
@@ -138,6 +156,7 @@ class PaymentStatusPage extends StatelessWidget {
             amountText: _rupiah(receipt.amount),
             status: receipt.status,
             plan: receipt.planTitle,
+            planLabel: receipt.itemLabel,
             method: receipt.methodLabel,
             accountNumber: receipt.accountNumber,
             timeText: _fmtDateTime(receipt.transTime),
@@ -170,6 +189,7 @@ class _ReceiptCard extends StatelessWidget {
     required this.amountText,
     required this.status,
     required this.plan,
+    required this.planLabel,
     required this.method,
     required this.timeText,
     this.accountNumber,
@@ -179,6 +199,7 @@ class _ReceiptCard extends StatelessWidget {
   final String amountText;
   final PaymentState status;
   final String plan;
+  final String planLabel;
   final String method;
   final String timeText;
   final String? accountNumber;
@@ -203,20 +224,31 @@ class _ReceiptCard extends StatelessWidget {
     Widget row(String label, Widget value) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: t.bodyMedium?.copyWith(
-                  color: cs.onSurface.withOpacity(.75),
-                  fontWeight: FontWeight.w600,
+        // Dulu label Expanded & value gak dibatasi: nilai panjang (Order ID/UUID, judul journal)
+        // makan semua lebar sampai label pecah per huruf ("Ord/er/ID"). Sekarang label pakai lebar
+        // alaminya (maks 45% baris), value ambil sisanya & turun baris kalau kepanjangan.
+        child: LayoutBuilder(
+          builder: (context, constraints) => Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: constraints.maxWidth * .45,
+                ),
+                child: Text(
+                  label,
+                  style: t.bodyMedium?.copyWith(
+                    color: cs.onSurface.withOpacity(.75),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 16),
-            value,
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Align(alignment: Alignment.topRight, child: value),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -264,7 +296,7 @@ class _ReceiptCard extends StatelessWidget {
           if (accountNumber != null) row('No Rek', valueText(accountNumber!)),
           row('Metode Pembayaran', valueText(method)),
           row('Waktu Transaksi', valueText(timeText, bold: false)),
-          row('Langganan yang dibeli', valueText(plan)),
+          row(planLabel, valueText(plan)),
           if (orderId != null)
             row('Order ID', valueText(orderId!, bold: false)),
           const SizedBox(height: 8),

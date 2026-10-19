@@ -203,7 +203,7 @@ class _CommunityPageState extends State<CommunityPage> {
 
           // Deskripsi
           Text(
-            'Mau dapet info terbaru biar cuan terus? 🪙\nJoin komunitas resmi sekarang, cukup Rp.[Nominal]!',
+            'Mau dapat info dan materi terbaru secara lebih cepat? 🪙\nJoin komunitas resmi sekarang, cukup Rp.[Nominal]!',
             textAlign: TextAlign.center,
             style: t.textTheme.titleMedium?.copyWith(
               color: cs.onSurface,

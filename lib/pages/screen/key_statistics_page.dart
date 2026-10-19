@@ -1,3 +1,4 @@
+import 'package:cuan_app/utils/number_format.dart';
 import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/providers/stock_detail_provider.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +26,10 @@ class _KeyStatisticsPageState extends State<KeyStatisticsPage> {
       decimalDigits: decimals,
     ).format(v).trim();
   }
+
+  // Khusus EPS: dipotong, tidak dibulatkan (permintaan tim, samakan dengan Stockbit)
+  String _eps(num? v) =>
+      v == null ? '-' : _n(truncateDecimals(v, 2), decimals: 2);
 
   String _p(num? v) => v == null ? '-' : '${v.toStringAsFixed(2)}%';
 
@@ -324,42 +329,37 @@ class _KeyStatisticsPageState extends State<KeyStatisticsPage> {
                                 ]),
                                 _row(context, [
                                   'Q1 (Mar)',
-                                  ...m.map((e) => _n(e['q1'], decimals: 2)),
+                                  ...m.map((e) => _eps(e['q1'])),
                                 ]),
                                 _row(context, [
                                   'Q2 (Jun)',
                                   ...m.map(
-                                    (e) => _n(
-                                      _calcStandalone(e['q2'], e['q1']),
-                                      decimals: 2,
-                                    ),
+                                    (e) =>
+                                        _eps(_calcStandalone(e['q2'], e['q1'])),
                                   ),
                                 ]),
                                 _row(context, [
                                   'Q3 (Sep)',
                                   ...m.map(
-                                    (e) => _n(
-                                      _calcStandalone(e['q3'], e['q2']),
-                                      decimals: 2,
-                                    ),
+                                    (e) =>
+                                        _eps(_calcStandalone(e['q3'], e['q2'])),
                                   ),
                                 ]),
                                 _row(context, [
                                   'Q4 (Dec)',
                                   // Jika e['q4'] null, otomatis pakai e['fy']. Jika masih null, pakai e['full_year']
                                   ...m.map(
-                                    (e) => _n(
+                                    (e) => _eps(
                                       _calcStandalone(
                                         e['q4'] ?? e['eps'] ?? e['fy'],
                                         e['q3'],
                                       ),
-                                      decimals: 2,
                                     ),
                                   ),
                                 ]),
                                 _row(context, [
                                   'EPS (Annual)',
-                                  ...m.map((e) => _n(e['eps'], decimals: 2)),
+                                  ...m.map((e) => _eps(e['eps'])),
                                 ], isBold: true),
                                 _row(context, [
                                   'DPS',
@@ -446,10 +446,7 @@ class _KeyStatisticsPageState extends State<KeyStatisticsPage> {
                     _sectionTitle(context, 'Earnings'),
                     _kvBox(context, [
                       ['Dividend Per Share (DPS)', _n(latest?.dps)],
-                      [
-                        'Earning Per Share (EPS)',
-                        _n(latest?.epsTtm, decimals: 2),
-                      ],
+                      ['Earning Per Share (EPS)', _eps(latest?.epsTtm)],
                       ['Revenue Per Share (RPS)', _n(latest?.rps, decimals: 2)],
                       [
                         'Book Value Per Share (BVPS)',

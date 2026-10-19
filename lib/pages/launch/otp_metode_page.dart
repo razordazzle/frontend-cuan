@@ -142,21 +142,21 @@ class _OtpMetodePageState extends State<OtpMetodePage> {
             ),
             child: Column(
               children: [
-                GradientOptionTile(
-                  icon: Icons.chat_bubble_outline,
-                  title: 'OTP via WhatsApp',
-                  subtitle: _maskPhone(phone),
-                  borderGradient: _borderGradient,
-                  backgroundGradient: innerGradient,
-                  textColor: cs.onSurface,
-                  onTap: phone == null || phone.isEmpty || _loading
-                      ? null
-                      : () => _chooseAndRequest(
-                          OtpVerificationType.whatsapp,
-                          displayContact: _maskPhone(phone),
-                        ),
-                ),
-                const SizedBox(height: 16),
+                // GradientOptionTile(
+                //   icon: Icons.chat_bubble_outline,
+                //   title: 'OTP via WhatsApp',
+                //   subtitle: _maskPhone(phone),
+                //   borderGradient: _borderGradient,
+                //   backgroundGradient: innerGradient,
+                //   textColor: cs.onSurface,
+                //   onTap: phone == null || phone.isEmpty || _loading
+                //       ? null
+                //       : () => _chooseAndRequest(
+                //           OtpVerificationType.whatsapp,
+                //           displayContact: _maskPhone(phone),
+                //         ),
+                // ),
+                // const SizedBox(height: 16),
                 GradientOptionTile(
                   icon: Icons.email_outlined,
                   title: 'OTP via Email',

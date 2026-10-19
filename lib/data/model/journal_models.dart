@@ -1,3 +1,5 @@
+import 'package:cuan_app/utils/wib_time.dart';
+
 class JournalListItem {
   final String journalId;
   final String title;
@@ -26,7 +28,7 @@ class JournalListItem {
         title: j['title'] as String,
         type: j['type'] as String,
         isPaid: j['is_paid'] as bool,
-        publishedAt: DateTime.parse(j['published_at'] as String),
+        publishedAt: parseServerTime(j['published_at'] as String),
         thumbnailUrl: j['thumbnail_url'] as String?,
         author: j['author'] as String?,
         priceIdr: (j['price_idr'] as num?)?.toInt(),
@@ -71,7 +73,7 @@ class JournalDetailResponse {
         journalId: j['journal_id'] as String,
         title: j['title'] as String,
         author: j['author'] as String?,
-        publishedAt: DateTime.parse(j['published_at'] as String),
+        publishedAt: parseServerTime(j['published_at'] as String),
         contentMd: j['content_md'] as String,
         isPaid: j['is_paid'] as bool,
       );

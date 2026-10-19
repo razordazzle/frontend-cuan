@@ -1,3 +1,4 @@
+import 'package:cuan_app/utils/wib_time.dart';
 import 'dart:ui' show ImageFilter;
 import 'package:cuan_app/components/html_content.dart';
 import 'package:cuan_app/providers/auth_provider.dart';
@@ -129,7 +130,8 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
     return 'Rp ${buf.toString()}';
   }
 
-  String _fmtDate(DateTime dt) {
+  String _fmtDate(DateTime publishedAt) {
+    final dt = toWib(publishedAt);
     final dd = dt.day.toString().padLeft(2, '0');
     final mm = dt.month.toString().padLeft(2, '0');
     final yyyy = dt.year.toString();
@@ -156,6 +158,13 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
 
   /// User regular: beli akses journal ini saja (berlaku selamanya).
   Future<void> _buyJournal() async {
+    // T&C dulu; checkout baru jalan kalau user setuju
+    final agreed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const PremiumAgreementPage.journal()),
+    );
+    if (!mounted || agreed != true) return;
+
     final q = context.read<QrisProvider>();
     await q.startCheckout(journalId: widget.item.id);
     if (!mounted) return;
@@ -179,11 +188,15 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
                 method: _qrisMethod,
                 invoiceId: cur.invoiceId,
                 amount: amount,
+                planTitle: widget.item.title,
+                isJournal: true,
               )
             : PaymentDetailPage(
                 method: _qrisMethod,
                 invoiceId: cur.invoiceId,
                 amount: amount,
+                planTitle: widget.item.title,
+                isJournal: true,
                 timeLimit: left.isNegative ? Duration.zero : left,
               ),
       ),
@@ -280,7 +293,12 @@ class _ResearchContentPageState extends State<ResearchContentPage> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          12,
+          16,
+          24 + MediaQuery.paddingOf(context).bottom,
+        ),
         children: [
           // ===== COVER =====
           Container(

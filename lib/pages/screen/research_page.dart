@@ -1,3 +1,4 @@
+import 'package:cuan_app/utils/wib_time.dart';
 import 'package:cuan_app/utils/currency.dart';
 import 'package:cuan_app/pages/screen/research_content_page.dart';
 import 'package:cuan_app/providers/journals_provider.dart';
@@ -72,7 +73,6 @@ class _ResearchPageState extends State<ResearchPage> {
             'https://images.unsplash.com/photo-1559526324-593bc073d938?q=80&w=1600&auto=format&fit=crop',
         category: cat,
         publishedAt: j.publishedAt,
-        duration: const Duration(minutes: 30), // API tdk ada durasi → dummy
         isPremium: j.isPaid,
         priceIdr: j.priceIdr,
         hasAccess: j.hasAccess,
@@ -359,14 +359,14 @@ class _ResearchCard extends StatelessWidget {
   final VoidCallback onTap;
   final String caption;
 
-  String _meta(DateTime dt, Duration dur) {
+  // Tanggal & jam terbit dalam WIB, mis. "Oct 14, 10:00 WIB"
+  String _meta(DateTime publishedAt) {
+    final dt = toWib(publishedAt);
     final mon = _ResearchPageState._mon(dt.month);
     final d = dt.day.toString().padLeft(2, '0');
     final hh = dt.hour.toString().padLeft(2, '0');
     final mm = dt.minute.toString().padLeft(2, '0');
-    final durMin = dur.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final durSec = (dur.inSeconds % 60).toString().padLeft(2, '0');
-    return '$mon $d, $hh:$mm | 00:$durMin:$durSec';
+    return '$mon $d, $hh:$mm WIB';
   }
 
   @override
@@ -485,7 +485,7 @@ class _ResearchCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _meta(item.publishedAt, item.duration),
+                        _meta(item.publishedAt),
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: .85),
                           fontSize: 10,
@@ -592,7 +592,6 @@ class ResearchItem {
     required this.cover,
     required this.category,
     required this.publishedAt,
-    required this.duration,
     required this.isPremium,
     this.priceIdr,
     this.hasAccess = true,
@@ -604,7 +603,6 @@ class ResearchItem {
   String cover;
   String category; // 'Research' | 'Knowledges'
   DateTime publishedAt;
-  Duration duration;
   bool isPremium;
   int? priceIdr; // harga unlock (premium); null = free / belum diatur admin
   bool hasAccess; // free, member, atau sudah dibeli
