@@ -342,6 +342,23 @@ class StocksProvider extends ChangeNotifier {
         _ => (interval: '1d', limit: 60),
       };
 
+  static const Duration _wibOffset = Duration(hours: 7);
+
+  /// Candle intraday di hari bursa terakhir saja (tanggal WIB candle terakhir), untuk chip 1D.
+  /// Di akhir pekan / sebelum bursa buka hasilnya sesi terakhir, bukan grafik kosong.
+  static List<Ohlc> _lastSessionBars(List<Ohlc> bars) {
+    if (bars.isEmpty) return bars;
+    DateTime wibDate(DateTime time) {
+      final DateTime wib = time.toUtc().add(_wibOffset);
+      return DateTime.utc(wib.year, wib.month, wib.day);
+    }
+
+    final DateTime lastSession = wibDate(bars.last.time);
+    return bars.sublist(
+      bars.indexWhere((Ohlc bar) => wibDate(bar.time) == lastSession),
+    );
+  }
+
   /// Candles IHSG untuk chart di HomePage.
   Future<void> fetchIndexCandles({bool force = false}) async {
     if (ihsgCandles.isNotEmpty && !force) return;
@@ -356,13 +373,17 @@ class StocksProvider extends ChangeNotifier {
       );
 
       // Panggil endpoint baru yang sudah punya indikator
-      ihsgChartPayload = await _svc.getIhsgChartWithIndicators(
+      final ChartPayload payload = await _svc.getIhsgChartWithIndicators(
         interval: candles.interval,
         limit: candles.limit,
       );
+      final List<Ohlc> bars = indexInterval == '1D'
+          ? _lastSessionBars(payload.candles)
+          : payload.candles;
+      ihsgChartPayload = ChartPayload(candles: bars);
 
       // Tetap isi ihsgCandles agar widget lama tidak rusak
-      ihsgCandles = ihsgChartPayload!.candles
+      ihsgCandles = bars
           .map(
             (Ohlc e) => CandleItem(
               ts: e.time,
