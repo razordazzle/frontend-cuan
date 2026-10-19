@@ -1611,6 +1611,15 @@ class _CandleChartCardState extends State<_CandleChartCard> {
                       ? 280
                       : 200,
                   child: SfCartesianChart(
+                    // initialVisibleMinimum/Maximum hanya dipakai saat chart dibuat; key baru
+                    // tiap data dimuat ulang (ganti ticker/timeframe) supaya frame awal ikut reset.
+                    // Update harga live tidak mengubah key, jadi geseran user tidak ter-reset.
+                    key: ValueKey<(String, String, DateTime, int)>((
+                      widget.ticker,
+                      range,
+                      raw.first.ts,
+                      raw.length,
+                    )),
                     plotAreaBorderWidth: 0,
                     backgroundColor: Colors.transparent,
                     primaryXAxis: NumericAxis(
