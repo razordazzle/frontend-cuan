@@ -297,7 +297,7 @@ class StocksProvider extends ChangeNotifier {
     }
   }
 
-  String indexInterval = '1D'; // '1d' | '1w' | '1M'
+  String indexInterval = '1D'; // rentang chip: '1D' | '1W' | '1M' | '3M' | 'YTD' | '1Y'
 
   Future<void> setIndexInterval(String v) async {
     if (indexInterval == v) return;
@@ -329,6 +329,19 @@ class StocksProvider extends ChangeNotifier {
   //     notifyListeners();
   //   }
   // }
+  /// Ukuran candle & jumlah bar per chip rentang chart IHSG di Home (permintaan tim):
+  /// 1D @menit, 1W & 1M @hari, 3M @minggu, YTD & 1Y @bulan.
+  static ({String interval, int limit}) _indexCandleSpec(String range) =>
+      switch (range) {
+        '1D' => (interval: '1m', limit: 390), // ~09:00-16:00
+        '1W' => (interval: '1d', limit: 5), // 5 hari bursa
+        '1M' => (interval: '1d', limit: 22), // ~22 hari bursa
+        '3M' => (interval: '1w', limit: 13), // ~13 minggu
+        'YTD' => (interval: '1M', limit: DateTime.now().month), // Januari s.d. bulan ini
+        '1Y' => (interval: '1M', limit: 12),
+        _ => (interval: '1d', limit: 60),
+      };
+
   /// Candles IHSG untuk chart di HomePage.
   Future<void> fetchIndexCandles({bool force = false}) async {
     if (ihsgCandles.isNotEmpty && !force) return;
@@ -338,47 +351,14 @@ class StocksProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Tentukan interval dan limit berdasarkan tab yang dipilih user
-      String apiInterval = '1d';
-      int apiLimit = 60;
-
-      switch (indexInterval) {
-        case '1D': // Hari Ini (Intraday)
-          apiInterval = '1m'; // 1 Menit
-          apiLimit = 390; // ~390 menit (Jam 09:00 - 16:00)
-          // apiLimit = 185; // ~390 menit (Jam 09:00 - 16:00)
-          break;
-        // case '1D': // Hari Ini (Intraday)
-        //   // apiInterval = '1m'; // 1 Menit
-        //   apiInterval = '5m'; // 5 Menit
-        //   apiLimit = 80;     // ~390 menit (Jam 09:00 - 16:00)
-        //   break;
-        case '1W': // 1 Minggu
-          apiInterval = '1h'; // 1 Jam
-          apiLimit = 40; // ~40 jam bursa dlm seminggu
-          break;
-        case '1M': // 1 Bulan
-          apiInterval = '1d'; // Harian
-          apiLimit = 22; // ~22 hari kerja bursa
-          break;
-        case '3M': // 3 Bulan
-          apiInterval = '1d';
-          apiLimit = 65;
-          break;
-        case 'YTD': // Year to Date (Dari 1 Januari)
-          apiInterval = '1d';
-          apiLimit = 260; // Angka aman maksimal hari setahun
-          break;
-        case '1Y': // 1 Tahun Terakhir
-          apiInterval = '1w'; // Mingguan biar grafik gak terlalu padat
-          apiLimit = 52; // 52 minggu dlm setahun
-          break;
-      }
+      final ({String interval, int limit}) candles = _indexCandleSpec(
+        indexInterval,
+      );
 
       // Panggil endpoint baru yang sudah punya indikator
       ihsgChartPayload = await _svc.getIhsgChartWithIndicators(
-        interval: apiInterval,
-        limit: apiLimit,
+        interval: candles.interval,
+        limit: candles.limit,
       );
 
       // Tetap isi ihsgCandles agar widget lama tidak rusak
