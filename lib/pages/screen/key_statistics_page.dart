@@ -420,8 +420,9 @@ class _KeyStatisticsPageState extends State<KeyStatisticsPage> {
                     // ===== MOST RECENT QUARTER =====
                     _sectionTitle(
                       context,
-                      'Most Recent Quarter : 31 May 2025',
-                    ), // Update manual atau via API nanti
+                      // dari backend (periode neraca terbaru); dulu ditulis mati "31 May 2025"
+                      'Most Recent Quarter : ${latest?.mostRecentQuarter ?? '-'}',
+                    ),
                     _kvBox(context, [
                       ['Financial Year End', latest?.financialYearEnd ?? '-'],
                       ['Issued Shares', _n(latest?.issuedShares)],

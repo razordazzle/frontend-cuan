@@ -11,6 +11,7 @@ class KeyStatsLatest {
       operatingProfit,
       netProfit;
   final String? financialYearEnd;
+  final String? mostRecentQuarter; // akhir periode neraca terbaru, mis. "30 Jun 2026"
   final double? issuedShares, dps, rps, bvps;
   final double? dividendYield, psr, pcfr;
   final double? dpr, gpm, opm, npm, ebitm, roa;
@@ -32,6 +33,7 @@ class KeyStatsLatest {
     this.operatingProfit,
     this.netProfit,
     this.financialYearEnd,
+    this.mostRecentQuarter,
     this.issuedShares,
     this.dps,
     this.rps,
@@ -66,6 +68,7 @@ class KeyStatsLatest {
     operatingProfit: (j['operating_profit'] as num?)?.toDouble(),
     netProfit: (j['net_profit'] as num?)?.toDouble(),
     financialYearEnd: j['financial_year_end'] as String?,
+    mostRecentQuarter: j['most_recent_quarter'] as String?,
     issuedShares: (j['issued_shares'] as num?)?.toDouble(),
     dps: (j['dps'] as num?)?.toDouble(),
     rps: (j['rps'] as num?)?.toDouble(),
