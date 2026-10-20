@@ -180,3 +180,28 @@ class CheckAccountResponse {
     );
   }
 }
+
+extension PasswordResetEndpoints on AuthService {
+  /// true kalau email punya akun (pakai endpoint /auth/check yang sama dengan halaman register).
+  Future<bool> isEmailRegistered(String email) async {
+    final res = await _dio.post(
+      ApiPaths.authCheck,
+      data: {'email': email.trim().toLowerCase()},
+    );
+    final data = res.data;
+    return data is Map && data['email_exists'] == true;
+  }
+
+  /// Minta link atur ulang password dikirim ke email.
+  /// Backend selalu membalas pesan yang sama (terdaftar atau tidak) supaya tidak bisa dipakai
+  /// menebak email mana yang punya akun; password diganti lewat halaman web dari link di email.
+  Future<String> forgotPassword(String email) async {
+    final res = await _dio.post(
+      '/auth/forgot-password',
+      data: {'email': email.trim()},
+    );
+    final data = res.data;
+    return (data is Map ? data['message'] as String? : null) ??
+        'Jika email terdaftar, tautan untuk mengatur ulang password telah dikirim.';
+  }
+}

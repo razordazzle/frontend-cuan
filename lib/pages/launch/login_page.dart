@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/components/gradient_button.dart';
 import 'package:cuan_app/components/gradient_border_button.dart';
+import 'package:cuan_app/pages/launch/forgot_password_page.dart';
 import 'package:cuan_app/utils/form_styles.dart';
 import 'package:cuan_app/utils/validators.dart';
 import 'package:provider/provider.dart';
@@ -64,6 +65,17 @@ class _LoginPageState extends State<LoginPage> {
       }
       return null;
     };
+  }
+
+  // Lupa password -> halaman isi email (email yang sudah diketik di sini ikut terbawa)
+  void _forgotPassword() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            ForgotPasswordPage(initialEmail: _emailController.text.trim()),
+      ),
+    );
   }
 
   void _submit() async {
@@ -223,6 +235,15 @@ class _LoginPageState extends State<LoginPage> {
                           Validators.required('Wajib diisi'),
                           Validators.minLength(8, 'Password'),
                         ]),
+                      ),
+                    ),
+
+                    // Lupa password -> halaman Lupa Password -> pop-up konfirmasi -> halaman berhasil
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _forgotPassword,
+                        child: const Text('Lupa password?'),
                       ),
                     ),
                   ],
