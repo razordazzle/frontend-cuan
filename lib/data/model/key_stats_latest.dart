@@ -1,5 +1,9 @@
 class KeyStatsLatest {
   final double? per, pbv, roe, der, epsTtm;
+  // versi [FY] (harga live / angka tahunan terakhir); per/psr/pcfr/epsTtm = [TTM]
+  final double? perFy, psrFy, pcfrFy, epsFy;
+  final String? ttmPeriod; // mis. "TTM Q2 2026"
+  final String? fyPeriod; // mis. "FY 2025"
   final double? sales,
       assets,
       liability,
@@ -22,6 +26,12 @@ class KeyStatsLatest {
     this.roe,
     this.der,
     this.epsTtm,
+    this.perFy,
+    this.psrFy,
+    this.pcfrFy,
+    this.epsFy,
+    this.ttmPeriod,
+    this.fyPeriod,
     this.sales,
     this.assets,
     this.liability,
@@ -57,6 +67,12 @@ class KeyStatsLatest {
     roe: (j['roe'] as num?)?.toDouble(),
     der: (j['der'] as num?)?.toDouble(),
     epsTtm: (j['eps_ttm'] as num?)?.toDouble(),
+    perFy: (j['per_fy'] as num?)?.toDouble(),
+    psrFy: (j['psr_fy'] as num?)?.toDouble(),
+    pcfrFy: (j['pcfr_fy'] as num?)?.toDouble(),
+    epsFy: (j['eps_fy'] as num?)?.toDouble(),
+    ttmPeriod: j['ttm_period'] as String?,
+    fyPeriod: j['fy_period'] as String?,
     sales: (j['sales'] as num?)?.toDouble(),
     assets: (j['assets'] as num?)?.toDouble(),
     liability: (j['liability'] as num?)?.toDouble(),

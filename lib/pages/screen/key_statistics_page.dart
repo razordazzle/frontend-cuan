@@ -423,34 +423,44 @@ class _KeyStatisticsPageState extends State<KeyStatisticsPage> {
                       // dari backend (periode neraca terbaru); dulu ditulis mati "31 May 2025"
                       'Most Recent Quarter : ${latest?.mostRecentQuarter ?? '-'}',
                     ),
+                    // Label periode: [Q] kuartal terbaru, [FY] tahunan terakhir,
+                    // [TTM] 12 bulan terakhir (sesuai spesifikasi tim)
                     _kvBox(context, [
                       ['Financial Year End', latest?.financialYearEnd ?? '-'],
-                      ['Issued Shares', _n(latest?.issuedShares)],
+                      ['TTM Period', latest?.ttmPeriod ?? '-'],
+                      ['Fiscal Year (FY)', latest?.fyPeriod ?? '-'],
+                      ['Issued Shares [Q]', _n(latest?.issuedShares)],
                     ]),
 
                     // ===== FUNDAMENTAL =====
                     _sectionTitle(context, 'Fundamental'),
                     _kvBox(context, [
-                      ['Sales', _n(latest?.sales)],
-                      ['Assets', _n(latest?.assets)],
-                      ['Liability', _n(latest?.liability)],
-                      ['Equity', _n(latest?.equity)],
-                      ['Operating Cash Flow', _n(latest?.operatingCashFlow)],
-                      ['Net Cash Flow', _n(latest?.netCashFlow)],
-                      ['Cap.Ex', _n(latest?.capEx)],
-                      ['Op.Exp', _n(latest?.opExp)],
-                      ['Operating Profit', _n(latest?.operatingProfit)],
-                      ['Net Profit', _n(latest?.netProfit)],
+                      ['Assets [Q]', _n(latest?.assets)],
+                      ['Liability [Q]', _n(latest?.liability)],
+                      ['Equity [Q]', _n(latest?.equity)],
+                      ['Sales [TTM]', _n(latest?.sales)],
+                      [
+                        'Operating Cash Flow [TTM]',
+                        _n(latest?.operatingCashFlow),
+                      ],
+                      ['Net Cash Flow [TTM]', _n(latest?.netCashFlow)],
+                      ['Cap.Ex [TTM]', _n(latest?.capEx)],
+                      ['Op.Exp [TTM]', _n(latest?.opExp)],
+                      ['Operating Profit [TTM]', _n(latest?.operatingProfit)],
+                      ['Net Profit [TTM]', _n(latest?.netProfit)],
                     ]),
 
                     // ===== EARNINGS =====
                     _sectionTitle(context, 'Earnings'),
                     _kvBox(context, [
-                      ['Dividend Per Share (DPS)', _n(latest?.dps)],
-                      ['Earning Per Share (EPS)', _eps(latest?.epsTtm)],
-                      ['Revenue Per Share (RPS)', _n(latest?.rps, decimals: 2)],
+                      ['Dividend Per Share (DPS) [TTM]', _n(latest?.dps)],
+                      ['Earning Per Share (EPS) [TTM]', _eps(latest?.epsTtm)],
                       [
-                        'Book Value Per Share (BVPS)',
+                        'Revenue Per Share (RPS) [TTM]',
+                        _n(latest?.rps, decimals: 2),
+                      ],
+                      [
+                        'Book Value Per Share (BVPS) [Q]',
                         _n(latest?.bvps, decimals: 2),
                       ],
                     ]),
@@ -458,41 +468,60 @@ class _KeyStatisticsPageState extends State<KeyStatisticsPage> {
                     // ===== VALUATION =====
                     _sectionTitle(context, 'Valuation'),
                     _kvBox(context, [
-                      ['Dividend Yield', _p(latest?.dividendYield)],
+                      ['Dividend Yield [TTM]', _p(latest?.dividendYield)],
+                      // PER, PSR, PCFR tampil 2 baris: [TTM] & [FY] (permintaan tim)
                       [
-                        'Price Earning Ratio (PER)',
+                        'Price Earning Ratio (PER) [TTM]',
                         _n(latest?.per, decimals: 2),
                       ],
-                      ['Price Sales Ratio (PSR)', _n(latest?.psr, decimals: 2)],
                       [
-                        'Price Book Value Ratio (PBVR)',
-                        _n(latest?.pbv, decimals: 2),
+                        'Price Earning Ratio (PER) [FY]',
+                        _n(latest?.perFy, decimals: 2),
                       ],
                       [
-                        'Price Cash Flow Ratio (PCFR)',
+                        'Price Sales Ratio (PSR) [TTM]',
+                        _n(latest?.psr, decimals: 2),
+                      ],
+                      [
+                        'Price Sales Ratio (PSR) [FY]',
+                        _n(latest?.psrFy, decimals: 2),
+                      ],
+                      [
+                        'Price Cash Flow Ratio (PCFR) [TTM]',
                         _n(latest?.pcfr, decimals: 2),
+                      ],
+                      [
+                        'Price Cash Flow Ratio (PCFR) [FY]',
+                        _n(latest?.pcfrFy, decimals: 2),
+                      ],
+                      [
+                        'Price Book Value Ratio (PBVR) [Q]',
+                        _n(latest?.pbv, decimals: 2),
                       ],
                     ]),
 
                     // ===== PROFITABILITY =====
                     _sectionTitle(context, 'Profitability'),
                     _kvBox(context, [
-                      ['Dividend Payout Ratio (DPR)', _p(latest?.dpr)],
-                      ['Gross Profit Margin (GPM)', _p(latest?.gpm)],
-                      ['Operating Profit Margin (OPM)', _p(latest?.opm)],
-                      ['Net Profit Margin (NPM)', _p(latest?.npm)],
-                      ['EBITM', _p(latest?.ebitm)],
-                      ['Return On Equity (ROE)', _p(latest?.roe)],
-                      ['Return On Assets (ROA)', _p(latest?.roa)],
+                      ['Dividend Payout Ratio (DPR) [FY]', _p(latest?.dpr)],
+                      ['Gross Profit Margin (GPM) [TTM]', _p(latest?.gpm)],
+                      ['Operating Profit Margin (OPM) [TTM]', _p(latest?.opm)],
+                      ['Net Profit Margin (NPM) [TTM]', _p(latest?.npm)],
+                      ['EBITM [TTM]', _p(latest?.ebitm)],
+                      ['Return On Equity (ROE) [TTM]', _p(latest?.roe)],
+                      ['Return On Assets (ROA) [TTM]', _p(latest?.roa)],
                     ]),
 
                     // ===== LIQUIDITY =====
                     _sectionTitle(context, 'Liquidity'),
                     _kvBox(context, [
-                      ['Debt Equity Ratio (DER)', _n(latest?.der, decimals: 2)],
-                      ['Cash Ratio (CR)', _p(latest?.cashRatio)],
-                      ['Quick Ratio (QR)', _p(latest?.quickRatio)],
-                      ['Current Ratio (CRR)', _p(latest?.currentRatio)],
+                      [
+                        'Debt Equity Ratio (DER) [Q]',
+                        _n(latest?.der, decimals: 2),
+                      ],
+                      ['Cash Ratio (CR) [Q]', _p(latest?.cashRatio)],
+                      ['Quick Ratio (QR) [Q]', _p(latest?.quickRatio)],
+                      ['Current Ratio (CRR) [Q]', _p(latest?.currentRatio)],
                     ]),
                   ],
                 ),
