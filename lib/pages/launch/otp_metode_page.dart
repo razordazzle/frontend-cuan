@@ -102,14 +102,15 @@ class _OtpMetodePageState extends State<OtpMetodePage> {
     final tt = Theme.of(context).textTheme;
     final isLight = Theme.of(context).brightness == Brightness.light;
 
-    // Ambil data user dari provider
-    final me = context.watch<AuthProvider>().me;
+    // Kontak OTP dari respons login (profil /users/me baru bisa diambil setelah OTP berhasil)
+    final auth = context.watch<AuthProvider>();
+    final me = auth.me;
 
     // Ambil juga argumen dari LoginPage (opsional; fallback kalau me null)
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final email = me?.email ?? args?['email'] as String?;
-    final phone = me?.phone; // pastikan diisi setelah /users/me
+    final email = auth.otpEmail ?? me?.email ?? args?['email'] as String?;
+    final phone = auth.otpPhone ?? me?.phone;
 
     // BG dalam tile: light = abu terang, dark = gelap
     final innerGradient = isLight

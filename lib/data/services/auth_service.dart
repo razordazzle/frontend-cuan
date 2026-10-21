@@ -4,6 +4,7 @@ import 'package:cuan_app/data/request/register_request.dart';
 import 'package:cuan_app/data/request/update_me_request.dart';
 import 'package:cuan_app/data/response/me_response.dart';
 import 'package:cuan_app/data/response/refresh_response.dart';
+import 'package:cuan_app/data/response/otp_login_response.dart';
 import 'package:cuan_app/data/response/register_response.dart';
 import 'package:cuan_app/data/response/token_pair_response.dart';
 import 'package:cuan_app/data/response/update_me_response.dart';
@@ -54,7 +55,7 @@ class AuthService {
     ).options.baseUrl;
   }
 
-  Future<TokenPairResponse> login({
+  Future<OtpLoginResponse> login({
     required String email,
     required String password,
   }) async {
@@ -62,9 +63,11 @@ class AuthService {
       ApiPaths.login,
       data: {'email': email, 'password': password},
     );
-    final tp = TokenPairResponse.fromJson(res.data);
-    await _storage.saveTokens(access: tp.accessToken, refresh: tp.refreshToken);
-    return tp;
+    final otp = OtpLoginResponse.fromJson(res.data as Map<String, dynamic>);
+    // Token ini hanya diterima /auth/otp/request (tanpa refresh token); token akses
+    // sungguhan baru ada setelah verifyOtp().
+    await _storage.saveTokens(access: otp.otpToken, refresh: '');
+    return otp;
   }
 
   Future<void> logout() async {

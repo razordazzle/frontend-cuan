@@ -18,8 +18,15 @@ class AuthProvider extends ChangeNotifier {
   MeResponse? _me;
   bool _loading = false;
 
+  // Kontak untuk langkah OTP. Sebelum OTP selesai belum ada token akses, jadi profil (/users/me)
+  // belum bisa diambil; halaman pilih metode memakai data dari respons login ini.
+  String? _otpEmail;
+  String? _otpPhone;
+
   MeResponse? get me => _me;
   bool get loading => _loading;
+  String? get otpEmail => _otpEmail;
+  String? get otpPhone => _otpPhone;
 
   AuthProvider(this._storage) {
     _auth = AuthService(_storage);
@@ -42,9 +49,10 @@ class AuthProvider extends ChangeNotifier {
     _loading = true;
     notifyListeners();
     try {
-      await _auth.login(email: email, password: password);
-      _me = await _users.me();
-      return null; // sukses
+      final otp = await _auth.login(email: email, password: password);
+      _otpEmail = email;
+      _otpPhone = otp.phone;
+      return null; // sukses; lanjut ke OTP
     } catch (e) {
       print('LOGIN ERROR >>> $e');
       return 'Login gagal. Cek kredensial / jaringan.';
@@ -92,6 +100,7 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     final ok = await _auth.verifyOtp(challengeId: challengeId, code: code);
     if (ok) {
+      _otpEmail = _otpPhone = null;
       try {
         _me = await _auth.me(); // optional: tarik profil terbaru
         notifyListeners();
@@ -152,8 +161,9 @@ class AuthProvider extends ChangeNotifier {
 
       // OPTIONAL: auto login setelah register
       if (autoLogin) {
-        await _auth.login(email: _regEmail!, password: password);
-        _me = await _auth.me();
+        final otp = await _auth.login(email: _regEmail!, password: password);
+        _otpEmail = _regEmail;
+        _otpPhone = otp.phone;
       }
 
       resetRegisterDraft(); // bereskan draft
