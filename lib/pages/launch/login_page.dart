@@ -93,15 +93,11 @@ class _LoginPageState extends State<LoginPage> {
     if (!mounted) return;
 
     if (err == null) {
-      final me = context.read<AuthProvider>().me; // sudah diisi di login()
+      // Kontak OTP (email + nomor tersamar) dibaca halaman berikutnya dari AuthProvider.
       Navigator.pushReplacementNamed(
         context,
         AppRoutes.otpMetode,
-        arguments: {
-          'email':
-              me?.email ?? _emailController.text.trim(), // fallback ke input
-          'phone': me?.phone, // bisa null
-        },
+        arguments: {'email': email},
       );
       // kalau ingin ke home: ganti AppRoutes.main -> AppRoutes.home
     } else {
