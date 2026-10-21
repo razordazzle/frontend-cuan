@@ -182,14 +182,15 @@ class CheckAccountResponse {
 }
 
 extension PasswordResetEndpoints on AuthService {
-  /// true kalau email punya akun (pakai endpoint /auth/check yang sama dengan halaman register).
+  /// true kalau email boleh reset password lewat app: terdaftar, aktif, dan role "user".
+  /// Akun staf (superadmin/admin/dll) dianggap tidak terdaftar -> reset lewat dashboard admin.
   Future<bool> isEmailRegistered(String email) async {
     final res = await _dio.post(
-      ApiPaths.authCheck,
+      '/auth/forgot-password/check',
       data: {'email': email.trim().toLowerCase()},
     );
     final data = res.data;
-    return data is Map && data['email_exists'] == true;
+    return data is Map && data['eligible'] == true;
   }
 
   /// Minta link atur ulang password dikirim ke email.
