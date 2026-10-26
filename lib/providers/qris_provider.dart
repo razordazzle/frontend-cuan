@@ -22,6 +22,10 @@ class QrisProvider extends ChangeNotifier {
 
   Timer? _pollTimer;
 
+  /// Satu pengecekan status pada satu waktu. Tanpa ini, kalau gateway lambat (> interval polling),
+  /// request /qris/query menumpuk dan backend memproses pembayaran yang sama berkali-kali.
+  bool _querying = false;
+
   /// Isi [packageCode] untuk beli membership, atau [journalId] untuk unlock satu journal premium.
   Future<void> startCheckout({
     String? packageCode,
@@ -32,6 +36,7 @@ class QrisProvider extends ChangeNotifier {
     // Bersihkan sisa checkout sebelumnya: kalau checkout ini gagal, halaman detail
     // jangan sampai nampilin QR / invoice lama.
     await stopPolling();
+    _querying = false;
     current = null;
     loading = true;
     error = null;
@@ -88,8 +93,12 @@ class QrisProvider extends ChangeNotifier {
     if (ref == null || ref.isEmpty) return;
 
     _pollTimer = Timer.periodic(const Duration(seconds: 5), (t) async {
+      if (_querying) return; // pengecekan sebelumnya belum selesai
+      _querying = true;
       try {
         final r = await _qris.query(partnerRefNo: ref);
+        // Checkout lain sudah dimulai selagi menunggu: abaikan hasil yang basi ini
+        if (current?.partnerRefNo != ref) return;
 
         if (r.isPaid) {
           paid = true;
@@ -106,15 +115,20 @@ class QrisProvider extends ChangeNotifier {
           statusText = r.statusText;
           notifyListeners();
         }
-      } catch (_) {}
+      } catch (_) {
+      } finally {
+        _querying = false;
+      }
     });
   }
 
   Future<void> refreshOnce() async {
     final ref = current?.partnerRefNo;
-    if (ref == null || ref.isEmpty) return;
+    if (ref == null || ref.isEmpty || _querying) return;
+    _querying = true;
     try {
       final r = await _qris.query(partnerRefNo: ref);
+      if (current?.partnerRefNo != ref) return;
       if (r.isPaid) {
         paid = true;
         statusText = 'Pembayaran berhasil';
@@ -126,7 +140,10 @@ class QrisProvider extends ChangeNotifier {
         statusText = r.statusText;
       }
       notifyListeners();
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      _querying = false;
+    }
   }
 
   Future<void> stopPolling() async {
