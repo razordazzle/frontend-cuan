@@ -9,21 +9,7 @@ class UsersService {
   UsersService._(this._dio);
 
   factory UsersService.fromStorage(TokenStorage storage) {
-    final interceptor = AuthInterceptor(
-      storage: storage,
-      onRefresh: (refreshToken) async {
-        try {
-          final dio = Dio(ApiClient.instance(AuthInterceptor(storage: TokenStorage(), onRefresh: (_) async => null)).options);
-          final res = await dio.post('/auth/refresh', data: {'Refresh_token': refreshToken});
-          final access = res.data['Access_token'] as String;
-          await storage.saveTokens(access: access, refresh: refreshToken);
-          return access;
-        } catch (_) {
-          await storage.clear();
-          return null;
-        }
-      },
-    );
+    final interceptor = AuthInterceptor.withRefresh(storage);
     final dio = ApiClient.instance(interceptor);
     return UsersService._(dio);
   }

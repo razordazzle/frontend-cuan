@@ -46,11 +46,7 @@ void main() async {
         null, // public endpoints mostly; sesuaikan jika perlu
   );
   // Satu interceptor untuk semua service (lebih konsisten)
-  final sharedInterceptor = AuthInterceptor(
-    storage: storage,
-    // kalau nanti punya mekanisme refresh token, taruh di sini
-    onRefresh: (_) async => null,
-  );
+  final sharedInterceptor = AuthInterceptor.withRefresh(storage);
   runApp(
     MultiProvider(
       providers: [

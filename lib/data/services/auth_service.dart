@@ -3,7 +3,6 @@ import 'package:cuan_app/data/model/stock_list_item.dart';
 import 'package:cuan_app/data/request/register_request.dart';
 import 'package:cuan_app/data/request/update_me_request.dart';
 import 'package:cuan_app/data/response/me_response.dart';
-import 'package:cuan_app/data/response/refresh_response.dart';
 import 'package:cuan_app/data/response/otp_login_response.dart';
 import 'package:cuan_app/data/response/register_response.dart';
 import 'package:cuan_app/data/response/token_pair_response.dart';
@@ -20,39 +19,10 @@ class AuthService {
   AuthService._(this._dio, this._storage);
 
   factory AuthService(TokenStorage storage) {
-    // Interceptor butuh fungsi refresh
-    final interceptor = AuthInterceptor(
-      storage: storage,
-      onRefresh: (refreshToken) async {
-        try {
-          final dio = Dio(BaseOptions(baseUrl: _baseUrlFromApiClient()));
-          print(dio);
-          final res = await dio.post(
-            ApiPaths.refresh,
-            data: {'refresh_token': refreshToken},
-            // data: {'Refresh_token': refreshToken},
-          );
-          final rr = RefreshResponse.fromJson(res.data);
-          await storage.saveTokens(
-            access: rr.accessToken,
-            refresh: refreshToken,
-          );
-          return rr.accessToken;
-        } catch (_) {
-          await storage.clear();
-          return null;
-        }
-      },
-    );
+    // Refresh token ditukar lewat TokenRefresher (satu panggilan bersama untuk semua request)
+    final interceptor = AuthInterceptor.withRefresh(storage);
     final dio = ApiClient.instance(interceptor);
     return AuthService._(dio, storage);
-  }
-
-  static String _baseUrlFromApiClient() {
-    // akses dari BaseOptions (sudah diset di ApiClient)
-    return ApiClient.instance(
-      AuthInterceptor(storage: TokenStorage(), onRefresh: (_) async => null),
-    ).options.baseUrl;
   }
 
   Future<OtpLoginResponse> login({
