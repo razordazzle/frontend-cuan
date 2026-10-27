@@ -200,7 +200,10 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                                 recognizer: TapGestureRecognizer()
                                   ..onTap = () {
-                                    // TODO: navigate TOS
+                                    Navigator.pushNamed(
+                                      context,
+                                      AppRoutes.terms,
+                                    );
                                   },
                               ),
                               const TextSpan(text: ' dan '),
@@ -213,7 +216,11 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                                 recognizer: TapGestureRecognizer()
                                   ..onTap = () {
-                                    // TODO: navigate Privacy
+                                    // Dokumen /legal/terms sudah memuat Kebijakan Privasi juga
+                                    Navigator.pushNamed(
+                                      context,
+                                      AppRoutes.terms,
+                                    );
                                   },
                               ),
                               const TextSpan(text: ' dari Cuan.'),
