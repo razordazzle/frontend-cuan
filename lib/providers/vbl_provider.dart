@@ -189,6 +189,8 @@ class VblProvider extends ChangeNotifier {
       latest = await _svc.latestProgress();
       notifyListeners();
     } catch (_) {}
+    // Persen playlist dihitung dari jumlah video completed -> segarkan saat ada yang selesai
+    if (isCompleted) await fetchPlaylistProgress(playlistId);
   }
 
   /* ========= HISTORY ========= */

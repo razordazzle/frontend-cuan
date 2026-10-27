@@ -85,15 +85,25 @@ class _LessonsPageState extends State<LessonsPage> {
     await _initVideo();
   }
 
+  // Sisa durasi (detik) yang masih dianggap "sudah ditonton sampai habis". Event `ended` dari
+  // YouTube tidak selalu terkirim, dan posisi terakhir yang dilaporkan player biasanya berhenti
+  // sedikit sebelum durasi penuh.
+  static const _endToleranceSeconds = 2;
+
+  // Durasi video: pakai durasi nyata dari player kalau sudah diketahui, karena durasi dari API
+  // (widget.duration) bisa beda beberapa detik dari video aslinya. Durasi API hanya cadangan.
+  Duration _totalOf(YoutubePlayerController c) {
+    final real = c.metadata.duration;
+    return real.inSeconds > 0 ? real : widget.duration;
+  }
+
   //Dipanggil tiap ada perubahan state player (posisi, play/pause, dll)
   void _onPlayerStateChange() {
     final controller = _ytController;
     if (controller == null || !controller.value.isReady) return;
+    final total = _totalOf(controller);
     //seek ke posisi resume, HANYA SEKALI, begitu player pertama kali ready
     if (!_hasSeeked) {
-      final total = widget.duration.inSeconds > 0
-          ? widget.duration
-          : controller.metadata.duration;
       if (total.inSeconds > 0) {
         _hasSeeked =
             true; // BARU di-set true SETELAH total valid, bukan di awal
@@ -108,9 +118,7 @@ class _LessonsPageState extends State<LessonsPage> {
     }
 
     final position = controller.value.position;
-    final total = widget.duration.inSeconds > 0
-        ? widget.duration
-        : controller.metadata.duration;
+    final state = controller.value.playerState;
 
     if (total.inSeconds > 0) {
       final pct = (position.inSeconds / total.inSeconds * 100)
@@ -121,22 +129,36 @@ class _LessonsPageState extends State<LessonsPage> {
       }
       _hasRealProgress = true;
     }
-    final state = controller.value.playerState;
+
+    // Selesai: event ended, atau posisi sudah di ujung durasi nyata video
+    final realTotal = controller.metadata.duration;
+    final atEnd =
+        realTotal.inSeconds > 0 &&
+        position.inSeconds > 0 &&
+        realTotal.inSeconds - position.inSeconds <= _endToleranceSeconds;
+    if ((state == PlayerState.ended || atEnd) && !_reportedComplete) {
+      _markCompleted();
+      return;
+    }
+
     if (state == PlayerState.playing) {
       _startAutoSaveTimer();
     } else {
       _autoSaveTimer?.cancel();
       if (state == PlayerState.paused) {
-        if (!_reportedComplete)
+        if (!_reportedComplete) {
           _persistProgress(); // simpan langsung pas user pause
+        }
       }
     }
+  }
 
-    if (state == PlayerState.ended && !_reportedComplete) {
-      _reportedComplete = true;
-      _autoSaveTimer?.cancel();
-      _persistProgress(isCompleted: true, forcePct: 100);
-    }
+  // Video ditonton sampai habis: tampilan langsung 100% dan tersimpan sebagai completed.
+  void _markCompleted() {
+    _reportedComplete = true;
+    _autoSaveTimer?.cancel();
+    if (mounted) setState(() => _progressPct = 100);
+    _persistProgress(isCompleted: true, forcePct: 100);
   }
 
   //jalanin timer yang nembak save tiap 10 detik selama video playing
@@ -166,12 +188,23 @@ class _LessonsPageState extends State<LessonsPage> {
       _reportedComplete = true; //cegah timer nimpa balik ke false
       _autoSaveTimer?.cancel();
     }
-    await context.read<VblProvider>().saveProgress(
-      playlistId: widget.playlistId,
-      videoId: widget.videoId,
-      progressPct: pct,
-      isCompleted: isCompleted,
-    );
+    try {
+      await context.read<VblProvider>().saveProgress(
+        playlistId: widget.playlistId,
+        videoId: widget.videoId,
+        progressPct: pct,
+        isCompleted: isCompleted,
+      );
+    } catch (_) {
+      // Gagal simpan (jaringan/token): jangan anggap sudah tersimpan, coba lagi sebentar lagi
+      _lastSavedPct = -1;
+      if (isCompleted) {
+        _reportedComplete = false;
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted && !_reportedComplete) _markCompleted();
+        });
+      }
+    }
   }
 
   @override
