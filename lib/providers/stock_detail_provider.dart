@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cuan_app/controllers/chart_payload_cache.dart';
 import 'package:cuan_app/data/model/candle_item.dart';
 import 'package:cuan_app/data/model/chart_payload.dart';
 import 'package:cuan_app/data/model/chart_timeframe.dart';
@@ -9,7 +10,6 @@ import 'package:cuan_app/data/model/ratio_item.dart';
 import 'package:cuan_app/data/model/stock_detail.dart';
 import 'package:cuan_app/data/services/live_prices_ws.dart';
 import 'package:cuan_app/data/services/stocks_service.dart';
-import 'package:cuan_app/pages/screen/home_page.dart';
 import 'package:flutter/material.dart';
 
 class StockDetailProvider extends ChangeNotifier {
@@ -30,10 +30,10 @@ class StockDetailProvider extends ChangeNotifier {
   // State terpisah, JANGAN reuse `candles`/`candleInterval` yang dipakai chart inline
   ChartTimeframe tvTimeframe = ChartTimeframe.defaultTimeframe;
   ChartPayload? tvChartPayload;
-  List<CandleItem> tvCandles = [];
   bool loadingTv = false;
   String? errTv;
   String? _tvTicker;
+  final ChartPayloadCache _tvCache = ChartPayloadCache();
 
   Future<void> loadAll(
     String ticker, {
@@ -120,41 +120,46 @@ class StockDetailProvider extends ChangeNotifier {
   Future<void> setTvTimeframe(String ticker, ChartTimeframe timeframe) async {
     if (tvTimeframe == timeframe && _tvTicker == ticker) return;
     tvTimeframe = timeframe;
-    _tvTicker = ticker;
-    await fetchTvCandles(ticker, force: true);
-    notifyListeners();
+    await fetchTvCandles(ticker);
   }
 
-  Future<void> fetchTvCandles(String ticker, {bool force = false}) async {
-    if (tvCandles.isNotEmpty && !force && _tvTicker == ticker) return;
+  /// Payload dari [_tvCache] kalau masih segar; kalau tidak, ambil dari backend.
+  Future<void> fetchTvCandles(String ticker) async {
+    final ChartTimeframe timeframe = tvTimeframe;
+    // Jangan tampilkan chart emiten sebelumnya selagi emiten baru dimuat.
+    if (_tvTicker != ticker) tvChartPayload = null;
+    _tvTicker = ticker;
+
+    final ChartPayload? cached = _tvCache.get(ticker, timeframe);
+    if (cached != null) {
+      tvChartPayload = cached;
+      loadingTv = false;
+      errTv = null;
+      notifyListeners();
+      return;
+    }
+
     loadingTv = true;
     errTv = null;
-    _tvTicker = ticker;
     notifyListeners();
+    ChartPayload? payload;
+    String? error;
     try {
-      tvChartPayload = await api.getStockChartWithIndicators(
+      payload = await api.getStockChartWithIndicators(
         ticker: ticker,
-        interval: tvTimeframe.apiInterval,
-        limit: tvTimeframe.limit,
+        interval: timeframe.apiInterval,
+        limit: timeframe.limit,
       );
-      tvCandles = tvChartPayload!.candles
-          .map(
-            (Ohlc e) => CandleItem(
-              ts: e.time,
-              open: e.open,
-              high: e.high,
-              low: e.low,
-              close: e.close,
-              volume: e.volume.toInt(),
-            ),
-          )
-          .toList();
+      _tvCache.put(ticker, timeframe, payload);
     } catch (e) {
-      errTv = 'Gagal memuat chart TradingView: $e';
-    } finally {
-      loadingTv = false;
-      notifyListeners();
+      error = 'Gagal memuat chart TradingView: $e';
     }
+    // User sudah pindah timeframe/emiten: hasil ini cukup masuk cache.
+    if (ticker != _tvTicker || timeframe != tvTimeframe) return;
+    tvChartPayload = payload ?? tvChartPayload;
+    errTv = error;
+    loadingTv = false;
+    notifyListeners();
   }
 
   // ===================== LIVE WS (1 ticker) =====================
