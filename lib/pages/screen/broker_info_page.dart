@@ -216,8 +216,7 @@ class _BrokerInfoPageState extends State<BrokerInfoPage> {
                   SliverPersistentHeader(
                     pinned: true,
                     delegate: _PinnedHeader(
-                      height:
-                          112, // 👈 dinaikkan dari 60, karena sekarang 2 baris
+                      height: 120, // 2 baris (pill filter; Net + tanggal) + ruang cadangan untuk font besar
                       child: Container(
                         color: Theme.of(context).scaffoldBackgroundColor,
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -225,35 +224,38 @@ class _BrokerInfoPageState extends State<BrokerInfoPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           // mainAxisSize: MainAxisSize.min,
                           children: [
-                            // ===== BARIS 1: filter jenis broker + date picker =====
+                            // ===== BARIS 1: filter jenis broker (4 pill selalu muat satu baris) =====
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                for (final (label, key) in const [
+                                  ('Semua', 'all'),
+                                  ('Asing', 'foreign'),
+                                  ('Lokal', 'local'),
+                                  ('BUMN', 'bumn'),
+                                ])
+                                  _pill(
+                                    context,
+                                    label,
+                                    key,
+                                    _brokerType == key,
+                                    () {
+                                      setState(() => _brokerType = key);
+                                      _refresh();
+                                    },
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            // ===== BARIS 2: toggle Net (kiri) + date picker (kanan) =====
                             Row(
                               children: [
-                                Expanded(
-                                  child: Wrap(
-                                    spacing: 8,
-                                    children: [
-                                      for (final (label, key) in const [
-                                        ('Semua', 'all'),
-                                        ('Asing', 'foreign'),
-                                        ('Lokal', 'local'),
-                                        ('BUMN', 'bumn'),
-                                      ])
-                                        _pill(
-                                          context,
-                                          label,
-                                          key,
-                                          _brokerType == key,
-                                          () {
-                                            setState(() => _brokerType = key);
-                                            _refresh();
-                                          },
-                                        ),
-                                      // 👈 pill 'Net' DIHAPUS dari sini
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
+                                netToggle(context),
+                                const Spacer(),
                                 OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                  ),
                                   icon: const Icon(
                                     Icons.calendar_today,
                                     size: 16,
@@ -286,12 +288,6 @@ class _BrokerInfoPageState extends State<BrokerInfoPage> {
                                   },
                                 ),
                               ],
-                            ),
-                            const SizedBox(height: 8),
-                            // ===== BARIS 2: Net toggle, sendirian =====
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: netToggle(context),
                             ),
                           ],
                         ),
