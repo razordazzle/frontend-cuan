@@ -1,3 +1,4 @@
+import 'package:cuan_app/controllers/chart_payload_cache.dart';
 import 'package:cuan_app/data/model/candle_item.dart';
 import 'package:cuan_app/data/model/stock_list_item.dart';
 import 'package:cuan_app/data/model/chart_payload.dart';
@@ -56,10 +57,11 @@ class StocksProvider extends ChangeNotifier {
   // ====== IHSG UNTUK HALAMAN TRADING VIEW (terpisah dari home_page) ======
   bool loadingTv = false;
   String? errTv;
-  List<CandleItem> tvCandles = [];
   ChartPayload? tvChartPayload;
   /// Resolusi candle di halaman chart TradingView, BUKAN window waktu.
   ChartTimeframe tvTimeframe = ChartTimeframe.defaultTimeframe;
+  static const String _ihsgSymbol = 'IHSG';
+  final ChartPayloadCache _tvCache = ChartPayloadCache();
 
   // ========== HELPER: overlay harga live dari GOAPI ==========
   // Future<List<StockListItem>> _applyLivePrices(List<StockListItem> list) async {
@@ -408,44 +410,44 @@ class StocksProvider extends ChangeNotifier {
   Future<void> setTvTimeframe(ChartTimeframe timeframe) async {
     if (tvTimeframe == timeframe) return;
     tvTimeframe = timeframe;
-    await fetchTvCandles(force: true);
-    notifyListeners();
+    await fetchTvCandles();
   }
 
   /// Candles IHSG untuk halaman TradingViewChartPage (IHSG).
   /// interval yang dikirim ke backend = resolusi asli ([ChartTimeframe.apiInterval]),
   /// BUKAN mapping window kayak di fetchIndexCandles(): tiap candle = 1 resolusi.
-  Future<void> fetchTvCandles({bool force = false}) async {
-    if (tvCandles.isNotEmpty && !force) return;
+  /// Payload dari [_tvCache] kalau masih segar; kalau tidak, ambil dari backend.
+  Future<void> fetchTvCandles() async {
+    final ChartTimeframe timeframe = tvTimeframe;
+    final ChartPayload? cached = _tvCache.get(_ihsgSymbol, timeframe);
+    if (cached != null) {
+      tvChartPayload = cached;
+      loadingTv = false;
+      errTv = null;
+      notifyListeners();
+      return;
+    }
 
     loadingTv = true;
     errTv = null;
     notifyListeners();
-
+    ChartPayload? payload;
+    String? error;
     try {
-      tvChartPayload = await _svc.getIhsgChartWithIndicators(
-        interval: tvTimeframe.apiInterval,
-        limit: tvTimeframe.limit,
+      payload = await _svc.getIhsgChartWithIndicators(
+        interval: timeframe.apiInterval,
+        limit: timeframe.limit,
       );
-
-      tvCandles = tvChartPayload!.candles
-          .map(
-            (Ohlc e) => CandleItem(
-              ts: e.time,
-              open: e.open,
-              high: e.high,
-              low: e.low,
-              close: e.close,
-              volume: e.volume.toInt(),
-            ),
-          )
-          .toList();
+      _tvCache.put(_ihsgSymbol, timeframe, payload);
     } catch (e) {
-      errTv = 'Gagal memuat chart TradingView: $e';
-    } finally {
-      loadingTv = false;
-      notifyListeners();
+      error = 'Gagal memuat chart TradingView: $e';
     }
+    // User sudah pindah timeframe: hasil ini cukup masuk cache.
+    if (timeframe != tvTimeframe) return;
+    tvChartPayload = payload ?? tvChartPayload;
+    errTv = error;
+    loadingTv = false;
+    notifyListeners();
   }
 
   // ==================== WATCHLIST OPERATIONS ====================
