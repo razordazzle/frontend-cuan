@@ -150,6 +150,7 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
                       _Legend(
                         crosshair: crosshair,
                         fallback: liveBar ?? candles.last,
+                        precision: chartPricePrecisionFor(source.symbol),
                       ),
                 ),
               ),
@@ -482,7 +483,12 @@ class _ActionButton extends StatelessWidget {
 class _Legend extends StatelessWidget {
   final CrosshairBar? crosshair;
   final Ohlc? fallback;
-  const _Legend({required this.crosshair, required this.fallback});
+  final int precision;
+  const _Legend({
+    required this.crosshair,
+    required this.fallback,
+    required this.precision,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -495,7 +501,7 @@ class _Legend extends StatelessWidget {
     Widget kv(String k, double? v) => Padding(
       padding: const EdgeInsets.only(right: 12),
       child: Text(
-        '$k ${v?.toStringAsFixed(kChartPricePrecision) ?? '-'}',
+        '$k ${v?.toStringAsFixed(precision) ?? '-'}',
         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
       ),
     );

@@ -13,8 +13,10 @@ import 'web_message_listener.dart';
 
 const bool _kShowDebugReloadButton = false;
 
-/// Jumlah desimal harga di chart (sama dengan PRICE_PRECISION di tv_chart.html).
-const int kChartPricePrecision = 3;
+/// Jumlah desimal harga di chart; aturannya sama dengan pricePrecisionFor() di tv_chart.html:
+/// saham Indonesia berharga bulat (0 desimal), indeks IHSG 2 desimal.
+int chartPricePrecisionFor(String symbol) =>
+    symbol.trim().toUpperCase() == 'IHSG' ? 2 : 0;
 
 /// Nilai OHLC bar di posisi crosshair. Null per field kalau series tidak punya
 /// nilai itu (mis. mode area hanya punya close/value).

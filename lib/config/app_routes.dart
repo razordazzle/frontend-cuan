@@ -57,7 +57,7 @@ class AppRoutes {
   static const editProfile = '/edit_profile';
   static const aboutUs = '/about_us';
   static const terms = '/terms';
-  static const termsX = '/terms';
+  static const termsM = '/terms';
 
   //detail
   static const keyStats = '/key_stats';

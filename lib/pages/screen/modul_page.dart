@@ -137,40 +137,40 @@ class _ModulPageState extends State<ModulPage> {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-        actions: [
-          IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search),
-            onPressed: _toggleSearch,
-          ),
-          PopupMenuButton<String>(
-            onSelected: (v) async {
-              if (v == 'show_readme') {
-                _openReadme();
-              } else if (v == 'reset_readme') {
-                await _resetReadmeFlag();
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Flag Readme di-reset. Buka tab ini lagi untuk melihat Readme.',
-                    ),
-                  ),
-                );
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                value: 'show_readme',
-                child: Text('Tampilkan Readme sekarang'),
-              ),
-              PopupMenuItem(
-                value: 'reset_readme',
-                child: Text('Reset Readme (debug)'),
-              ),
-            ],
-          ),
-          const SizedBox(width: 6),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: Icon(_isSearching ? Icons.close : Icons.search),
+        //     onPressed: _toggleSearch,
+        //   ),
+        //   PopupMenuButton<String>(
+        //     onSelected: (v) async {
+        //       if (v == 'show_readme') {
+        //         _openReadme();
+        //       } else if (v == 'reset_readme') {
+        //         await _resetReadmeFlag();
+        //         if (!mounted) return;
+        //         ScaffoldMessenger.of(context).showSnackBar(
+        //           const SnackBar(
+        //             content: Text(
+        //               'Flag Readme di-reset. Buka tab ini lagi untuk melihat Readme.',
+        //             ),
+        //           ),
+        //         );
+        //       }
+        //     },
+        //     itemBuilder: (_) => const [
+        //       PopupMenuItem(
+        //         value: 'show_readme',
+        //         child: Text('Tampilkan Readme sekarang'),
+        //       ),
+        //       PopupMenuItem(
+        //         value: 'reset_readme',
+        //         child: Text('Reset Readme (debug)'),
+        //       ),
+        //     ],
+        //   ),
+        //   const SizedBox(width: 6),
+        // ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(8),
           child: Divider(

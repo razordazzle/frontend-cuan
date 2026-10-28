@@ -299,139 +299,154 @@ class _LessonsPageState extends State<LessonsPage> {
                 ],
               ),
             )
-          : ListView(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                8,
-                16,
-                24 + MediaQuery.paddingOf(context).bottom,
-              ),
+          : Column(
               children: [
-                // ======= Header 16:9 (cover) + progress UI =======
-                if (player != null)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: player,
-                  )
-                else
-                  // fallback loading state sementara nunggu video_url & controller siap
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: AspectRatio(
-                      aspectRatio: 16 / 9,
-                      child: Container(
-                        color: Colors.black12,
-                        child: const Center(child: CircularProgressIndicator()),
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-
-                // ======= Judul (Part n | Title) =======
-                RichText(
-                  text: TextSpan(
-                    style: t.textTheme.titleMedium?.copyWith(
-                      color: cs.onSurface,
-                      height: 1.25,
-                      fontWeight: FontWeight.w800,
+                // ======= Pemutar 16:9, TETAP di atas (tidak ikut tergulir) =======
+                // Kalau pemutar ada di dalam ListView, begitu tergulir keluar layar widget-nya
+                // dibuang dan WebView YouTube ikut hancur -> video berhenti. Di luar ListView
+                // pemutar tetap hidup dan video terus jalan selama user membaca deskripsi.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: player != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: player,
+                        )
+                      // fallback loading state sementara nunggu video_url & controller siap
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: AspectRatio(
+                            aspectRatio: 16 / 9,
+                            child: Container(
+                              color: Colors.black12,
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
+                          ),
+                        ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      16,
+                      16,
+                      24 + MediaQuery.paddingOf(context).bottom,
                     ),
                     children: [
-                      TextSpan(
-                        text: 'Part ${widget.part} ',
-                        style: TextStyle(
-                          color: cs.primary,
-                          fontWeight: FontWeight.w800,
+                      // ======= Judul (Part n | Title) =======
+                      RichText(
+                        text: TextSpan(
+                          style: t.textTheme.titleMedium?.copyWith(
+                            color: cs.onSurface,
+                            height: 1.25,
+                            fontWeight: FontWeight.w800,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: 'Part ${widget.part} ',
+                              style: TextStyle(
+                                color: cs.primary,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const TextSpan(text: '| '),
+                            TextSpan(text: widget.lesson.title),
+                          ],
                         ),
                       ),
-                      const TextSpan(text: '| '),
-                      TextSpan(text: widget.lesson.title),
-                    ],
-                  ),
-                ),
 
-                const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                // ======= Description (dari API video detail) =======
-                Text(
-                  'Description',
-                  style: t.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: cs.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  vd?.description?.isNotEmpty == true ? vd!.description! : '—',
-                  style: t.textTheme.bodyMedium?.copyWith(
-                    color: cs.onSurface.withOpacity(.9),
-                    height: 1.35,
-                  ),
-                ),
+                      // ======= Description (dari API video detail) =======
+                      Text(
+                        'Description',
+                        style: t.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        vd?.description?.isNotEmpty == true
+                            ? vd!.description!
+                            : '—',
+                        style: t.textTheme.bodyMedium?.copyWith(
+                          color: cs.onSurface.withOpacity(.9),
+                          height: 1.35,
+                        ),
+                      ),
 
-                const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                // ======= Slider progress (demo) =======
-                Text('Progress: ${_progressPct.toStringAsFixed(1)}%'),
-                Slider(
-                  value: _progressPct,
-                  min: 0,
-                  max: 100,
-                  onChanged: (v) => setState(() => _progressPct = v),
-                  onChangeEnd: (v) async {
-                    final isDone = v >= 100 - 1e-6;
-                    await _persistProgress(
-                      isCompleted: isDone,
-                      forcePct: v,
-                      force: true,
-                    ); // GANTI
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Progress tersimpan')),
-                      );
-                    }
-                  },
-                ),
-
-                // ======= Tombol aksi =======
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: () async {
-                          setState(() => _progressPct = 100);
+                      // ======= Slider progress (demo) =======
+                      Text('Progress: ${_progressPct.toStringAsFixed(1)}%'),
+                      Slider(
+                        value: _progressPct,
+                        min: 0,
+                        max: 100,
+                        onChanged: (v) => setState(() => _progressPct = v),
+                        onChangeEnd: (v) async {
+                          final isDone = v >= 100 - 1e-6;
                           await _persistProgress(
-                            isCompleted: true,
-                            forcePct: 100,
+                            isCompleted: isDone,
+                            forcePct: v,
                             force: true,
                           ); // GANTI
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Ditandai Complete'),
+                                content: Text('Progress tersimpan'),
                               ),
                             );
                           }
                         },
-                        icon: const Icon(Icons.check_circle),
-                        label: const Text('Complete'),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    IconButton.filledTonal(
-                      onPressed: () {
-                        Navigator.pushNamed(
-                          context,
-                          AppRoutes.listVideo,
-                          arguments: {
-                            'lesson': widget.lesson,
-                            'playlistId': widget.playlistId,
-                          },
-                        );
-                      },
-                      icon: const Icon(Icons.list_alt),
-                      tooltip: 'All Parts',
-                    ),
-                  ],
+
+                      // ======= Tombol aksi =======
+                      Row(
+                        children: [
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: () async {
+                                setState(() => _progressPct = 100);
+                                await _persistProgress(
+                                  isCompleted: true,
+                                  forcePct: 100,
+                                  force: true,
+                                ); // GANTI
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Ditandai Complete'),
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.check_circle),
+                              label: const Text('Complete'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          IconButton.filledTonal(
+                            onPressed: () {
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.listVideo,
+                                arguments: {
+                                  'lesson': widget.lesson,
+                                  'playlistId': widget.playlistId,
+                                },
+                              );
+                            },
+                            icon: const Icon(Icons.list_alt),
+                            tooltip: 'All Parts',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

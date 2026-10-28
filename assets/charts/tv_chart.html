@@ -2447,8 +2447,17 @@
         let candleSeries = null;
         let areaSeries = null;
         let currentType = 'candle';
-        const PRICE_PRECISION = 3;
-        const PRICE_FORMAT = { type: 'price', precision: PRICE_PRECISION, minMove: Math.pow(10, -PRICE_PRECISION) };
+        // Saham Indonesia berharga bulat (tik minimum 1) -> skala tanpa desimal.
+        // Indeks (IHSG) tetap 2 desimal. Presisi mengikuti simbol lewat setChartInfo().
+        const INDEX_SYMBOLS = new Set(['IHSG']);
+        function pricePrecisionFor(symbol) {
+            return INDEX_SYMBOLS.has(String(symbol || '').toUpperCase()) ? 2 : 0;
+        }
+        function makePriceFormat(precision) {
+            return { type: 'price', precision: precision, minMove: Math.pow(10, -precision) };
+        }
+        let PRICE_PRECISION = pricePrecisionFor('IHSG');
+        let PRICE_FORMAT = makePriceFormat(PRICE_PRECISION);
         let currentShowFib = false;
         let isDrawingFib = false;
         let isFibSelected = false; // true: Edit Mode (large handles, dashed line), false: Non-Edit Mode (subtle dots)
@@ -4575,9 +4584,19 @@
         let currentChartSymbol = 'IHSG';
         let currentChartTimeframe = '1D';
 
+        function applyPricePrecisionForSymbol() {
+            const precision = pricePrecisionFor(currentChartSymbol);
+            if (precision === PRICE_PRECISION) return;
+            PRICE_PRECISION = precision;
+            PRICE_FORMAT = makePriceFormat(precision);
+            if (candleSeries) candleSeries.applyOptions({ priceFormat: PRICE_FORMAT });
+            if (areaSeries) areaSeries.applyOptions({ priceFormat: PRICE_FORMAT });
+        }
+
         function setChartInfo(symbol, timeframe) {
             if (symbol) currentChartSymbol = String(symbol);
             if (timeframe) currentChartTimeframe = String(timeframe);
+            applyPricePrecisionForSymbol();
             const infoLabel = document.getElementById('tv-tree-symbol-info');
             if (infoLabel) {
                 infoLabel.textContent = `${currentChartSymbol}, ${currentChartTimeframe}`;

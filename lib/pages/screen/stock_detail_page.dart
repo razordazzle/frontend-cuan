@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'package:cuan_app/config/app_config.dart';
+import 'package:cuan_app/utils/price_scale.dart';
 import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/data/model/broker_summary_row.dart';
 import 'package:cuan_app/data/model/candle_item.dart';
@@ -1388,26 +1388,6 @@ class _CandleChartCardState extends State<_CandleChartCard> {
 
   String _fmtNum(num? v) => v == null ? '-' : v.toStringAsFixed(0);
 
-  double _niceInterval(double rawRange, {int targetTicks = 8}) {
-    if (rawRange <= 0) return 1;
-    final rough = rawRange / targetTicks;
-    final mag = math.pow(10, (math.log(rough) / math.ln10).floor()).toDouble();
-    final norm = rough / mag; // 1..10
-    double niceMul;
-    if (norm <= 1) {
-      niceMul = 1;
-    } else if (norm <= 2) {
-      niceMul = 2;
-    } else if (norm <= 2.5) {
-      niceMul = 2.5;
-    } else if (norm <= 5) {
-      niceMul = 5;
-    } else {
-      niceMul = 10;
-    }
-    return niceMul * mag;
-  }
-
   List<double> _ema(List<double> values, int period) {
     if (values.length < period) return [];
     final k = 2 / (period + 1);
@@ -1544,8 +1524,8 @@ class _CandleChartCardState extends State<_CandleChartCard> {
       if (d.high! > rawMax) rawMax = d.high!.toDouble();
       if ((d.volume ?? 0) > maxVol) maxVol = (d.volume ?? 0).toDouble();
     }
-    // double yInterval = 100.0;
-    double yInterval = _niceInterval(rawMax - rawMin);
+    // Interval sumbu harga mengikuti fraksi harga (bilangan bulat, kelipatan tik), bukan pecahan
+    double yInterval = priceAxisInterval(rawMin, rawMax);
 
     double minY = (rawMin / yInterval).floor() * yInterval;
     double maxY = (rawMax / yInterval).ceil() * yInterval;
@@ -1650,7 +1630,11 @@ class _CandleChartCardState extends State<_CandleChartCard> {
                             const TextStyle(color: Colors.transparent),
                           );
                         }
-                        return ChartAxisLabel(details.text, details.textStyle);
+                        // Harga saham bulat: tampilkan tanpa desimal
+                        return ChartAxisLabel(
+                          details.value.toStringAsFixed(0),
+                          details.textStyle,
+                        );
                       },
                       opposedPosition: true,
                       axisLine: const AxisLine(width: 0),
