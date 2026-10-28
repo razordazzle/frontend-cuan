@@ -48,6 +48,30 @@ class StocksProvider extends ChangeNotifier {
   List<StockListItem>? topLosers;
   List<StockListItem>? topVolume;
 
+  /// Tanggal bursa data Top Gainers/Losers/Volume (data penutupan, bukan harga live).
+  DateTime? topAsOf;
+
+  /// Contoh: "Data penutupan 27 Okt 2026". Null kalau tanggalnya belum diketahui.
+  String? get topAsOfLabel {
+    final d = topAsOf;
+    if (d == null) return null;
+    const bulan = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+    return 'Data penutupan ${d.day} ${bulan[d.month - 1]} ${d.year}';
+  }
+
   // ====== IHSG / INDEX CANDLES UNTUK HOME_PAGE ======
   bool loadingIndex = false;
   String? errIndex;
@@ -58,6 +82,7 @@ class StocksProvider extends ChangeNotifier {
   bool loadingTv = false;
   String? errTv;
   ChartPayload? tvChartPayload;
+
   /// Resolusi candle di halaman chart TradingView, BUKAN window waktu.
   ChartTimeframe tvTimeframe = ChartTimeframe.defaultTimeframe;
   static const String _ihsgSymbol = 'IHSG';
@@ -260,7 +285,9 @@ class StocksProvider extends ChangeNotifier {
     errGainers = null;
     notifyListeners();
     try {
-      topGainers = await _svc.list(filter: 'top_gainers', limit: 50);
+      final r = await _svc.listTop(filter: 'top_gainers', limit: 50);
+      topGainers = r.items;
+      topAsOf = r.asOf ?? topAsOf;
     } catch (e) {
       errGainers = 'Gagal memuat top gainers';
     } finally {
@@ -275,7 +302,9 @@ class StocksProvider extends ChangeNotifier {
     errLosers = null;
     notifyListeners();
     try {
-      topLosers = await _svc.list(filter: 'top_losers', limit: 50);
+      final r = await _svc.listTop(filter: 'top_losers', limit: 50);
+      topLosers = r.items;
+      topAsOf = r.asOf ?? topAsOf;
     } catch (e) {
       errLosers = 'Gagal memuat top losers';
     } finally {
@@ -290,7 +319,9 @@ class StocksProvider extends ChangeNotifier {
     errVolume = null;
     notifyListeners();
     try {
-      topVolume = await _svc.list(filter: 'top_volume', limit: 50);
+      final r = await _svc.listTop(filter: 'top_volume', limit: 50);
+      topVolume = r.items;
+      topAsOf = r.asOf ?? topAsOf;
     } catch (e) {
       errVolume = 'Gagal memuat top volume';
     } finally {
@@ -299,7 +330,8 @@ class StocksProvider extends ChangeNotifier {
     }
   }
 
-  String indexInterval = '1D'; // rentang chip: '1D' | '1W' | '1M' | '3M' | 'YTD' | '1Y'
+  String indexInterval =
+      '1D'; // rentang chip: '1D' | '1W' | '1M' | '3M' | 'YTD' | '1Y'
 
   Future<void> setIndexInterval(String v) async {
     if (indexInterval == v) return;
@@ -339,7 +371,10 @@ class StocksProvider extends ChangeNotifier {
         '1W' => (interval: '1d', limit: 5), // 5 hari bursa
         '1M' => (interval: '1d', limit: 22), // ~22 hari bursa
         '3M' => (interval: '1w', limit: 13), // ~13 minggu
-        'YTD' => (interval: '1M', limit: DateTime.now().month), // Januari s.d. bulan ini
+        'YTD' => (
+          interval: '1M',
+          limit: DateTime.now().month,
+        ), // Januari s.d. bulan ini
         '1Y' => (interval: '1M', limit: 12),
         _ => (interval: '1d', limit: 60),
       };
@@ -551,10 +586,10 @@ class StocksProvider extends ChangeNotifier {
         // changed = _patchListBySymbol(topVolume, row) || changed;
         row['symbol'] = entry.key;
 
+        // Hanya Watchlist yang di-live. Top Gainers/Losers/Volume adalah data penutupan hari
+        // bursa terakhir (Invezgo, End of Day): menimpanya dengan harga live membuat saham yang
+        // kemarin naik tampil turun di Top Gainers (dan sebaliknya).
         changed = _patchListBySymbol(watchlist, row) || changed;
-        changed = _patchListBySymbol(topGainers, row) || changed;
-        changed = _patchListBySymbol(topLosers, row) || changed;
-        changed = _patchListBySymbol(topVolume, row) || changed;
       }
 
       if (changed) notifyListeners();

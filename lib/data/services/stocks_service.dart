@@ -57,6 +57,26 @@ class StocksService {
     // return list;
   }
 
+  /// Top Gainers / Losers / Volume: data penutupan (End of Day) hari bursa terakhir.
+  /// [asOf] = tanggal bursa datanya (null kalau server tidak mengirimnya).
+  Future<({List<StockListItem> items, DateTime? asOf})> listTop({
+    required String filter, // top_gainers|top_losers|top_volume
+    int limit = 50,
+  }) async {
+    final res = await _dio.get(
+      '/stocks',
+      queryParameters: {'filter': filter, 'limit': limit},
+    );
+    final items = (_extractData(res) as List)
+        .map((e) => StockListItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final asOfRaw = res.data is Map ? (res.data as Map)['as_of'] : null;
+    return (
+      items: items,
+      asOf: asOfRaw is String ? DateTime.tryParse(asOfRaw) : null,
+    );
+  }
+
   // (opsional) detail
   Future<Map<String, dynamic>> detailRaw(String ticker) async {
     final res = await _dio.get('/stocks/$ticker');
@@ -152,7 +172,8 @@ class StocksService {
     String ticker, {
     DateTime? tradeDate,
     String investor = 'all', // jenis INVESTOR: 'all' | 'foreign' | 'local'
-    String brokerType = 'all', // jenis BROKER: 'all' | 'foreign' | 'local' | 'bumn'
+    String brokerType =
+        'all', // jenis BROKER: 'all' | 'foreign' | 'local' | 'bumn'
     bool net = false,
     int limit = 300,
   }) async {
@@ -160,7 +181,8 @@ class StocksService {
       final qp = <String, dynamic>{
         'limit': limit,
         if (investor.isNotEmpty && investor != 'all') 'investor': investor,
-        if (brokerType.isNotEmpty && brokerType != 'all') 'broker_type': brokerType,
+        if (brokerType.isNotEmpty && brokerType != 'all')
+          'broker_type': brokerType,
         if (net)
           'net':
               true, // 👈 BARU — cukup kirim kalau true, biar query string bersih

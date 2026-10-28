@@ -2448,13 +2448,18 @@
         let areaSeries = null;
         let currentType = 'candle';
         // Saham Indonesia berharga bulat (tik minimum 1) -> skala tanpa desimal.
-        // Indeks (IHSG) tetap 2 desimal. Presisi mengikuti simbol lewat setChartInfo().
+        // Indeks IHSG tetap 2 desimal. Presisi mengikuti simbol lewat setChartInfo().
         const INDEX_SYMBOLS = new Set(['IHSG']);
         function pricePrecisionFor(symbol) {
             return INDEX_SYMBOLS.has(String(symbol || '').toUpperCase()) ? 2 : 0;
         }
         function makePriceFormat(precision) {
-            return { type: 'price', precision: precision, minMove: Math.pow(10, -precision) };
+            if (precision > 0) {
+                return { type: 'price', precision: precision, minMove: Math.pow(10, -precision) };
+            }
+            // Format 'price' presisi 0 memotong desimal (7234,57 -> 7234), sedangkan header OHLC di
+            // Flutter membulatkan. Formatter sendiri supaya label sumbu dan header selalu sama.
+            return { type: 'custom', minMove: 1, formatter: (p) => String(Math.round(p)) };
         }
         let PRICE_PRECISION = pricePrecisionFor('IHSG');
         let PRICE_FORMAT = makePriceFormat(PRICE_PRECISION);

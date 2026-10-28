@@ -211,21 +211,20 @@ class _MarketPageState extends State<MarketPage> {
                     //       : 'volume',
                     //   limit: 50,
                     // ),
-                    onRefresh: () async {
-                      final p = context.read<MarketProvider>();
-                      await p.refreshOne(
-                        _segIndex == 0
-                            ? 'gainers'
-                            : _segIndex == 1
-                            ? 'losers'
-                            : 'volume',
-                        limit: 50,
-                      );
-                      _syncWsSymbols(p);
+                    // Daftar yang tampil berasal dari StocksProvider, jadi itu yang dimuat ulang
+                    // (dulu memanggil MarketProvider.refreshOne yang tidak memengaruhi tampilan).
+                    onRefresh: () {
+                      final sp = context.read<StocksProvider>();
+                      return switch (_segIndex) {
+                        0 => sp.fetchGainers(force: true),
+                        1 => sp.fetchLosers(force: true),
+                        _ => sp.fetchVolume(force: true),
+                      };
                     },
                     child: ListView.separated(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: current().length,
+                      itemCount:
+                          current().length + (p.topAsOfLabel == null ? 0 : 1),
                       separatorBuilder: (_, __) => Divider(
                         height: 1,
                         color: Theme.of(
@@ -233,6 +232,24 @@ class _MarketPageState extends State<MarketPage> {
                         ).colorScheme.outline.withValues(alpha: .06),
                       ),
                       itemBuilder: (context, i) {
+                        if (p.topAsOfLabel != null) {
+                          if (i == 0) {
+                            return Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                              child: Text(
+                                p.topAsOfLabel!,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: .6),
+                                    ),
+                              ),
+                            );
+                          }
+                          i -= 1;
+                        }
                         final s = current()[i];
                         final up = (s.changePoint ?? 0) >= 0;
                         final color = up

@@ -126,18 +126,15 @@ class _HomePageState extends State<HomePage>
     return '$s0  ($s1)';
   }
 
-  /// Saham di tab daftar yang sedang tampil (WatchList / Top Gainers / Top Losers / Top Volume).
+  /// Saham yang perlu harga live. Hanya Watchlist: Top Gainers/Losers/Volume adalah data
+  /// penutupan hari bursa terakhir (tidak di-live), jadi tidak ikut berlangganan.
   List<StockListItem> _activeTabStocks(StocksProvider p) =>
-      switch (_tabController.index) {
-        0 => p.watchlist,
-        1 => p.topGainers,
-        2 => p.topLosers,
-        _ => p.topVolume,
-      } ??
-      const <StockListItem>[];
+      _tabController.index == 0
+      ? (p.watchlist ?? const <StockListItem>[])
+      : const <StockListItem>[];
 
-  /// Harga live hanya untuk tab yang tampil. Tiap ticker di WebSocket memicu refresh harga
-  /// ke Invezgo di backend, jadi berlangganan 4 tab sekaligus (~130 saham) boros kuota.
+  /// Harga live hanya untuk tab Watchlist yang tampil. Tiap ticker di WebSocket memicu refresh
+  /// harga ke Invezgo di backend, jadi jangan berlangganan lebih dari yang perlu (boros kuota).
   Future<void> _subscribeActiveTab() async {
     final StocksProvider p = _stocksProvider;
     _subscribedTab = _tabController.index;
@@ -294,9 +291,7 @@ class _HomePageState extends State<HomePage>
                         return candles.last.close >= candles.first.close;
                       }();
 
-                      final baselinePrice = hasData
-                          ? candles.first.open
-                          : null;
+                      final baselinePrice = hasData ? candles.first.open : null;
 
                       return Card(
                         color: cs.surface,
@@ -381,9 +376,7 @@ class _HomePageState extends State<HomePage>
                                               isUp
                                                   ? Icons.arrow_drop_up
                                                   : Icons.arrow_drop_down,
-                                              color: isUp
-                                                  ? upColor
-                                                  : downColor,
+                                              color: isUp ? upColor : downColor,
                                             ),
                                             Text(
                                               (p.indexInterval == '1D')
@@ -396,8 +389,7 @@ class _HomePageState extends State<HomePage>
                                                     color: isUp
                                                         ? upColor
                                                         : downColor,
-                                                    fontWeight:
-                                                        FontWeight.w600,
+                                                    fontWeight: FontWeight.w600,
                                                   ),
                                             ),
                                           ],
@@ -539,6 +531,7 @@ class _HomePageState extends State<HomePage>
                   loading: p.loadingGainers,
                   error: p.errGainers,
                   data: p.topGainers,
+                  caption: p.topAsOfLabel,
                   onRefresh: () async {
                     await p.fetchGainers(force: true);
                     await _subscribeActiveTab();
@@ -548,6 +541,7 @@ class _HomePageState extends State<HomePage>
                   loading: p.loadingLosers,
                   error: p.errLosers,
                   data: p.topLosers,
+                  caption: p.topAsOfLabel,
                   onRefresh: () async {
                     await p.fetchLosers(force: true);
                     await _subscribeActiveTab();
@@ -557,6 +551,7 @@ class _HomePageState extends State<HomePage>
                   loading: p.loadingVolume,
                   error: p.errVolume,
                   data: p.topVolume,
+                  caption: p.topAsOfLabel,
                   onRefresh: () async {
                     await p.fetchVolume(force: true);
                     await _subscribeActiveTab();
@@ -629,11 +624,15 @@ class _TabList extends StatelessWidget {
   final String? error;
   final List<StockListItem>? data;
   final Future<void> Function() onRefresh;
+
+  /// Keterangan di atas daftar, mis. "Data penutupan 27 Okt 2026" (null = tidak ditampilkan).
+  final String? caption;
   const _TabList({
     required this.loading,
     required this.error,
     required this.data,
     required this.onRefresh,
+    this.caption,
   });
 
   @override
@@ -822,9 +821,26 @@ class _TabList extends StatelessWidget {
       onRefresh: onRefresh,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: 1 /* header */ + (items.isEmpty ? 1 : items.length),
+        itemCount:
+            (caption == null ? 0 : 1) +
+            1 /* header */ +
+            (items.isEmpty ? 1 : items.length),
         separatorBuilder: (_, __) => const Divider(height: 1),
         itemBuilder: (_, i) {
+          if (caption != null) {
+            if (i == 0) {
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Text(
+                  caption!,
+                  style: t.labelSmall?.copyWith(
+                    color: cs.onSurface.withOpacity(.6),
+                  ),
+                ),
+              );
+            }
+            i -= 1;
+          }
           if (i == 0) return header();
           if (items.isEmpty) return statusCell();
           return row(items[i - 1]);

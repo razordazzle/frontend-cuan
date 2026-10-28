@@ -90,6 +90,10 @@ class _LessonsPageState extends State<LessonsPage> {
   // sedikit sebelum durasi penuh.
   static const _endToleranceSeconds = 2;
 
+  // Tombol Complete baru aktif kalau video sudah ditonton LEBIH dari batas ini (persen).
+  static const _completeMinPct = 20.0;
+  bool get _canComplete => _progressPct > _completeMinPct;
+
   // Durasi video: pakai durasi nyata dari player kalau sudah diketahui, karena durasi dari API
   // (widget.duration) bisa beda beberapa detik dari video aslinya. Durasi API hanya cadangan.
   Duration _totalOf(YoutubePlayerController c) {
@@ -380,50 +384,45 @@ class _LessonsPageState extends State<LessonsPage> {
 
                       const SizedBox(height: 16),
 
-                      // ======= Slider progress (demo) =======
+                      // ======= Progress tontonan (hanya tampilan, tidak bisa digeser) =======
+                      // Dulu berupa Slider yang bisa digeser manual: itu menyimpan progres tanpa
+                      // menonton dan melewati aturan minimal tonton untuk tombol Complete.
                       Text('Progress: ${_progressPct.toStringAsFixed(1)}%'),
-                      Slider(
-                        value: _progressPct,
-                        min: 0,
-                        max: 100,
-                        onChanged: (v) => setState(() => _progressPct = v),
-                        onChangeEnd: (v) async {
-                          final isDone = v >= 100 - 1e-6;
-                          await _persistProgress(
-                            isCompleted: isDone,
-                            forcePct: v,
-                            force: true,
-                          ); // GANTI
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Progress tersimpan'),
-                              ),
-                            );
-                          }
-                        },
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          value: (_progressPct / 100).clamp(0.0, 1.0),
+                          minHeight: 8,
+                          backgroundColor: cs.surfaceContainerHighest,
+                        ),
                       ),
+                      const SizedBox(height: 16),
 
                       // ======= Tombol aksi =======
                       Row(
                         children: [
                           Expanded(
                             child: FilledButton.icon(
-                              onPressed: () async {
-                                setState(() => _progressPct = 100);
-                                await _persistProgress(
-                                  isCompleted: true,
-                                  forcePct: 100,
-                                  force: true,
-                                ); // GANTI
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Ditandai Complete'),
-                                    ),
-                                  );
-                                }
-                              },
+                              onPressed: !_canComplete
+                                  ? null
+                                  : () async {
+                                      setState(() => _progressPct = 100);
+                                      await _persistProgress(
+                                        isCompleted: true,
+                                        forcePct: 100,
+                                        force: true,
+                                      ); // GANTI
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Ditandai Complete'),
+                                          ),
+                                        );
+                                      }
+                                    },
                               icon: const Icon(Icons.check_circle),
                               label: const Text('Complete'),
                             ),
@@ -445,6 +444,15 @@ class _LessonsPageState extends State<LessonsPage> {
                           ),
                         ],
                       ),
+                      if (!_canComplete) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tonton lebih dari ${_completeMinPct.toStringAsFixed(0)}% video untuk menandai selesai.',
+                          style: t.textTheme.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
