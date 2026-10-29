@@ -405,39 +405,65 @@ class StocksProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final ({String interval, int limit}) candles = _indexCandleSpec(
-        indexInterval,
-      );
-
-      // Panggil endpoint baru yang sudah punya indikator
-      final ChartPayload payload = await _svc.getIhsgChartWithIndicators(
-        interval: candles.interval,
-        limit: candles.limit,
-      );
-      final List<Ohlc> bars = indexInterval == '1D'
-          ? _lastSessionBars(payload.candles)
-          : payload.candles;
-      ihsgChartPayload = ChartPayload(candles: bars);
-
-      // Tetap isi ihsgCandles agar widget lama tidak rusak
-      ihsgCandles = bars
-          .map(
-            (Ohlc e) => CandleItem(
-              ts: e.time,
-              open: e.open,
-              high: e.high,
-              low: e.low,
-              close: e.close,
-              volume: e.volume.toInt(),
-            ),
-          )
-          .toList();
+      await _loadIndexBars();
     } catch (e) {
       errIndex = 'Gagal memuat chart IHSG: $e';
     } finally {
       loadingIndex = false;
       notifyListeners();
     }
+  }
+
+  /// Kapan grafik IHSG terakhir berhasil dimuat (null = belum pernah).
+  DateTime? ihsgFetchedAt;
+
+  /// True kalau grafik IHSG belum pernah dimuat atau sudah lebih tua dari [maxAge].
+  bool isIndexStale(Duration maxAge) =>
+      ihsgFetchedAt == null ||
+      DateTime.now().difference(ihsgFetchedAt!) > maxAge;
+
+  /// Muat ulang grafik IHSG intraday (chip 1D) TANPA spinner dan tanpa menghapus grafik yang
+  /// sedang tampil: dipanggil berkala selama bursa buka supaya candle menit baru muncul sendiri.
+  /// Gagal -> grafik lama tetap tampil (jaringan sesaat bukan alasan menampilkan error).
+  Future<void> refreshIndexQuietly() async {
+    if (loadingIndex || indexInterval != '1D') return;
+    try {
+      await _loadIndexBars();
+      notifyListeners();
+    } catch (_) {
+      // abaikan; coba lagi di putaran berikutnya
+    }
+  }
+
+  Future<void> _loadIndexBars() async {
+    final ({String interval, int limit}) candles = _indexCandleSpec(
+      indexInterval,
+    );
+
+    // Panggil endpoint baru yang sudah punya indikator
+    final ChartPayload payload = await _svc.getIhsgChartWithIndicators(
+      interval: candles.interval,
+      limit: candles.limit,
+    );
+    final List<Ohlc> bars = indexInterval == '1D'
+        ? _lastSessionBars(payload.candles)
+        : payload.candles;
+    ihsgChartPayload = ChartPayload(candles: bars);
+
+    // Tetap isi ihsgCandles agar widget lama tidak rusak
+    ihsgCandles = bars
+        .map(
+          (Ohlc e) => CandleItem(
+            ts: e.time,
+            open: e.open,
+            high: e.high,
+            low: e.low,
+            close: e.close,
+            volume: e.volume.toInt(),
+          ),
+        )
+        .toList();
+    ihsgFetchedAt = DateTime.now();
   }
 
   /// Ganti resolusi candle di halaman TradingView (Model B: resolusi, bukan window).

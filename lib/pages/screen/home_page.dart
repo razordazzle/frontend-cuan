@@ -10,6 +10,7 @@ import 'package:cuan_app/controllers/chart_data_source.dart';
 import 'package:cuan_app/pages/screen/tradingview_chart_page.dart';
 import 'package:cuan_app/pages/screen/stock_detail_page.dart';
 import 'package:cuan_app/providers/stocks_provider.dart';
+import 'package:cuan_app/utils/idx_session.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -23,7 +24,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late StocksProvider _stocksProvider;
   late final TabController _tabController = TabController(
     length: 4,
@@ -42,11 +43,30 @@ class _HomePageState extends State<HomePage>
     _stocksProvider = context.read<StocksProvider>();
   }
 
+  /// Jeda pembaruan otomatis grafik IHSG intraday (chip 1D) selama bursa buka.
+  ///
+  /// Sengaja 65 detik, sedikit LEBIH LAMA dari cache server (INTRADAY_CACHE_SECONDS = 60). Kalau sama
+  /// (60), permintaan tiap tick jatuh sesaat sebelum cache habis, jadi selang-seling dijawab dari cache
+  /// dan grafik baru segar tiap 2 menit. Dengan 65, tiap tick mengambil data baru: grafik segar tiap
+  /// ~1 menit dan Invezgo dipanggil paling banyak 1x per menit (cache dipakai bersama semua user).
+  static const Duration _chartRefreshInterval = Duration(seconds: 65);
+
+  Timer? _chartTimer;
+  bool _appResumed = true;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _chartTimer = Timer.periodic(
+      _chartRefreshInterval,
+      (_) => _refreshChartIfDue(),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final p = _stocksProvider;
+      // Grafik yang tersimpan dari kunjungan sebelumnya (pindah tab lalu kembali) bisa sudah lama
+      final chartWasStale =
+          p.ihsgCandles.isNotEmpty && p.isIndexStale(_chartRefreshInterval);
       await Future.wait([
         p.fetchWatchlist(),
         p.fetchGainers(),
@@ -54,12 +74,32 @@ class _HomePageState extends State<HomePage>
         p.fetchVolume(),
         p.fetchIndexCandles(),
       ]);
+      if (chartWasStale) unawaited(p.refreshIndexQuietly());
 
       if (!mounted) return;
 
       await _subscribeActiveTab();
       p.startIhsgLive(wsBaseUrl: _wsBaseUrl);
     });
+  }
+
+  /// Muat ulang grafik 1D hanya kalau layar ini tampil, app di depan, dan bursa sedang buka.
+  void _refreshChartIfDue() {
+    if (!mounted || !_appResumed) return;
+    if (!isIdxSessionActive(DateTime.now().toUtc())) return;
+    _stocksProvider.refreshIndexQuietly();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appResumed = state == AppLifecycleState.resumed;
+    // Kembali dari background: kalau grafik sudah basi, segarkan sekarang (jangan tunggu timer)
+    if (_appResumed &&
+        mounted &&
+        isIdxSessionActive(DateTime.now().toUtc()) &&
+        _stocksProvider.isIndexStale(_chartRefreshInterval)) {
+      _stocksProvider.refreshIndexQuietly();
+    }
   }
 
   String _deltaText(List<Ohlc> candles) {
@@ -160,6 +200,8 @@ class _HomePageState extends State<HomePage>
   void dispose() {
     // context.read<StocksProvider>().stopIhsgLive();
     // context.read<StocksProvider>().stopLivePrices();
+    _chartTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _stocksProvider.stopIhsgLive();
     _stocksProvider.stopLivePrices();
     _tabController.dispose();

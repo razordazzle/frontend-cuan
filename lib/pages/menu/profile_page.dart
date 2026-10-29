@@ -1,4 +1,5 @@
 // lib/pages/screen/profile_page.dart
+import 'package:cuan_app/components/default_avatar.dart';
 import 'package:cuan_app/components/gradient_button.dart';
 import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/data/request/update_me_request.dart';
@@ -164,13 +165,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        CircleAvatar(
-                          radius: 36,
-                          backgroundImage: const NetworkImage(
-                            'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=600&auto=format&fit=crop',
-                          ),
-                          backgroundColor: cs.surfaceContainerHighest,
-                        ),
+                        const DefaultAvatar(radius: 36),
                         // badge kecil di pojok
                         Positioned(
                           bottom: -2,

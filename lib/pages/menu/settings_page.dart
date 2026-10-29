@@ -1,3 +1,4 @@
+import 'package:cuan_app/components/default_avatar.dart';
 import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
@@ -94,11 +95,7 @@ class _SettingsPageState extends State<SettingsPage> {
           Center(
             child: Column(
               children: [
-                CircleAvatar(
-                  radius: 36,
-                  backgroundColor: cs.surfaceVariant,
-                  child: Icon(Icons.person, color: cs.onSurface, size: 36),
-                ),
+                const DefaultAvatar(radius: 36),
                 const SizedBox(height: 10),
                 Row(
                   mainAxisSize: MainAxisSize.min,

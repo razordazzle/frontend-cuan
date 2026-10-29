@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cuan_app/components/default_avatar.dart';
 import 'package:cuan_app/components/gradient_text.dart';
 import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/providers/auth_provider.dart';
@@ -65,16 +66,14 @@ class _WelcomePageState extends State<WelcomePage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // avatar
-                CircleAvatar(
-                  radius: 44,
-                  backgroundColor: cs.surfaceVariant,
-                  backgroundImage: widget.avatarUrl != null
-                      ? NetworkImage(widget.avatarUrl!)
-                      : null,
-                  child: widget.avatarUrl == null
-                      ? Icon(Icons.person, color: cs.onSurface, size: 40)
-                      : null,
-                ),
+                // belum ada fitur ubah foto: avatarUrl null -> foto profil bawaan
+                widget.avatarUrl != null
+                    ? CircleAvatar(
+                        radius: 44,
+                        backgroundColor: cs.surfaceVariant,
+                        backgroundImage: NetworkImage(widget.avatarUrl!),
+                      )
+                    : const DefaultAvatar(radius: 44),
                 const SizedBox(height: 24),
                 // "Halo, User" (User ber-gradient)
                 Row(

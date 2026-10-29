@@ -1,3 +1,4 @@
+import 'package:cuan_app/components/default_avatar.dart';
 import 'package:cuan_app/utils/phone_format.dart';
 import 'package:cuan_app/utils/validators.dart';
 import 'package:flutter/material.dart';
@@ -60,11 +61,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _dateCtrl.text = _displayDate(picked);
     });
   }
+
   late final _nameCtrl = TextEditingController(text: widget.fullname);
   late final _userCtrl = TextEditingController(text: widget.username);
   late final _placeCtrl = TextEditingController(text: widget.birthPlace);
   late final _dateCtrl = TextEditingController();
-  DateTime? _birthDate; // dipilih lewat date picker; dikirim ke backend sebagai YYYY-MM-DD
+  DateTime?
+  _birthDate; // dipilih lewat date picker; dikirim ke backend sebagai YYYY-MM-DD
   late final _domCtrl = TextEditingController(text: widget.domicile);
   late final _phoneCtrl = TextEditingController(text: widget.phone);
 
@@ -117,12 +120,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           // Header kecil (avatar + title)
           Row(
             children: const [
-              CircleAvatar(
-                radius: 24,
-                backgroundImage: NetworkImage(
-                  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=600&auto=format&fit=crop',
-                ),
-              ),
+              DefaultAvatar(radius: 24),
               SizedBox(width: 12),
               Text(
                 'Edit Profil',
