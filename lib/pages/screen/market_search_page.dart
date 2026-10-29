@@ -1,11 +1,33 @@
+import 'package:cuan_app/config/app_routes.dart';
 import 'package:cuan_app/data/model/stock_list_item.dart';
 import 'package:cuan_app/data/services/stocks_service.dart';
 import 'package:cuan_app/pages/screen/stock_detail_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+/// Buka halaman saham dari hasil search.
+///
+/// [backToHome] = true (search dibuka dari halaman detail saham): tumpukan halaman di atas Home
+/// (detail saham sebelumnya + halaman search ini) dibuang dan diganti halaman baru, jadi tombol
+/// back dari saham yang baru dibuka langsung ke Home, bukan ke saham sebelumnya atau ke search.
+/// Penjaga `isFirst` mencegah tumpukan terkosongkan seandainya rute `/main` tidak ada.
+Future<T?> pushStockFromSearch<T>(
+  BuildContext context,
+  Route<T> route, {
+  required bool backToHome,
+}) {
+  final navigator = Navigator.of(context);
+  if (!backToHome) return navigator.push(route);
+  return navigator.pushAndRemoveUntil(
+    route,
+    (Route<dynamic> r) => r.settings.name == AppRoutes.main || r.isFirst,
+  );
+}
+
 class MarketSearchPage extends StatefulWidget {
-  const MarketSearchPage({super.key});
+  /// true bila dibuka dari halaman detail saham (back dari hasil pilihan langsung ke Home).
+  final bool backToHome;
+  const MarketSearchPage({super.key, this.backToHome = false});
 
   @override
   State<MarketSearchPage> createState() => _MarketSearchPageState();
@@ -209,7 +231,7 @@ class _MarketSearchPageState extends State<MarketSearchPage> {
             // Sembunyikan keyboard sebelum pindah halaman
             FocusScope.of(context).unfocus();
 
-            Navigator.push(
+            pushStockFromSearch(
               context,
               MaterialPageRoute(
                 builder: (_) => StockDetailPage(
@@ -221,6 +243,7 @@ class _MarketSearchPageState extends State<MarketSearchPage> {
                   logoUrl: s.logoUrl,
                 ),
               ),
+              backToHome: widget.backToHome,
             );
           },
         );

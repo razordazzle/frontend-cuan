@@ -6,6 +6,7 @@ import 'package:cuan_app/data/model/broker_summary_row.dart';
 import 'package:cuan_app/data/model/candle_item.dart';
 import 'package:cuan_app/data/services/stocks_service.dart';
 import 'package:cuan_app/controllers/chart_data_source.dart';
+import 'package:cuan_app/pages/screen/market_search_page.dart';
 import 'package:cuan_app/pages/screen/tradingview_chart_page.dart';
 import 'package:cuan_app/providers/stock_detail_provider.dart';
 import 'package:cuan_app/providers/stocks_provider.dart';
@@ -171,7 +172,14 @@ class _StockDetailPageState extends State<StockDetailPage> {
               actions: [
                 IconButton(
                   icon: Icon(Icons.search, color: cs.onSurface),
-                  onPressed: () {},
+                  // Sama dengan search di Home; saham yang dipilih menggantikan halaman ini
+                  // dan back dari sana langsung ke Home.
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const MarketSearchPage(backToHome: true),
+                    ),
+                  ),
                 ),
                 Consumer<StocksProvider>(
                   builder: (_, sp, __) {
@@ -1469,7 +1477,6 @@ class _CandleChartCardState extends State<_CandleChartCard> {
     if (!xMax.isAfter(xMin)) {
       xMax = xMin.add(const Duration(hours: 1));
     }
-
 
     if (isIntraday) {
       // Frame awal = candle hari ini saja. Candle hari-hari sebelumnya tetap masuk series
