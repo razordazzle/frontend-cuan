@@ -2510,7 +2510,12 @@
         function commitFibSettings(newSettings) {
             if (!newSettings) return;
             fibSettings = JSON.parse(JSON.stringify(newSettings));
-            pendingFibSettings = JSON.parse(JSON.stringify(newSettings));
+            // pendingFibSettings jangan diganti objek baru kalau yang di-commit dirinya sendiri: baris level di
+            // modal settings (checkbox, input level) masih memegang objek level lamanya, sehingga perubahan
+            // berikutnya hilang dan hanya perubahan pertama yang tersimpan.
+            if (newSettings !== pendingFibSettings) {
+                pendingFibSettings = JSON.parse(JSON.stringify(newSettings));
+            }
             if (selectedFibIndex >= 0 && selectedFibIndex < fibonaccis.length) {
                 fibonaccis[selectedFibIndex].settings = JSON.parse(JSON.stringify(fibSettings));
             }
@@ -2607,6 +2612,8 @@
         // (titiknya tidak tertutup jari) dan ketukan menaruh titik di crosshair. Selama jari menggeser:
         // { fromX, fromY, originX, originY }; null kalau tidak sedang ditekan.
         let placementDrag = null;
+        // Warna crosshair penempatan, sama untuk semua tool (biru default TradingView = warna default trendline).
+        const PLACEMENT_CROSSHAIR_COLOR = DRAWING_COLORS.trendline;
 
         let trendlines = []; // Array of { id, p1: { time, price }, p2: { time, price } }
         let isDrawingTrendline = false;
@@ -2688,7 +2695,14 @@
         function beginDrawingPlacement() {
             placementDrag = null;
             crosshairPos = crosshairPos ?? clampToCandleArea(getChartContentWidth() / 2, getMainPaneHeight() / 2);
-            if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+            if (!chart) return;
+            // Crosshair chart (mis. dari tekan lama) diganti crosshair penempatan, seperti TradingView mobile.
+            chart.clearCrosshairPosition();
+            chart.applyOptions({
+                handleScroll: false,
+                handleScale: false,
+                crosshair: { mode: LightweightCharts.CrosshairMode.Hidden },
+            });
         }
 
         /** Akhiri penempatan setelah tool selesai/batal; diabaikan kalau tool lain masih menggambar. */
@@ -2696,7 +2710,13 @@
             if (isPlacingDrawing()) return;
             placementDrag = null;
             crosshairPos = null;
-            if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
+            if (chart) {
+                chart.applyOptions({
+                    handleScroll: true,
+                    handleScale: true,
+                    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+                });
+            }
         }
 
         /** Drawing baru tersimpan: chart & canvas kembali ke mode normal. */
@@ -7828,7 +7848,7 @@
                 const price = getPriceAtY(hy);
 
                 ctx.save();
-                ctx.strokeStyle = isDrawingTrendline ? hexToRgba(lastTrendlineStyle.color || DRAWING_COLORS.trendline, 0.85) : (isDrawingRectangle ? hexToRgba(DRAWING_COLORS.rectangle, 0.85) : (currentCrosshairColor || 'rgba(255, 255, 255, 0.85)'));
+                ctx.strokeStyle = hexToRgba(PLACEMENT_CROSSHAIR_COLOR, 0.85);
                 ctx.lineWidth = 1;
                 ctx.setLineDash([6, 6]);
 
@@ -8750,7 +8770,7 @@
                         const badgeX = Math.min(maxContentX, Math.round(width - 2 - neededW));
                         const badgeWidth = Math.round(width - 2 - badgeX);
 
-                        ctx.fillStyle = isDrawingTrendline ? (lastTrendlineStyle.color || DRAWING_COLORS.trendline) : (isDrawingRectangle ? DRAWING_COLORS.rectangle : (isDrawingHorizontalLine ? (lastHLineStyle.color || DRAWING_COLORS.horizontalLine) : '#2962FF'));
+                        ctx.fillStyle = PLACEMENT_CROSSHAIR_COLOR;
                         ctx.beginPath();
                         if (ctx.roundRect) {
                             ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, [0, 4, 4, 0]);
