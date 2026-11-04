@@ -44,3 +44,31 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+// Nama file APK yang enak dibagikan: "Cuan App V<versi>.apk" (versi = versionName di pubspec.yaml).
+// Untuk build staging isi env APK_PREFIX, mis. APK_PREFIX="[Stag] - " -> "[Stag] - Cuan App V1.0.0.apk".
+//
+// Dibuat sebagai SALINAN di folder yang sama dengan app-release.apk, bukan mengganti nama aslinya:
+// `flutter build apk` mencari app-release.apk setelah Gradle selesai, jadi kalau file itu diganti
+// namanya perintah build dianggap gagal walau APK-nya sudah jadi.
+//
+// Sengaja tugas biasa TANPA input/output terdaftar (bukan tipe Copy): kalau folder flutter-apk
+// dideklarasikan sebagai output, Gradle menghapusnya sebagai "keluaran lama" saat tugas ini
+// dijalankan dan APK asli ikut hilang.
+val apkVersion = flutter.versionName
+val apkPrefix = System.getenv("APK_PREFIX") ?: ""
+val apkOutputDir = layout.buildDirectory.dir("outputs/flutter-apk")
+val namedApk = tasks.register("copyNamedReleaseApk") {
+    doLast {
+        val dir = apkOutputDir.get().asFile
+        // universal: app-release.apk | split per ABI: app-arm64-v8a-release.apk -> "... V1.0.0 arm64-v8a.apk"
+        val pattern = Regex("^app-(?:(.+)-)?release[.]apk$")
+        dir.listFiles()?.forEach { file ->
+            val abi = pattern.find(file.name)?.let { it.groupValues[1] } ?: return@forEach
+            val named = "${apkPrefix}Cuan App V$apkVersion" + (if (abi.isNotEmpty()) " $abi" else "") + ".apk"
+            file.copyTo(File(dir, named), overwrite = true)
+            println("APK bernama: ${File(dir, named)}")
+        }
+    }
+}
+tasks.matching { it.name == "assembleRelease" }.configureEach { finalizedBy(namedApk) }

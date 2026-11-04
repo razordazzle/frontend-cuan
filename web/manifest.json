@@ -1,6 +1,6 @@
 {
-    "name": "cuan_app",
-    "short_name": "cuan_app",
+    "name": "Cuan Mobile",
+    "short_name": "Cuan Mobile",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

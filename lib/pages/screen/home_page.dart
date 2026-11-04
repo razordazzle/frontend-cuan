@@ -225,7 +225,7 @@ class _HomePageState extends State<HomePage>
         titleSpacing: 16,
         centerTitle: false,
         title: Text(
-          'Cuan Apps',
+          'Cuan Mobile',
           style: t.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w800,
             color: cs.onSurface,

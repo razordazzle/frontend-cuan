@@ -136,7 +136,7 @@ class MyApp extends StatelessWidget {
         .watch<ThemeController>()
         .mode; // rebuild saat theme ganti
     return MaterialApp(
-      title: 'Cuan App',
+      title: 'Cuan Mobile',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: mode,

@@ -102,7 +102,7 @@ class LaunchPage extends StatelessWidget {
                     const SizedBox(height: 6),
 
                     GradientText(
-                      "Cuan App",
+                      "Cuan Mobile",
                       gradient: cuanGradient,
                       style: cuanAppStyle,
                     ),
