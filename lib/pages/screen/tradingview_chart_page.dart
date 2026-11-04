@@ -386,13 +386,13 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
                                     ChartDrawingTool.rectangle =>
                                       'Ketuk sudut 1 lalu sudut 2 untuk membuat Box Area',
                                     ChartDrawingTool.path =>
-                                      'Ketuk untuk menaruh titik Path, ketuk titik terakhir lagi untuk selesai',
+                                      'Geser untuk mengarahkan crosshair, ketuk untuk menaruh titik. Ketuk 2x di titik terakhir untuk selesai',
                                     ChartDrawingTool.elliottImpulse =>
-                                      'Ketuk 6 titik berurutan (0-1-2-3-4-5) untuk Elliott Impulse Wave',
+                                      'Geser untuk mengarahkan crosshair, ketuk untuk menaruh 6 titik (0-1-2-3-4-5)',
                                     ChartDrawingTool.elliottCorrection =>
-                                      'Ketuk 4 titik berurutan (0-A-B-C) untuk Elliott Correction Wave',
+                                      'Geser untuk mengarahkan crosshair, ketuk untuk menaruh 4 titik (0-A-B-C)',
                                     ChartDrawingTool.elliottTriangle =>
-                                      'Ketuk 6 titik berurutan (0-A-B-C-D-E) untuk Elliott Triangle Wave',
+                                      'Geser untuk mengarahkan crosshair, ketuk untuk menaruh 6 titik (0-A-B-C-D-E)',
                                     ChartDrawingTool.fibonacci || null =>
                                       'Tarik dari titik asal ke puncak untuk Fibonacci',
                                   },
