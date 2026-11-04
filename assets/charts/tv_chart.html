@@ -2603,6 +2603,10 @@
         let dragHorizontalLineIndex = -1;
         let crosshairPos = null;
         let currentCrosshairColor = 'rgba(255, 255, 255, 0.75)';
+        // Penempatan titik drawing baru ala TradingView mobile: jari menggeser crosshair secara relatif
+        // (titiknya tidak tertutup jari) dan ketukan menaruh titik di crosshair. Selama jari menggeser:
+        // { fromX, fromY, originX, originY }; null kalau tidak sedang ditekan.
+        let placementDrag = null;
 
         let trendlines = []; // Array of { id, p1: { time, price }, p2: { time, price } }
         let isDrawingTrendline = false;
@@ -2654,6 +2658,252 @@
             let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
             t = Math.max(0, Math.min(1, t));
             return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+        }
+
+        /** Tinggi pane harga utama (pane 0), satu-satunya area tempat drawing. */
+        function getMainPaneHeight() {
+            const paneHeight = chart?.panes?.()[0]?.getHeight();
+            if (paneHeight > 0) return paneHeight;
+            const canvas = document.getElementById('fib-canvas');
+            return canvas ? canvas.getBoundingClientRect().height : 0;
+        }
+
+        /** Posisi dijepit ke area candle supaya titik di crosshair selalu punya waktu & harga. */
+        function clampToCandleArea(x, y) {
+            return {
+                x: Math.max(0, Math.min(x, getChartContentWidth())),
+                y: Math.max(0, Math.min(y, getMainPaneHeight())),
+            };
+        }
+
+        /** True selama ada tool yang sedang menaruh titik drawing baru. */
+        function isPlacingDrawing() {
+            return isDrawingHorizontalLine
+                || (isDrawingTrendline && trendlineDrawState > 0)
+                || (isDrawingRectangle && rectangleDrawState > 0)
+                || (isDrawingFib && fibDrawState > 0);
+        }
+
+        /** Mulai menaruh titik: crosshair di tengah area candle & chart tidak ikut ter-scroll oleh geseran jari. */
+        function beginDrawingPlacement() {
+            placementDrag = null;
+            crosshairPos = crosshairPos ?? clampToCandleArea(getChartContentWidth() / 2, getMainPaneHeight() / 2);
+            if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+        }
+
+        /** Akhiri penempatan setelah tool selesai/batal; diabaikan kalau tool lain masih menggambar. */
+        function releaseDrawingPlacement() {
+            if (isPlacingDrawing()) return;
+            placementDrag = null;
+            crosshairPos = null;
+            if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
+        }
+
+        /** Drawing baru tersimpan: chart & canvas kembali ke mode normal. */
+        function completeDrawingPlacement() {
+            releaseDrawingPlacement();
+            const canvas = document.getElementById('fib-canvas');
+            if (canvas) {
+                canvas.style.cursor = 'default';
+                canvas.style.pointerEvents = 'none';
+            }
+        }
+
+        function postDrawingEvent(type, payload) {
+            if (window.flutter_inappwebview?.callHandler) {
+                window.flutter_inappwebview.callHandler(type, payload);
+            }
+            window.parent?.postMessage(JSON.stringify({ type, payload }), '*');
+        }
+
+        /** { time, price } di koordinat layar; null kalau di luar data / pane harga. */
+        function chartPointAt(x, y) {
+            const time = getTimeAtX(x);
+            const price = getPriceAtY(y);
+            return time && price !== null ? { time, price } : null;
+        }
+
+        /** Titik ke-2 trendline di (x, y), dikunci ke kelipatan 45° dari titik 1 kalau angle lock aktif. */
+        function trendlineTargetPoint(x, y) {
+            const series = candleSeries || areaSeries;
+            if (globalAngleLock && tempTrendlineP1 && series && chart) {
+                const ox = chart.timeScale().timeToCoordinate(tempTrendlineP1.time);
+                const oy = series.priceToCoordinate(tempTrendlineP1.price);
+                if (ox !== null && oy !== null) {
+                    const snapped = snapCoordinateTo45Degrees(ox, oy, x, y);
+                    return chartPointAt(snapped.x, snapped.y);
+                }
+            }
+            return chartPointAt(x, y);
+        }
+
+        /** Pratinjau titik ke-2 (rubber band) trendline / rectangle / fib mengikuti crosshair. */
+        function updatePlacementPreview() {
+            if (!crosshairPos) return;
+            const { x, y } = crosshairPos;
+            if (isDrawingTrendline && trendlineDrawState === 2) {
+                tempTrendlineP2 = trendlineTargetPoint(x, y) ?? tempTrendlineP2;
+            } else if (isDrawingRectangle && rectangleDrawState === 2) {
+                tempRectangleP2 = chartPointAt(x, y) ?? tempRectangleP2;
+            } else if (isDrawingFib && fibDrawState === 2) {
+                tempFibP2 = chartPointAt(x, y) ?? tempFibP2;
+            }
+        }
+
+        /** Taruh titik tool aktif di crosshair: titik pertama memulai rubber band, titik terakhir menyimpan drawing. */
+        function placeDrawingPointAtCrosshair() {
+            if (!crosshairPos) return;
+            const { x, y } = crosshairPos;
+            if (isDrawingHorizontalLine) {
+                const price = getPriceAtY(y);
+                if (price !== null) finishHorizontalLine(price);
+                return;
+            }
+            const point = chartPointAt(x, y);
+            if (!point) return;
+            if (isDrawingTrendline) {
+                if (trendlineDrawState === 1) {
+                    tempTrendlineP1 = point;
+                    tempTrendlineP2 = point;
+                    trendlineDrawState = 2;
+                } else {
+                    finishTrendline(trendlineTargetPoint(x, y) ?? point);
+                }
+            } else if (isDrawingRectangle) {
+                if (rectangleDrawState === 1) {
+                    tempRectangleP1 = point;
+                    tempRectangleP2 = point;
+                    rectangleDrawState = 2;
+                } else {
+                    finishRectangle(point);
+                }
+            } else if (isDrawingFib) {
+                if (fibDrawState === 1) {
+                    tempFibP1 = point;
+                    tempFibP2 = point;
+                    fibDrawState = 2;
+                } else {
+                    finishFibonacci(point);
+                }
+            }
+        }
+
+        function finishHorizontalLine(price) {
+            const newHLine = normalizeHorizontalLine({
+                id: 'hl_' + Date.now(),
+                price: price,
+                color: lastHLineStyle.color || DRAWING_COLORS.horizontalLine,
+                width: lastHLineStyle.width || 2,
+                style: lastHLineStyle.style || 'solid',
+                opacity: lastHLineStyle.opacity !== undefined ? lastHLineStyle.opacity : 1.0,
+                text: '',
+                textColor: null,
+                textSize: 14,
+                textBold: false,
+                textItalic: false,
+                textValign: 'top',
+                textHalign: 'center',
+                isLocked: false,
+                hidden: false
+            });
+            horizontalLines.push(newHLine);
+            selectedHorizontalLineIndex = horizontalLines.length - 1; // Enter edit mode immediately upon placement!
+            selectedTrendlineIndex = -1;
+            selectedRectangleIndex = -1;
+            isFibSelected = false;
+            isDrawingHorizontalLine = false;
+            completeDrawingPlacement();
+            showHorizontalLineToolbar(selectedHorizontalLineIndex);
+            renderFib();
+            notifyHorizontalLinesChanged();
+            postDrawingEvent('onHorizontalLineAdded', newHLine);
+        }
+
+        function finishTrendline(p2) {
+            const newLine = {
+                id: 'tl_' + Date.now(),
+                p1: tempTrendlineP1,
+                p2,
+                color: lastTrendlineStyle.color || DRAWING_COLORS.trendline,
+                width: lastTrendlineStyle.width || 2,
+                style: lastTrendlineStyle.style || 'solid',
+                opacity: lastTrendlineStyle.opacity !== undefined ? lastTrendlineStyle.opacity : 1.0,
+                textColor: null,
+                lockAngle: false
+            };
+            trendlines.push(newLine);
+            globalAngleLock = false;
+            selectedTrendlineIndex = trendlines.length - 1; // Enter edit mode upon placement
+            isDrawingTrendline = false;
+            trendlineDrawState = 0;
+            tempTrendlineP1 = null;
+            tempTrendlineP2 = null;
+            completeDrawingPlacement();
+            showTrendlineToolbar(selectedTrendlineIndex);
+            renderFib();
+            notifyTrendlinesChanged();
+            postDrawingEvent('onTrendlineAdded', newLine);
+        }
+
+        function finishRectangle(p2) {
+            const newRect = {
+                id: 'rect_' + Date.now(),
+                p1: tempRectangleP1,
+                p2,
+                color: DRAWING_COLORS.rectangle,
+                width: 2,
+                style: 'solid',
+                fillColor: DRAWING_COLORS.rectangle,
+                fillOpacity: 0.2,
+                text: '',
+                textColor: null,
+                textSize: 14,
+                textBold: false,
+                textItalic: false,
+                textValign: 'middle',
+                textHalign: 'center',
+                lockAspect: false,
+                isLocked: false,
+                hidden: false
+            };
+            rectangles.push(newRect);
+            selectedRectangleIndex = rectangles.length - 1; // Enter edit mode upon placement
+            selectedTrendlineIndex = -1;
+            selectedHorizontalLineIndex = -1;
+            isFibSelected = false;
+            isDrawingRectangle = false;
+            rectangleDrawState = 0;
+            tempRectangleP1 = null;
+            tempRectangleP2 = null;
+            completeDrawingPlacement();
+            showRectangleToolbar(selectedRectangleIndex);
+            renderFib();
+            notifyRectanglesChanged();
+            postDrawingEvent('onRectangleAdded', newRect);
+        }
+
+        function finishFibonacci(p2) {
+            fibonaccis.push({
+                id: 'fib_' + Date.now(),
+                p1: tempFibP1,
+                p2,
+                settings: JSON.parse(JSON.stringify(fibSettings)),
+                isLocked: false,
+                hidden: false,
+                customColor: fibCustomColor || null,
+                lineWidth: fibLineWidth || 2
+            });
+            selectedFibIndex = fibonaccis.length - 1;
+            syncActiveFibFromIndex();
+            tempFibP1 = null;
+            tempFibP2 = null;
+            fibDrawState = 0;
+            isDrawingFib = false;
+            completeDrawingPlacement();
+            showFibToolbar();
+            renderFib();
+            refreshObjectTree();
+            postDrawingEvent('onFibDrawn', true);
         }
 
         let fibDrawState = 0; // 0: idle, 1: waiting for anchor 1, 2: waiting for anchor 2
@@ -6840,44 +7090,13 @@
                 pointerDownTime = Date.now();
                 pendingTapSelection = null;
 
-                // 0. Horizontal Line Placement (One-Tap S/R)
-                if (isDrawingHorizontalLine) {
-                    const price = getPriceAtY(y);
-                    crosshairPos = null;
-                    if (price !== null) {
-                        const newHLine = normalizeHorizontalLine({
-                            id: 'hl_' + Date.now(),
-                            price: price,
-                            color: lastHLineStyle.color || DRAWING_COLORS.horizontalLine,
-                            width: lastHLineStyle.width || 2,
-                            style: lastHLineStyle.style || 'solid',
-                            opacity: lastHLineStyle.opacity !== undefined ? lastHLineStyle.opacity : 1.0,
-                            text: '',
-                            textColor: null,
-                            textSize: 14,
-                            textBold: false,
-                            textItalic: false,
-                            textValign: 'top',
-                            textHalign: 'center',
-                            isLocked: false,
-                            hidden: false
-                        });
-                        horizontalLines.push(newHLine);
-                        selectedHorizontalLineIndex = horizontalLines.length - 1; // Enter edit mode immediately upon placement!
-                        selectedTrendlineIndex = -1;
-                        selectedRectangleIndex = -1;
-                        isFibSelected = false;
-                        isDrawingHorizontalLine = false;
-                        canvas.style.cursor = 'default';
-                        canvas.style.pointerEvents = 'none';
-                        showHorizontalLineToolbar(selectedHorizontalLineIndex);
-                        renderFib();
-                        notifyHorizontalLinesChanged();
-                        if (window.flutter_inappwebview?.callHandler) {
-                            window.flutter_inappwebview.callHandler('onHorizontalLineAdded', newHLine);
-                        }
-                        window.parent?.postMessage(JSON.stringify({ type: 'onHorizontalLineAdded', payload: newHLine }), '*');
-                    }
+                // 0. Penempatan drawing baru (S/R, Trendline, Rectangle, Fib): geseran jari memindahkan crosshair
+                // secara relatif, ketukan menaruh titik di crosshair (onPointerUp). Mouse: crosshair = kursor.
+                if (isPlacingDrawing()) {
+                    if (e.pointerType === 'mouse' || !crosshairPos) crosshairPos = clampToCandleArea(x, y);
+                    placementDrag = { fromX: x, fromY: y, originX: crosshairPos.x, originY: crosshairPos.y };
+                    isPointerDown = true;
+                    try { canvas.setPointerCapture?.(e.pointerId); } catch (_) {}
                     return;
                 }
 
@@ -6906,147 +7125,6 @@
                             return;
                         }
                     }
-                }
-
-                // 0.2 Trendline Placement (Two-Click Drawing Mode)
-                if (isDrawingTrendline) {
-                    const time = getTimeAtX(clampedX);
-                    const price = getPriceAtY(y);
-                    if (time && price !== null) {
-                        if (trendlineDrawState === 1) {
-                            // Click 1: Anchor 1 placed
-                            tempTrendlineP1 = { time, price };
-                            tempTrendlineP2 = { time, price };
-                            trendlineDrawState = 2; // Waiting for Anchor 2
-                            isPointerDown = true;
-                            canvas.setPointerCapture?.(e.pointerId);
-                            if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
-                            renderFib();
-                            return;
-                        } else if (trendlineDrawState === 2) {
-                            // Click 2: Anchor 2 placed -> Lock trendline
-                            if (tempTrendlineP1) {
-                                let finalTime = time;
-                                let finalPrice = price;
-                                if (globalAngleLock) {
-                                    const activeSeries = candleSeries || areaSeries;
-                                    if (activeSeries && chart) {
-                                        const ox = chart.timeScale().timeToCoordinate(tempTrendlineP1.time);
-                                        const oy = activeSeries.priceToCoordinate(tempTrendlineP1.price);
-                                        if (ox !== null && oy !== null) {
-                                            const snapped = snapCoordinateTo45Degrees(ox, oy, clampedX, y);
-                                            const st = getTimeAtX(snapped.x);
-                                            const sp = getPriceAtY(snapped.y);
-                                            if (st && sp !== null) {
-                                                finalTime = st;
-                                                finalPrice = sp;
-                                            }
-                                        }
-                                    }
-                                }
-                                const newLine = {
-                                    id: 'tl_' + Date.now(),
-                                    p1: tempTrendlineP1,
-                                    p2: { time: finalTime, price: finalPrice },
-                                    color: lastTrendlineStyle.color || DRAWING_COLORS.trendline,
-                                    width: lastTrendlineStyle.width || 2,
-                                    style: lastTrendlineStyle.style || 'solid',
-                                    opacity: lastTrendlineStyle.opacity !== undefined ? lastTrendlineStyle.opacity : 1.0,
-                                    textColor: null,
-                                    lockAngle: false
-                                };
-                                trendlines.push(newLine);
-                                globalAngleLock = false;
-                                selectedTrendlineIndex = trendlines.length - 1; // Enter edit mode upon placement
-                                isDrawingTrendline = false;
-                                trendlineDrawState = 0;
-                                tempTrendlineP1 = null;
-                                tempTrendlineP2 = null;
-                                crosshairPos = null;
-                                isPointerDown = false;
-                                try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                                if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
-                                canvas.style.cursor = 'default';
-                                canvas.style.pointerEvents = 'none';
-                                showTrendlineToolbar(selectedTrendlineIndex);
-                                renderFib();
-                                notifyTrendlinesChanged();
-                                if (window.flutter_inappwebview?.callHandler) {
-                                    window.flutter_inappwebview.callHandler('onTrendlineAdded', newLine);
-                                }
-                                window.parent?.postMessage(JSON.stringify({ type: 'onTrendlineAdded', payload: newLine }), '*');
-                                return;
-                            }
-                        }
-                    }
-                    return;
-                }
-
-                // 0.25 Rectangle Placement (Two-Click Drawing Mode)
-                if (isDrawingRectangle) {
-                    const time = getTimeAtX(clampedX);
-                    const price = getPriceAtY(y);
-                    if (time && price !== null) {
-                        if (rectangleDrawState === 1) {
-                            // Click 1: Anchor 1 placed
-                            tempRectangleP1 = { time, price };
-                            tempRectangleP2 = { time, price };
-                            rectangleDrawState = 2; // Waiting for Anchor 2
-                            isPointerDown = true;
-                            canvas.setPointerCapture?.(e.pointerId);
-                            if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
-                            renderFib();
-                            return;
-                        } else if (rectangleDrawState === 2) {
-                            // Click 2: Anchor 2 placed -> Lock rectangle
-                            if (tempRectangleP1) {
-                                const newRect = {
-                                    id: 'rect_' + Date.now(),
-                                    p1: tempRectangleP1,
-                                    p2: { time, price },
-                                    color: DRAWING_COLORS.rectangle,
-                                    width: 2,
-                                    style: 'solid',
-                                    fillColor: DRAWING_COLORS.rectangle,
-                                    fillOpacity: 0.2,
-                                    text: '',
-                                    textColor: null,
-                                    textSize: 14,
-                                    textBold: false,
-                                    textItalic: false,
-                                    textValign: 'middle',
-                                    textHalign: 'center',
-                                    lockAspect: false,
-                                    isLocked: false,
-                                    hidden: false
-                                };
-                                rectangles.push(newRect);
-                                selectedRectangleIndex = rectangles.length - 1; // Enter edit mode upon placement
-                                selectedTrendlineIndex = -1;
-                                selectedHorizontalLineIndex = -1;
-                                isFibSelected = false;
-                                isDrawingRectangle = false;
-                                rectangleDrawState = 0;
-                                tempRectangleP1 = null;
-                                tempRectangleP2 = null;
-                                crosshairPos = null;
-                                isPointerDown = false;
-                                try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                                if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
-                                canvas.style.cursor = 'default';
-                                canvas.style.pointerEvents = 'none';
-                                showRectangleToolbar(selectedRectangleIndex);
-                                renderFib();
-                                notifyRectanglesChanged();
-                                if (window.flutter_inappwebview?.callHandler) {
-                                    window.flutter_inappwebview.callHandler('onRectangleAdded', newRect);
-                                }
-                                window.parent?.postMessage(JSON.stringify({ type: 'onRectangleAdded', payload: newRect }), '*');
-                                return;
-                            }
-                        }
-                    }
-                    return;
                 }
 
                 // 0.26 Check if clicking on an existing Rectangle (corner anchors or body)
@@ -7244,61 +7322,6 @@
                     }
                 }
 
-                // 2. Click 1: Place Anchor 1 (Fib)
-                if (fibDrawState === 1) {
-                    const time = getTimeAtX(clampedX);
-                    const price = getPriceAtY(y);
-                    if (time && price !== null) {
-                        tempFibP1 = { time, price };
-                        tempFibP2 = { time, price };
-                        fibDrawState = 2; // Now waiting for click 2 (Anchor 2)
-                        isPointerDown = true;
-                        canvas.setPointerCapture?.(e.pointerId);
-                        if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
-                        renderFib();
-                    }
-                    return;
-                }
-
-                // 3. Click 2: Place Anchor 2 (Fib - No hold required!)
-                if (fibDrawState === 2) {
-                    const time = getTimeAtX(clampedX);
-                    const price = getPriceAtY(y);
-                    if (time && price !== null && tempFibP1) {
-                        const newFib = {
-                            id: 'fib_' + Date.now(),
-                            p1: tempFibP1,
-                            p2: { time, price },
-                            settings: JSON.parse(JSON.stringify(fibSettings)),
-                            isLocked: false,
-                            hidden: false,
-                            customColor: fibCustomColor || null,
-                            lineWidth: fibLineWidth || 2
-                        };
-                        fibonaccis.push(newFib);
-                        selectedFibIndex = fibonaccis.length - 1;
-                        syncActiveFibFromIndex();
-                        tempFibP1 = null;
-                        tempFibP2 = null;
-                        fibDrawState = 0;
-                        isDrawingFib = false;
-                        isPointerDown = false;
-                        try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                        if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
-                        canvas.style.cursor = 'default';
-                        canvas.style.pointerEvents = 'none';
-                        showFibToolbar();
-                        renderFib();
-                        refreshObjectTree();
-
-                        if (window.flutter_inappwebview?.callHandler) {
-                            window.flutter_inappwebview.callHandler('onFibDrawn', true);
-                        }
-                        window.parent?.postMessage(JSON.stringify({ type: 'onFibDrawn', payload: true }), '*');
-                    }
-                    return;
-                }
-
                 if (pendingTapSelection) return;
 
                 // If tapped on empty canvas space outside all drawings:
@@ -7340,51 +7363,25 @@
                 const maxContentX = getChartContentWidth();
                 const clampedX = Math.max(0, Math.min(x, maxContentX));
 
-                // Tracking crosshair position during drawing tools (S/R, Fib, Trendline, Rectangle)
-                if (isDrawingHorizontalLine || (isDrawingFib && fibDrawState > 0) || (isDrawingTrendline && trendlineDrawState > 0) || (isDrawingRectangle && rectangleDrawState > 0)) {
-                    crosshairPos = { x: clampedX, y };
-                    if (isDrawingHorizontalLine || (isDrawingTrendline && trendlineDrawState === 1) || (isDrawingRectangle && rectangleDrawState === 1)) {
-                        renderFib();
+                // Drawing baru: crosshair bergeser sejauh geseran jari (lihat pointerdown 0.), mouse tanpa
+                // ditekan = posisi kursor; titik ke-2 (rubber band) ikut crosshair.
+                if (isPlacingDrawing()) {
+                    if (placementDrag) {
+                        crosshairPos = clampToCandleArea(
+                            placementDrag.originX + x - placementDrag.fromX,
+                            placementDrag.originY + y - placementDrag.fromY,
+                        );
+                    } else if (e.pointerType === 'mouse') {
+                        crosshairPos = clampToCandleArea(x, y);
+                    } else {
                         return;
                     }
-                } else if (crosshairPos !== null && dragHorizontalLineIndex === -1 && dragTrendlineIndex === -1 && dragRectangleIndex === -1) {
+                    updatePlacementPreview();
+                    renderFib();
+                    return;
+                }
+                if (crosshairPos !== null && dragHorizontalLineIndex === -1 && dragTrendlineIndex === -1 && dragRectangleIndex === -1) {
                     crosshairPos = null;
-                }
-
-                // Live rubber-band preview during Trendline Anchor 2 aiming
-                if (isDrawingTrendline && trendlineDrawState === 2) {
-                    let targetX = clampedX;
-                    let targetY = y;
-                    if (globalAngleLock && tempTrendlineP1) {
-                        const activeSeries = candleSeries || areaSeries;
-                        if (activeSeries && chart) {
-                            const ox = chart.timeScale().timeToCoordinate(tempTrendlineP1.time);
-                            const oy = activeSeries.priceToCoordinate(tempTrendlineP1.price);
-                            if (ox !== null && oy !== null) {
-                                const snapped = snapCoordinateTo45Degrees(ox, oy, targetX, targetY);
-                                targetX = snapped.x;
-                                targetY = snapped.y;
-                            }
-                        }
-                    }
-                    const time = getTimeAtX(targetX);
-                    const price = getPriceAtY(targetY);
-                    if (time && price !== null) {
-                        tempTrendlineP2 = { time, price };
-                        renderFib();
-                    }
-                    return;
-                }
-
-                // Live rubber-band preview during Rectangle Anchor 2 aiming
-                if (isDrawingRectangle && rectangleDrawState === 2) {
-                    const time = getTimeAtX(clampedX);
-                    const price = getPriceAtY(y);
-                    if (time && price !== null) {
-                        tempRectangleP2 = { time, price };
-                        renderFib();
-                    }
-                    return;
                 }
 
                 // Dragging Trendline (Anchor 1, Anchor 2, or Body)
@@ -7674,16 +7671,6 @@
                     }
                     return;
                 }
-
-                // While in state 2: live preview as cursor/finger moves (NO HOLDING NEEDED)
-                if (fibDrawState === 2) {
-                    const time = getTimeAtX(clampedX);
-                    const price = getPriceAtY(y);
-                    if (time && price !== null) {
-                        tempFibP2 = { time, price };
-                        renderFib();
-                    }
-                }
             };
 
             canvas.addEventListener('pointermove', onPointerMove);
@@ -7692,7 +7679,8 @@
             }
 
             canvas.addEventListener('pointerleave', () => {
-                if (crosshairPos !== null) {
+                // Crosshair penempatan tetap ada: di layar sentuh pointerleave muncul setiap jari diangkat.
+                if (crosshairPos !== null && !isPlacingDrawing()) {
                     crosshairPos = null;
                     renderFib();
                 }
@@ -7715,6 +7703,19 @@
                         && dist <= TAP_MAX_DISTANCE
                         && Date.now() - pointerDownTime <= TAP_MAX_DURATION_MS;
                     if (isTap) select();
+                    return;
+                }
+
+                // Drawing baru: ketukan (tanpa geser) menaruh titik di crosshair; geseran cukup memindahkan crosshair.
+                if (isPlacingDrawing()) {
+                    const drag = placementDrag;
+                    placementDrag = null;
+                    isPointerDown = false;
+                    try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
+                    if (drag && e.type === 'pointerup' && Math.hypot(x - drag.fromX, y - drag.fromY) <= TAP_MAX_DISTANCE) {
+                        placeDrawingPointAtCrosshair();
+                    }
+                    renderFib();
                     return;
                 }
 
@@ -7778,155 +7779,6 @@
                     return;
                 }
 
-                if (isDrawingTrendline && trendlineDrawState === 2) {
-                    // If user dragged and released with distance >= 20px, finalize immediately (Drag gesture fallback)
-                    if (dist >= 20 && tempTrendlineP1 && tempTrendlineP2) {
-                        const newLine = {
-                            id: 'tl_' + Date.now(),
-                            p1: tempTrendlineP1,
-                            p2: tempTrendlineP2,
-                            color: lastTrendlineStyle.color || DRAWING_COLORS.trendline,
-                            width: lastTrendlineStyle.width || 2,
-                            style: lastTrendlineStyle.style || 'solid',
-                            opacity: lastTrendlineStyle.opacity !== undefined ? lastTrendlineStyle.opacity : 1.0,
-                            textColor: null,
-                            lockAngle: false
-                        };
-                        trendlines.push(newLine);
-                        globalAngleLock = false;
-                        selectedTrendlineIndex = trendlines.length - 1; // Enter edit mode upon placement
-                        isDrawingTrendline = false;
-                        trendlineDrawState = 0;
-                        tempTrendlineP1 = null;
-                        tempTrendlineP2 = null;
-                        crosshairPos = null;
-                        isPointerDown = false;
-                        try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                        try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                        if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
-                        canvas.style.cursor = 'default';
-                        canvas.style.pointerEvents = 'none';
-                        showTrendlineToolbar(selectedTrendlineIndex);
-                        renderFib();
-                        notifyTrendlinesChanged();
-                        if (window.flutter_inappwebview?.callHandler) {
-                            window.flutter_inappwebview.callHandler('onTrendlineAdded', newLine);
-                        }
-                        window.parent?.postMessage(JSON.stringify({ type: 'onTrendlineAdded', payload: newLine }), '*');
-                        return;
-                    }
-
-                    // If it was just a tap for Anchor 1:
-                    isPointerDown = false;
-                    try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                    try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                    renderFib();
-                    return;
-                }
-
-                if (isDrawingRectangle && rectangleDrawState === 2) {
-                    // If user dragged and released with distance >= 20px, finalize immediately (Drag gesture fallback)
-                    if (dist >= 20 && tempRectangleP1 && tempRectangleP2) {
-                        const newRect = {
-                            id: 'rect_' + Date.now(),
-                            p1: tempRectangleP1,
-                            p2: tempRectangleP2,
-                            color: DRAWING_COLORS.rectangle,
-                            width: 2,
-                            style: 'solid',
-                            fillColor: DRAWING_COLORS.rectangle,
-                            fillOpacity: 0.2,
-                            text: '',
-                            textColor: null,
-                            textSize: 14,
-                            textBold: false,
-                            textItalic: false,
-                            textValign: 'middle',
-                            textHalign: 'center',
-                            lockAspect: false,
-                            isLocked: false,
-                            hidden: false
-                        };
-                        rectangles.push(newRect);
-                        selectedRectangleIndex = rectangles.length - 1; // Enter edit mode upon placement
-                        selectedTrendlineIndex = -1;
-                        selectedHorizontalLineIndex = -1;
-                        isFibSelected = false;
-                        isDrawingRectangle = false;
-                        rectangleDrawState = 0;
-                        tempRectangleP1 = null;
-                        tempRectangleP2 = null;
-                        crosshairPos = null;
-                        isPointerDown = false;
-                        try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                        try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                        if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
-                        canvas.style.cursor = 'default';
-                        canvas.style.pointerEvents = 'none';
-                        showRectangleToolbar(selectedRectangleIndex);
-                        renderFib();
-                        notifyRectanglesChanged();
-                        if (window.flutter_inappwebview?.callHandler) {
-                            window.flutter_inappwebview.callHandler('onRectangleAdded', newRect);
-                        }
-                        window.parent?.postMessage(JSON.stringify({ type: 'onRectangleAdded', payload: newRect }), '*');
-                        return;
-                    }
-
-                    // If it was just a tap for Corner 1:
-                    isPointerDown = false;
-                    try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                    try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                    renderFib();
-                    return;
-                }
-
-
-                if (fibDrawState === 2) {
-                    // If user dragged and released with distance >= 20px, finalize immediately (Drag gesture fallback)
-                    if (dist >= 20 && tempFibP1 && tempFibP2 && Math.abs(tempFibP2.price - tempFibP1.price) > 0.001) {
-                        const newFib = {
-                            id: 'fib_' + Date.now(),
-                            p1: tempFibP1,
-                            p2: tempFibP2,
-                            settings: JSON.parse(JSON.stringify(fibSettings)),
-                            isLocked: false,
-                            hidden: false,
-                            customColor: fibCustomColor || null,
-                            lineWidth: fibLineWidth || 2
-                        };
-                        fibonaccis.push(newFib);
-                        selectedFibIndex = fibonaccis.length - 1;
-                        syncActiveFibFromIndex();
-                        tempFibP1 = null;
-                        tempFibP2 = null;
-                        fibDrawState = 0;
-                        isDrawingFib = false;
-                        isPointerDown = false;
-                        try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                        try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                        if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
-                        canvas.style.cursor = 'default';
-                        canvas.style.pointerEvents = 'none';
-                        showFibToolbar();
-                        renderFib();
-                        refreshObjectTree();
-
-                        if (window.flutter_inappwebview?.callHandler) {
-                            window.flutter_inappwebview.callHandler('onFibDrawn', true);
-                        }
-                        window.parent?.postMessage(JSON.stringify({ type: 'onFibDrawn', payload: true }), '*');
-                        return;
-                    }
-
-                    // If it was just a tap for Anchor 1:
-                    // Release pointer capture so cursor/touch movement tracks freely WITHOUT needing to hold!
-                    isPointerDown = false;
-                    try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                    try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                    renderFib();
-                    return;
-                }
             };
 
             canvas.addEventListener('pointerup', onPointerUp);
@@ -7994,6 +7846,16 @@
                     ctx.stroke();
                 }
                 ctx.setLineDash([]);
+
+                // Titik pusat crosshair = posisi titik yang akan ditaruh saat diketuk
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(hx, hy, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#1E1E1E';
+                ctx.beginPath();
+                ctx.arc(hx, hy, 3, 0, Math.PI * 2);
+                ctx.fill();
 
                 ctx.restore();
             }
@@ -8930,6 +8792,7 @@
                 fibDrawState = 0;
                 tempFibP1 = null;
                 tempFibP2 = null;
+                releaseDrawingPlacement();
                 fibonaccis = [];
                 selectedFibIndex = -1;
                 syncActiveFibFromIndex();
@@ -8974,6 +8837,7 @@
             fibDrawState = 0;
             tempFibP1 = null;
             tempFibP2 = null;
+            releaseDrawingPlacement();
             const canvas = document.getElementById('fib-canvas');
             if (canvas && !isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle) {
                 canvas.style.pointerEvents = 'none';
@@ -8997,6 +8861,7 @@
             tempFibP2 = null;
             fibDrawState = 1; // Waiting for Anchor 1 click
             dragMode = 0;
+            beginDrawingPlacement();
             const canvas = document.getElementById('fib-canvas');
             if (canvas) {
                 canvas.style.pointerEvents = 'auto';
@@ -9015,16 +8880,18 @@
             cancelTrendlineDrawing();
             cancelRectangleDrawing();
             isDrawingHorizontalLine = true;
+            beginDrawingPlacement();
             const canvas = document.getElementById('fib-canvas');
             if (canvas) {
                 canvas.style.pointerEvents = 'auto';
                 canvas.style.cursor = 'crosshair';
             }
+            renderFib();
         }
 
         function cancelHorizontalLineDrawing() {
             isDrawingHorizontalLine = false;
-            crosshairPos = null;
+            releaseDrawingPlacement();
             const canvas = document.getElementById('fib-canvas');
             if (canvas && !isDrawingFib && !isDrawingTrendline && !isDrawingRectangle) {
                 canvas.style.pointerEvents = 'none';
@@ -9053,7 +8920,7 @@
             horizontalLines = [];
             selectedHorizontalLineIndex = -1;
             isDrawingHorizontalLine = false;
-            crosshairPos = null;
+            releaseDrawingPlacement();
             const canvas = document.getElementById('fib-canvas');
             if (canvas && !isDrawingFib && !isDrawingTrendline && !isDrawingRectangle) {
                 canvas.style.pointerEvents = 'none';
@@ -9079,6 +8946,7 @@
             trendlineDrawState = 1; // Waiting for Anchor 1 click
             tempTrendlineP1 = null;
             tempTrendlineP2 = null;
+            beginDrawingPlacement();
             const canvas = document.getElementById('fib-canvas');
             if (canvas) {
                 canvas.style.pointerEvents = 'auto';
@@ -9092,14 +8960,13 @@
             trendlineDrawState = 0;
             tempTrendlineP1 = null;
             tempTrendlineP2 = null;
-            crosshairPos = null;
             globalAngleLock = false;
+            releaseDrawingPlacement();
             const canvas = document.getElementById('fib-canvas');
             if (canvas && !isDrawingFib && !isDrawingHorizontalLine && !isDrawingRectangle) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
             }
-            if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
             if (selectedTrendlineIndex >= 0 && selectedTrendlineIndex < trendlines.length) {
                 showTrendlineToolbar(selectedTrendlineIndex);
             }
@@ -9141,6 +9008,7 @@
             rectangleDrawState = 1; // Waiting for Corner 1 click
             tempRectangleP1 = null;
             tempRectangleP2 = null;
+            beginDrawingPlacement();
             const canvas = document.getElementById('fib-canvas');
             if (canvas) {
                 canvas.style.pointerEvents = 'auto';
@@ -9154,13 +9022,12 @@
             rectangleDrawState = 0;
             tempRectangleP1 = null;
             tempRectangleP2 = null;
-            crosshairPos = null;
+            releaseDrawingPlacement();
             const canvas = document.getElementById('fib-canvas');
             if (canvas && !isDrawingFib && !isDrawingHorizontalLine && !isDrawingTrendline) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
             }
-            if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
             if (selectedRectangleIndex >= 0 && selectedRectangleIndex < rectangles.length) {
                 showRectangleToolbar(selectedRectangleIndex);
             }

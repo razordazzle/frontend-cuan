@@ -377,13 +377,13 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
                                 child: Text(
                                   switch (_drawings.activeTool) {
                                     ChartDrawingTool.horizontalLine =>
-                                      'Ketuk chart untuk menaruh garis Support/Resistance',
+                                      'Geser untuk mengarahkan crosshair, ketuk untuk menaruh garis Support/Resistance',
                                     ChartDrawingTool.trendline =>
-                                      'Ketuk titik 1 lalu titik 2 untuk menarik Trendline',
+                                      'Geser untuk mengarahkan crosshair, ketuk untuk menaruh titik 1 lalu titik 2 Trendline',
                                     ChartDrawingTool.rectangle =>
-                                      'Ketuk sudut 1 lalu sudut 2 untuk membuat Box Area',
+                                      'Geser untuk mengarahkan crosshair, ketuk untuk menaruh sudut 1 lalu sudut 2 Box Area',
                                     ChartDrawingTool.fibonacci || null =>
-                                      'Tarik dari titik asal ke puncak untuk Fibonacci',
+                                      'Geser untuk mengarahkan crosshair, ketuk untuk menaruh titik asal lalu puncak Fibonacci',
                                   },
                                   style: TextStyle(
                                     fontSize: 11.5,
