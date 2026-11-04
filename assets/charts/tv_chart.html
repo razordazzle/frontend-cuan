@@ -1736,6 +1736,7 @@
     </style>
     <script src="lightweight-charts.standalone.production.js"></script>
     <script src="indicators.js"></script>
+    <script src="wave_drawings.js"></script>
 </head>
 
 <body>
@@ -2646,6 +2647,32 @@
             window.parent?.postMessage(JSON.stringify({ type: 'onRectanglesChanged', payload: rectangles }), '*');
         }
 
+        // Path & Elliott Wave: polyline multi-titik, model & geometrinya di wave_drawings.js.
+        let waves = []; // Array of Wave (lihat wave_drawings.js)
+        let waveDraft = null; // { kind, points } selama menggambar wave baru; null = tidak sedang menggambar
+        let selectedWaveIndex = -1; // -1: none, >= 0: wave index in edit mode
+        let dragWaveIndex = -1;
+        let dragWavePointIndex = -1; // >= 0: geser satu titik, -1: geser seluruh wave (dragWaveStartPos)
+        let dragWaveStartPos = null; // { x, y, origPoints } saat menggeser seluruh wave
+
+        function notifyWavesChanged() {
+            if (window.flutter_inappwebview?.callHandler) {
+                window.flutter_inappwebview.callHandler('onWavesChanged', waves);
+            }
+            window.parent?.postMessage(JSON.stringify({ type: 'onWavesChanged', payload: waves }), '*');
+        }
+
+        /** Koordinat layar titik-titik wave; null untuk titik yang di luar skala chart. */
+        function waveScreenPoints(points) {
+            const series = candleSeries || areaSeries;
+            if (!chart || !series) return points.map(() => null);
+            return points.map(p => {
+                const x = chart.timeScale().timeToCoordinate(p.time);
+                const y = series.priceToCoordinate(p.price);
+                return x === null || y === null ? null : { x, y };
+            });
+        }
+
         function distToSegment(px, py, x1, y1, x2, y2) {
             const dx = x2 - x1;
             const dy = y2 - y1;
@@ -2910,6 +2937,7 @@
             selectedHorizontalLineIndex = index;
             selectedTrendlineIndex = -1;
             selectedRectangleIndex = -1;
+            selectedWaveIndex = -1;
             isFibSelected = false;
 
             const h = horizontalLines[index];
@@ -2978,6 +3006,7 @@
             selectedTrendlineIndex = index;
             selectedHorizontalLineIndex = -1;
             selectedRectangleIndex = -1;
+            selectedWaveIndex = -1;
             isFibSelected = false;
 
             const t = trendlines[index];
@@ -3047,6 +3076,7 @@
             selectedRectangleIndex = index;
             selectedTrendlineIndex = -1;
             selectedHorizontalLineIndex = -1;
+            selectedWaveIndex = -1;
             isFibSelected = false;
 
             const r = rectangles[index];
@@ -3123,6 +3153,7 @@
             selectedHorizontalLineIndex = -1;
             selectedTrendlineIndex = -1;
             selectedRectangleIndex = -1;
+            selectedWaveIndex = -1;
 
             const toolbar = document.getElementById('tv-trendline-toolbar');
             if (!toolbar) return;
@@ -3177,6 +3208,49 @@
             toolbar.style.display = 'flex';
         }
 
+        function showWaveToolbar(index) {
+            const w = waves[index];
+            const toolbar = document.getElementById('tv-trendline-toolbar');
+            if (!w || !toolbar) {
+                hideTrendlineToolbar();
+                return;
+            }
+            selectedWaveIndex = index;
+            selectedHorizontalLineIndex = -1;
+            selectedTrendlineIndex = -1;
+            selectedRectangleIndex = -1;
+            isFibSelected = false;
+
+            const setVisible = (id, visible) => {
+                const btn = document.getElementById(id);
+                if (btn) btn.style.display = visible ? 'flex' : 'none';
+            };
+            setVisible('tv-btn-clone', true);
+            setVisible('tv-btn-line-color', true);
+            setVisible('tv-btn-fill-color', false);
+            setVisible('tv-btn-text-color', false);
+            setVisible('tv-btn-width', true);
+            // Elliott Wave TradingView hanya punya warna & ketebalan; gaya garis khusus Path.
+            setVisible('tv-btn-style', w.kind === 'path');
+            setVisible('tv-btn-angle', false);
+
+            const lineInd = document.getElementById('tv-indicator-line-color');
+            if (lineInd) lineInd.style.background = w.color;
+
+            const widthLabel = document.getElementById('tv-label-width');
+            if (widthLabel) widthLabel.textContent = w.width + 'px';
+
+            const styleInd = document.getElementById('tv-indicator-line-style');
+            if (styleInd) styleInd.innerHTML = `<span class="tv-style-line-${w.style}"></span>`;
+
+            const rainbowSwatch = document.getElementById('tv-fib-rainbow-swatch');
+            if (rainbowSwatch) rainbowSwatch.style.display = 'none';
+
+            updateLockSheetUI(w.isLocked);
+
+            toolbar.style.display = 'flex';
+        }
+
         function updateLockSheetUI(isLocked) {
             const lockLabel = document.getElementById('tv-sheet-lock-label');
             const lockShackle = document.getElementById('tv-lock-shackle');
@@ -3224,6 +3298,9 @@
             if (selectedRectangleIndex >= 0 && selectedRectangleIndex < rectangles.length) {
                 return { drawing: rectangles[selectedRectangleIndex], isHLine: false, isRect: true, isFib: false, index: selectedRectangleIndex, type: 'rectangle' };
             }
+            if (selectedWaveIndex >= 0 && selectedWaveIndex < waves.length) {
+                return { drawing: waves[selectedWaveIndex], isHLine: false, isRect: false, isFib: false, isWave: true, index: selectedWaveIndex, type: 'wave' };
+            }
             if (isFibSelected && currentShowFib && fibPoint1 && fibPoint2) {
                 return {
                     drawing: {
@@ -3250,6 +3327,8 @@
                 isLocked = !!trendlines[selectedTrendlineIndex].isLocked;
             } else if (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]) {
                 isLocked = !!rectangles[selectedRectangleIndex].isLocked;
+            } else if (selectedWaveIndex >= 0 && waves[selectedWaveIndex]) {
+                isLocked = waves[selectedWaveIndex].isLocked;
             } else if (isFibSelected && currentShowFib && fibPoint1 && fibPoint2) {
                 isLocked = !!fibIsLocked;
             } else {
@@ -3265,6 +3344,12 @@
             if (btnMore) btnMore.classList.add('active');
 
             updateLockSheetUI(isLocked);
+
+            // Path & Elliott Wave tidak punya teks, jadi tanpa "Settings..." (gayanya lewat toolbar).
+            const hasSettings = selectedWaveIndex < 0;
+            sheet.querySelectorAll('#tv-sheet-settings, .tv-sheet-separator').forEach(el => {
+                el.style.display = hasSettings ? '' : 'none';
+            });
 
             backdrop.style.display = 'block';
             sheet.style.display = 'block';
@@ -4660,7 +4745,8 @@
 
             let totalDrawings = (trendlines ? trendlines.length : 0) +
                                 (rectangles ? rectangles.length : 0) +
-                                (horizontalLines ? horizontalLines.length : 0);
+                                (horizontalLines ? horizontalLines.length : 0) +
+                                waves.length;
 
             if (totalDrawings === 0) {
                 const empty = document.createElement('div');
@@ -4901,6 +4987,9 @@
                 });
             }
 
+            // 3.5 Path & Elliott Wave
+            waves.forEach((wave, wIdx) => body.appendChild(buildWaveTreeRow(wave, wIdx)));
+
             // 4. Horizontal Lines
             if (horizontalLines && horizontalLines.length > 0) {
                 horizontalLines.forEach((hLine, hIdx) => {
@@ -5130,6 +5219,95 @@
             }
         }
 
+        // Ikon object tree per jenis wave (garis zigzag 18x18, sama gayanya dengan ikon drawing lain).
+        const WAVE_TREE_ICON_PATHS = Object.freeze({
+            path: 'M2.5 14.5L6.5 8.5l3.5 4 5.5-8M12 4.5h3.5V8',
+            elliottImpulse: 'M1.5 15.5l3-6 2 3 4-8.5 2 3 4-5',
+            elliottCorrection: 'M2 15l5-9 3.5 5 5.5-8',
+            elliottTriangle: 'M1.5 9l3-5.5 3 11 3-8.5 3 6 3-3.5',
+        });
+
+        function buildWaveTreeRow(wave, idx) {
+            const isSelected = selectedWaveIndex === idx;
+            const row = document.createElement('div');
+            row.className = 'tv-tree-item' + (isSelected ? ' selected' : '') + (wave.hidden ? ' hidden-item' : '');
+            row.innerHTML = `
+                <div class="tv-tree-item-left">
+                    <div class="tv-tree-item-icon" style="color: var(--tv-label);">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="${WAVE_TREE_ICON_PATHS[wave.kind]}" />
+                        </svg>
+                    </div>
+                    <span class="tv-tree-item-label">${WaveDrawings.KINDS[wave.kind].title}</span>
+                </div>
+                <div class="tv-tree-item-actions">
+                    <button class="tv-tree-action-btn tv-tree-btn-lock ${wave.isLocked ? 'active-action' : ''}" title="${wave.isLocked ? 'Unlock' : 'Lock'}">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                            <rect x="4" y="9" width="12" height="8" rx="2" />
+                            <path d="${wave.isLocked ? 'M7 9V6a3 3 0 0 1 6 0v3' : 'M7 9V6a3 3 0 0 1 6 0'}" />
+                        </svg>
+                    </button>
+                    <button class="tv-tree-action-btn tv-tree-btn-eye ${wave.hidden ? 'dimmed-action' : ''}" title="${wave.hidden ? 'Show / Unhide' : 'Hide'}">
+                        ${getMaterialEyeSvg(wave.hidden, 18)}
+                    </button>
+                    <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
+                        ${getMaterialDeleteSvg(18)}
+                    </button>
+                </div>
+            `;
+
+            // Setiap aksi: perbarui chart, kabari Flutter (kecuali seleksi), lalu gambar ulang tree.
+            const commit = (changed) => {
+                renderFib();
+                if (changed) notifyWavesChanged();
+                refreshObjectTree();
+            };
+
+            row.onclick = (e) => {
+                e.stopPropagation();
+                if (wave.hidden) {
+                    selectedWaveIndex = idx;
+                    hideTrendlineToolbar();
+                } else {
+                    showWaveToolbar(idx);
+                }
+                commit(false);
+            };
+
+            row.querySelector('.tv-tree-btn-lock').onclick = (e) => {
+                e.stopPropagation();
+                wave.isLocked = !wave.isLocked;
+                if (isSelected) updateLockSheetUI(wave.isLocked);
+                commit(true);
+            };
+
+            row.querySelector('.tv-tree-btn-eye').onclick = (e) => {
+                e.stopPropagation();
+                wave.hidden = !wave.hidden;
+                if (!wave.hidden) {
+                    showWaveToolbar(idx);
+                } else if (isSelected) {
+                    selectedWaveIndex = -1;
+                    hideTrendlineToolbar();
+                }
+                commit(true);
+            };
+
+            row.querySelector('.tv-tree-btn-delete').onclick = (e) => {
+                e.stopPropagation();
+                waves.splice(idx, 1);
+                if (isSelected) {
+                    selectedWaveIndex = -1;
+                    hideTrendlineToolbar();
+                } else if (selectedWaveIndex > idx) {
+                    selectedWaveIndex--;
+                }
+                commit(true);
+            };
+
+            return row;
+        }
+
         function positionPopover(popover, targetBtn) {
             if (!popover || !targetBtn) return;
             const btnRect = targetBtn.getBoundingClientRect();
@@ -5204,6 +5382,7 @@
             let drawing = null;
             let isHLine = false;
             let isRect = false;
+            let isWave = false;
             if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
                 drawing = horizontalLines[selectedHorizontalLineIndex];
                 isHLine = true;
@@ -5213,6 +5392,9 @@
             } else if (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]) {
                 drawing = rectangles[selectedRectangleIndex];
                 isRect = true;
+            } else if (selectedWaveIndex >= 0 && waves[selectedWaveIndex]) {
+                drawing = waves[selectedWaveIndex];
+                isWave = true;
             } else {
                 return;
             }
@@ -5223,7 +5405,7 @@
                 if (isHLine) {
                     if (colorHex) lastHLineStyle.color = colorHex;
                     if (opacityVal !== undefined) lastHLineStyle.opacity = opacityVal;
-                } else if (!isRect) {
+                } else if (!isRect && !isWave) {
                     if (colorHex) lastTrendlineStyle.color = colorHex;
                     if (opacityVal !== undefined) lastTrendlineStyle.opacity = opacityVal;
                 }
@@ -5269,6 +5451,8 @@
                 notifyHorizontalLinesChanged();
             } else if (isRect) {
                 notifyRectanglesChanged();
+            } else if (isWave) {
+                notifyWavesChanged();
             } else {
                 notifyTrendlinesChanged();
             }
@@ -5297,6 +5481,7 @@
             let drawing = null;
             let isHLine = false;
             let isRect = false;
+            let isWave = false;
             if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
                 drawing = horizontalLines[selectedHorizontalLineIndex];
                 isHLine = true;
@@ -5306,6 +5491,9 @@
             } else if (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]) {
                 drawing = rectangles[selectedRectangleIndex];
                 isRect = true;
+            } else if (selectedWaveIndex >= 0 && waves[selectedWaveIndex]) {
+                drawing = waves[selectedWaveIndex];
+                isWave = true;
             } else {
                 return;
             }
@@ -5313,7 +5501,7 @@
             drawing.width = parseInt(w);
             if (isHLine) {
                 lastHLineStyle.width = drawing.width;
-            } else if (!isRect) {
+            } else if (!isRect && !isWave) {
                 lastTrendlineStyle.width = drawing.width;
             }
             const widthLabel = document.getElementById('tv-label-width');
@@ -5329,6 +5517,8 @@
                 notifyHorizontalLinesChanged();
             } else if (isRect) {
                 notifyRectanglesChanged();
+            } else if (isWave) {
+                notifyWavesChanged();
             } else {
                 notifyTrendlinesChanged();
             }
@@ -5338,6 +5528,7 @@
             let drawing = null;
             let isHLine = false;
             let isRect = false;
+            let isWave = false;
             if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
                 drawing = horizontalLines[selectedHorizontalLineIndex];
                 isHLine = true;
@@ -5347,6 +5538,9 @@
             } else if (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]) {
                 drawing = rectangles[selectedRectangleIndex];
                 isRect = true;
+            } else if (selectedWaveIndex >= 0 && waves[selectedWaveIndex]) {
+                drawing = waves[selectedWaveIndex];
+                isWave = true;
             } else {
                 return;
             }
@@ -5354,7 +5548,7 @@
             drawing.style = s;
             if (isHLine) {
                 lastHLineStyle.style = drawing.style;
-            } else if (!isRect) {
+            } else if (!isRect && !isWave) {
                 lastTrendlineStyle.style = drawing.style;
             }
             const styleInd = document.getElementById('tv-indicator-line-style');
@@ -5378,6 +5572,8 @@
                 notifyHorizontalLinesChanged();
             } else if (isRect) {
                 notifyRectanglesChanged();
+            } else if (isWave) {
+                notifyWavesChanged();
             } else {
                 notifyTrendlinesChanged();
             }
@@ -5415,6 +5611,14 @@
                 notifyRectanglesChanged();
                 refreshObjectTree();
                 return;
+            }
+            if (selectedWaveIndex >= 0 && selectedWaveIndex < waves.length) {
+                waves.splice(selectedWaveIndex, 1);
+                selectedWaveIndex = -1;
+                hideTrendlineToolbar();
+                renderFib();
+                notifyWavesChanged();
+                refreshObjectTree();
             }
         }
 
@@ -5557,6 +5761,28 @@
                 showRectangleToolbar(selectedRectangleIndex);
                 renderFib();
                 notifyRectanglesChanged();
+                refreshObjectTree();
+                return;
+            }
+            if (selectedWaveIndex >= 0 && selectedWaveIndex < waves.length) {
+                // Clone digeser 24px ke bawah, sama seperti drawing lain.
+                const src = waves[selectedWaveIndex];
+                const activeSeries = candleSeries || areaSeries;
+                const firstY = activeSeries ? activeSeries.priceToCoordinate(src.points[0].price) : null;
+                const shiftedPrice = firstY === null ? null : activeSeries.coordinateToPrice(firstY + 24);
+                const priceOffset = (shiftedPrice !== null && !isNaN(shiftedPrice))
+                    ? shiftedPrice - src.points[0].price
+                    : -(src.points[0].price || 100) * 0.005;
+                const cloned = WaveDrawings.normalizeWave({
+                    ...src,
+                    id: '',
+                    points: src.points.map(p => ({ time: p.time, price: p.price + priceOffset })),
+                    hidden: false,
+                });
+                waves.push(cloned);
+                showWaveToolbar(waves.length - 1);
+                renderFib();
+                notifyWavesChanged();
                 refreshObjectTree();
             }
         }
@@ -5940,6 +6166,8 @@
                             notifyHorizontalLinesChanged();
                         } else if (active.isRect) {
                             notifyRectanglesChanged();
+                        } else if (active.isWave) {
+                            notifyWavesChanged();
                         } else {
                             notifyTrendlinesChanged();
                         }
@@ -5963,6 +6191,7 @@
                         selectedHorizontalLineIndex = -1;
                         selectedTrendlineIndex = -1;
                         selectedRectangleIndex = -1;
+                        selectedWaveIndex = -1;
                         hideTrendlineToolbar();
                         closeMoreBottomSheet();
                         renderFib();
@@ -5970,6 +6199,8 @@
                             notifyHorizontalLinesChanged();
                         } else if (active.isRect) {
                             notifyRectanglesChanged();
+                        } else if (active.isWave) {
+                            notifyWavesChanged();
                         } else {
                             notifyTrendlinesChanged();
                         }
@@ -6340,6 +6571,51 @@
                 renderFib();
             }
 
+            function selectWaveAt(index) {
+                showWaveToolbar(index);
+                renderFib();
+            }
+
+            /** Wave yang kena sentuhan di (x, y): wave terseleksi lebih dulu, lalu dari yang paling atas. */
+            function hitTestWaves(x, y) {
+                const order = waves.map((_, i) => waves.length - 1 - i);
+                if (selectedWaveIndex >= 0) order.unshift(selectedWaveIndex);
+                for (const index of order) {
+                    const wave = waves[index];
+                    if (!wave || wave.hidden) continue;
+                    const hit = WaveDrawings.hitTest(waveScreenPoints(wave.points), x, y, HITBOX_TL_ANCHOR, HITBOX_TL_BODY);
+                    if (hit) return { index, hit };
+                }
+                return null;
+            }
+
+            /**
+             * Sentuhan di wave. Wave yang belum terseleksi baru dipilih kalau gesturnya tap; wave terseleksi
+             * langsung di-drag (satu titik atau seluruh wave). True kalau sentuhan dipakai wave terseleksi.
+             */
+            function handleWavePointerDown(e, x, y, captureTarget) {
+                const target = hitTestWaves(x, y);
+                if (!target) return false;
+                if (target.index !== selectedWaveIndex) {
+                    queueTapSelection(() => selectWaveAt(target.index));
+                    return false;
+                }
+                const wave = waves[target.index];
+                showWaveToolbar(target.index);
+                if (!wave.isLocked) {
+                    dragWaveIndex = target.index;
+                    dragWavePointIndex = target.hit.part === 'anchor' ? target.hit.pointIndex : -1;
+                    dragWaveStartPos = target.hit.part === 'body'
+                        ? { x, y, origPoints: wave.points.map(p => ({ time: p.time, price: p.price })) }
+                        : null;
+                    isPointerDown = true;
+                    try { captureTarget.setPointerCapture?.(e.pointerId); } catch (_) {}
+                    if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                }
+                renderFib();
+                return true;
+            }
+
             // Simpan calon seleksi pertama yang kena; drawing terseleksi tetap diprioritaskan karena scan berlanjut.
             function queueTapSelection(select) {
                 if (!pendingTapSelection) pendingTapSelection = select;
@@ -6347,7 +6623,7 @@
 
             // Hover detection to allow grabbing existing anchor handles, trendlines, & horizontal lines on desktop
             function updateHoverState(e) {
-                if (isDrawingHorizontalLine || isDrawingTrendline || isDrawingRectangle || isDrawingFib || fibDrawState !== 0 || trendlineDrawState !== 0 || rectangleDrawState !== 0 || isPointerDown || dragHorizontalLineIndex !== -1 || dragTrendlineIndex !== -1 || dragRectangleIndex !== -1 || dragMode !== 0) {
+                if (isDrawingHorizontalLine || isDrawingTrendline || isDrawingRectangle || isDrawingFib || waveDraft || fibDrawState !== 0 || trendlineDrawState !== 0 || rectangleDrawState !== 0 || isPointerDown || dragHorizontalLineIndex !== -1 || dragTrendlineIndex !== -1 || dragRectangleIndex !== -1 || dragWaveIndex !== -1 || dragMode !== 0) {
                     return;
                 }
 
@@ -6459,6 +6735,20 @@
                     }
                 }
 
+                // 2.6 Check proximity to Path & Elliott Wave (points or segments)
+                const waveTarget = hitTestWaves(x, y);
+                if (waveTarget) {
+                    canvas.style.pointerEvents = 'auto';
+                    if (waveTarget.index !== selectedWaveIndex) {
+                        canvas.style.cursor = 'pointer';
+                    } else if (waves[waveTarget.index].isLocked) {
+                        canvas.style.cursor = 'default';
+                    } else {
+                        canvas.style.cursor = waveTarget.hit.part === 'anchor' ? 'grab' : 'move';
+                    }
+                    return;
+                }
+
                 // 3. Check proximity to Fibonacci anchors
                 if (currentShowFib && fibPoint1 && fibPoint2 && chart && activeSeries) {
                     const x1 = chart.timeScale().timeToCoordinate(fibPoint1.time);
@@ -6498,7 +6788,7 @@
                     }
 
                     // If user is placing a brand new tool, let canvas handle placement
-                    if (isDrawingHorizontalLine || isDrawingTrendline || isDrawingRectangle || isDrawingFib || fibDrawState !== 0 || trendlineDrawState !== 0 || rectangleDrawState !== 0) {
+                    if (isDrawingHorizontalLine || isDrawingTrendline || isDrawingRectangle || isDrawingFib || waveDraft || fibDrawState !== 0 || trendlineDrawState !== 0 || rectangleDrawState !== 0) {
                         return;
                     }
 
@@ -6802,10 +7092,22 @@
                         }
                     }
 
+                    // 5. PATH & ELLIOTT WAVE HIT TEST (points and segments)
+                    if (handleWavePointerDown(e, x, y, chartContainer)) {
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                        e.preventDefault();
+                        return;
+                    }
+
                     if (pendingTapSelection) return;
 
-                    // If tapped empty space on chart while a trendline, fib, horizontal line, or rectangle was selected, deselect it
+                    // If tapped empty space on chart while a trendline, fib, horizontal line, rectangle, or wave was selected, deselect it
                     let needsDeselect = false;
+                    if (selectedWaveIndex !== -1) {
+                        selectedWaveIndex = -1;
+                        needsDeselect = true;
+                    }
                     if (selectedTrendlineIndex !== -1) {
                         selectedTrendlineIndex = -1;
                         hideTrendlineToolbar();
@@ -6878,6 +7180,29 @@
                         }
                         window.parent?.postMessage(JSON.stringify({ type: 'onHorizontalLineAdded', payload: newHLine }), '*');
                     }
+                    return;
+                }
+
+                // 0.05 Path / Elliott Wave Placement: tiap ketukan menaruh satu titik (masih bisa digeser
+                // selama jari menempel). Path diakhiri dengan mengetuk titik terakhirnya lagi.
+                if (waveDraft) {
+                    const time = getTimeAtX(clampedX);
+                    const price = getPriceAtY(y);
+                    if (!time || price === null) return;
+                    const points = waveDraft.points;
+                    const lastPoint = points.length > 0 ? waveScreenPoints([points[points.length - 1]])[0] : null;
+                    if (WaveDrawings.KINDS[waveDraft.kind].openEnded
+                        && points.length >= WaveDrawings.minPoints(waveDraft.kind)
+                        && lastPoint
+                        && Math.hypot(clampedX - lastPoint.x, y - lastPoint.y) <= HITBOX_TL_ANCHOR) {
+                        finishWaveDraft();
+                        return;
+                    }
+                    points.push({ time, price });
+                    isPointerDown = true;
+                    canvas.setPointerCapture?.(e.pointerId);
+                    if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                    renderFib();
                     return;
                 }
 
@@ -7219,6 +7544,12 @@
                     }
                 }
 
+                // 0.35 Check if clicking on an existing Path / Elliott Wave (points or segments)
+                if (handleWavePointerDown(e, x, y, canvas)) {
+                    if (dragWaveIndex >= 0) canvas.style.cursor = dragWavePointIndex >= 0 ? 'grabbing' : 'move';
+                    return;
+                }
+
                 // 1. Check if clicking on an existing anchor handle to reposition (Fib, hanya saat terseleksi)
                 if (fibDrawState === 0 && isFibSelected && fibPoint1 && fibPoint2) {
                     const x1 = chart.timeScale().timeToCoordinate(fibPoint1.time);
@@ -7303,6 +7634,11 @@
 
                 // If tapped on empty canvas space outside all drawings:
                 let canvasNeedsDeselect = false;
+                if (selectedWaveIndex !== -1) {
+                    selectedWaveIndex = -1;
+                    hideTrendlineToolbar();
+                    canvasNeedsDeselect = true;
+                }
                 if (selectedTrendlineIndex !== -1) {
                     selectedTrendlineIndex = -1;
                     hideTrendlineToolbar();
@@ -7329,7 +7665,7 @@
             });
 
             const onPointerMove = (e) => {
-                if (!isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle && !isDrawingFib && fibDrawState === 0 && trendlineDrawState === 0 && rectangleDrawState === 0 && !isPointerDown && dragHorizontalLineIndex === -1 && dragTrendlineIndex === -1 && dragRectangleIndex === -1 && dragMode === 0) {
+                if (!isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle && !isDrawingFib && !waveDraft && fibDrawState === 0 && trendlineDrawState === 0 && rectangleDrawState === 0 && !isPointerDown && dragHorizontalLineIndex === -1 && dragTrendlineIndex === -1 && dragRectangleIndex === -1 && dragWaveIndex === -1 && dragMode === 0) {
                     updateHoverState(e);
                     return;
                 }
@@ -7341,7 +7677,7 @@
                 const clampedX = Math.max(0, Math.min(x, maxContentX));
 
                 // Tracking crosshair position during drawing tools (S/R, Fib, Trendline, Rectangle)
-                if (isDrawingHorizontalLine || (isDrawingFib && fibDrawState > 0) || (isDrawingTrendline && trendlineDrawState > 0) || (isDrawingRectangle && rectangleDrawState > 0)) {
+                if (isDrawingHorizontalLine || (isDrawingFib && fibDrawState > 0) || (isDrawingTrendline && trendlineDrawState > 0) || (isDrawingRectangle && rectangleDrawState > 0) || waveDraft) {
                     crosshairPos = { x: clampedX, y };
                     if (isDrawingHorizontalLine || (isDrawingTrendline && trendlineDrawState === 1) || (isDrawingRectangle && rectangleDrawState === 1)) {
                         renderFib();
@@ -7349,6 +7685,48 @@
                     }
                 } else if (crosshairPos !== null && dragHorizontalLineIndex === -1 && dragTrendlineIndex === -1 && dragRectangleIndex === -1) {
                     crosshairPos = null;
+                }
+
+                // Path / Elliott Wave draft: titik yang baru ditaruh mengikuti jari selama masih menempel;
+                // tanpa ditekan (mouse) cukup pratinjau segmen ke kursor.
+                if (waveDraft) {
+                    const points = waveDraft.points;
+                    if (isPointerDown && points.length > 0) {
+                        const time = getTimeAtX(clampedX);
+                        const price = getPriceAtY(y);
+                        if (time && price !== null) points[points.length - 1] = { time, price };
+                    }
+                    renderFib();
+                    return;
+                }
+
+                // Dragging Path / Elliott Wave (satu titik atau seluruh wave)
+                if (dragWaveIndex >= 0 && waves[dragWaveIndex]) {
+                    crosshairPos = null;
+                    const wave = waves[dragWaveIndex];
+                    if (dragWavePointIndex >= 0) {
+                        const time = getTimeAtX(clampedX);
+                        const price = getPriceAtY(y);
+                        if (time && price !== null) {
+                            wave.points[dragWavePointIndex] = { time, price };
+                            renderFib();
+                        }
+                        return;
+                    }
+                    if (dragWaveStartPos) {
+                        const origin = waveScreenPoints(dragWaveStartPos.origPoints);
+                        if (origin.includes(null)) return;
+                        // Geser tanpa keluar dari area candle (sama seperti trendline).
+                        const xs = origin.map(p => p.x);
+                        const dx = Math.max(-Math.min(...xs), Math.min(maxContentX - Math.max(...xs), x - dragWaveStartPos.x));
+                        const dy = y - dragWaveStartPos.y;
+                        const moved = origin.map(p => ({ time: getTimeAtX(p.x + dx), price: getPriceAtY(p.y + dy) }));
+                        if (moved.every(p => p.time && p.price !== null)) {
+                            wave.points = moved;
+                            renderFib();
+                        }
+                    }
+                    return;
                 }
 
                 // Live rubber-band preview during Trendline Anchor 2 aiming
@@ -7696,7 +8074,7 @@
                     crosshairPos = null;
                     renderFib();
                 }
-                if (!isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle && !isDrawingFib && !isPointerDown) {
+                if (!isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle && !isDrawingFib && !waveDraft && !isPointerDown) {
                     canvas.style.pointerEvents = 'none';
                     canvas.style.cursor = 'default';
                 }
@@ -7715,6 +8093,33 @@
                         && dist <= TAP_MAX_DISTANCE
                         && Date.now() - pointerDownTime <= TAP_MAX_DURATION_MS;
                     if (isTap) select();
+                    return;
+                }
+
+                if (dragWaveIndex >= 0) {
+                    dragWaveIndex = -1;
+                    dragWavePointIndex = -1;
+                    dragWaveStartPos = null;
+                    isPointerDown = false;
+                    try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
+                    try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
+                    if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
+                    canvas.style.cursor = 'default';
+                    canvas.style.pointerEvents = 'none';
+                    renderFib();
+                    notifyWavesChanged();
+                    return;
+                }
+
+                // Titik draft wave selesai ditaruh; Elliott Wave otomatis tersimpan begitu titiknya lengkap.
+                if (waveDraft) {
+                    isPointerDown = false;
+                    try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
+                    if (WaveDrawings.isComplete(waveDraft.kind, waveDraft.points.length)) {
+                        finishWaveDraft();
+                    } else {
+                        renderFib();
+                    }
                     return;
                 }
 
@@ -7970,13 +8375,13 @@
             try {
 
             // 0. Render Crosshair Guidelines during tool drawing (like TradingView)
-            if ((isDrawingHorizontalLine || (isDrawingFib && fibDrawState > 0) || (isDrawingTrendline && trendlineDrawState > 0) || (isDrawingRectangle && rectangleDrawState > 0)) && crosshairPos) {
+            if ((isDrawingHorizontalLine || (isDrawingFib && fibDrawState > 0) || (isDrawingTrendline && trendlineDrawState > 0) || (isDrawingRectangle && rectangleDrawState > 0) || waveDraft) && crosshairPos) {
                 const hx = crosshairPos.x;
                 const hy = crosshairPos.y;
                 const price = getPriceAtY(hy);
 
                 ctx.save();
-                ctx.strokeStyle = isDrawingTrendline ? hexToRgba(lastTrendlineStyle.color || DRAWING_COLORS.trendline, 0.85) : (isDrawingRectangle ? hexToRgba(DRAWING_COLORS.rectangle, 0.85) : (currentCrosshairColor || 'rgba(255, 255, 255, 0.85)'));
+                ctx.strokeStyle = waveDraft ? hexToRgba(WaveDrawings.KINDS[waveDraft.kind].color, 0.85) : (isDrawingTrendline ? hexToRgba(lastTrendlineStyle.color || DRAWING_COLORS.trendline, 0.85) : (isDrawingRectangle ? hexToRgba(DRAWING_COLORS.rectangle, 0.85) : (currentCrosshairColor || 'rgba(255, 255, 255, 0.85)')));
                 ctx.lineWidth = 1;
                 ctx.setLineDash([6, 6]);
 
@@ -8516,6 +8921,9 @@
                 }
             }
 
+            // 1.9 Render Path & Elliott Wave, plus the draft being drawn
+            renderWaves(ctx);
+
             // 2. Render Fibonacci Retracement(s) with Neutral Anchors
             const fibItemsToRender = [];
 
@@ -8871,7 +9279,7 @@
             }
 
             // Render live crosshair guideline price badge on price scale if active
-            if ((isDrawingHorizontalLine || (isDrawingFib && fibDrawState > 0) || (isDrawingTrendline && trendlineDrawState > 0) || (isDrawingRectangle && rectangleDrawState > 0)) && crosshairPos) {
+            if ((isDrawingHorizontalLine || (isDrawingFib && fibDrawState > 0) || (isDrawingTrendline && trendlineDrawState > 0) || (isDrawingRectangle && rectangleDrawState > 0) || waveDraft) && crosshairPos) {
                 const hy = crosshairPos.y;
                 const price = getPriceAtY(hy);
                 if (price !== null && hy >= 0 && hy <= pane0Height) {
@@ -8905,6 +9313,124 @@
                     }
                 }
             }
+        }
+
+        const WAVE_LABEL_FONT = '600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+        // Pola garis sama dengan trendline.
+        function setWaveLineDash(ctx, style, width) {
+            if (style === 'dashed') {
+                ctx.lineCap = 'butt';
+                ctx.setLineDash([Math.max(6, width * 3), Math.max(4, width * 2)]);
+            } else if (style === 'dotted') {
+                ctx.lineCap = 'round';
+                ctx.setLineDash([0, Math.max(6, width * 2.5)]);
+            } else {
+                ctx.lineCap = 'round';
+                ctx.setLineDash([]);
+            }
+        }
+
+        // Handle titik saat Edit Mode (sama dengan handle trendline).
+        function drawWaveEditAnchor(ctx, p, color) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+            ctx.fillStyle = hexToRgba(color, 0.25);
+            ctx.fill();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+        }
+
+        // Titik draft yang sudah ditaruh (netral, sama dengan pratinjau trendline).
+        function drawWaveDraftAnchor(ctx, p) {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#1E1E1E';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        /**
+         * Gambar satu wave: polyline, panah Path, label Elliott Wave, dan handle kalau terseleksi.
+         * `screenPoints` boleh lebih panjang dari `points` (segmen pratinjau ke kursor saat menggambar).
+         */
+        function drawWave(ctx, wave, screenPoints, isSelected) {
+            const spec = WaveDrawings.KINDS[wave.kind];
+            const strokeColor = hexToRgba(wave.color, wave.opacity);
+
+            ctx.save();
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = wave.width;
+            ctx.lineJoin = 'round';
+            setWaveLineDash(ctx, wave.style, wave.width);
+            ctx.beginPath();
+            screenPoints.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const count = screenPoints.length;
+            const wings = spec.endArrow && count >= 2
+                ? WaveDrawings.arrowHead(screenPoints[count - 2], screenPoints[count - 1], 8 + wave.width * 2)
+                : null;
+            if (wings) {
+                const tip = screenPoints[count - 1];
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(wings[0].x, wings[0].y);
+                ctx.lineTo(tip.x, tip.y);
+                ctx.lineTo(wings[1].x, wings[1].y);
+                ctx.stroke();
+            }
+
+            ctx.font = WAVE_LABEL_FONT;
+            ctx.fillStyle = strokeColor;
+            ctx.textAlign = 'center';
+            // Di luar handle Edit Mode (radius 8) supaya label tidak tertutup saat terseleksi.
+            const labelOffset = 10 + wave.width / 2;
+            wave.points.forEach((_, i) => {
+                const label = WaveDrawings.labelAt(wave.kind, i);
+                const p = screenPoints[i];
+                if (!label || !p) return;
+                const isAbove = WaveDrawings.labelSide(wave.points, i) === 'above';
+                ctx.textBaseline = isAbove ? 'bottom' : 'top';
+                ctx.fillText(label, p.x, isAbove ? p.y - labelOffset : p.y + labelOffset);
+            });
+
+            if (isSelected) {
+                wave.points.forEach((_, i) => drawWaveEditAnchor(ctx, screenPoints[i], wave.color));
+            }
+            ctx.restore();
+        }
+
+        function renderWaves(ctx) {
+            waves.forEach((wave, i) => {
+                if (wave.hidden) return;
+                const screenPoints = waveScreenPoints(wave.points);
+                // Titik di luar data chart (mis. timeframe lain): wave dilewati, sama seperti trendline.
+                if (screenPoints.includes(null)) return;
+                drawWave(ctx, wave, screenPoints, i === selectedWaveIndex);
+            });
+
+            if (!waveDraft || waveDraft.points.length === 0) return;
+            const placed = waveScreenPoints(waveDraft.points).filter(Boolean);
+            // Pakai mouse (tidak sedang ditekan): segmen berikutnya mengikuti kursor.
+            const preview = !isPointerDown && crosshairPos ? [...placed, crosshairPos] : placed;
+            drawWave(ctx, WaveDrawings.createWave(waveDraft.kind, waveDraft.points), preview, false);
+            ctx.save();
+            placed.forEach(p => drawWaveDraftAnchor(ctx, p));
+            ctx.restore();
         }
 
         // Format harga sama dengan price scale (PRICE_PRECISION desimal).
@@ -8975,7 +9501,7 @@
             tempFibP1 = null;
             tempFibP2 = null;
             const canvas = document.getElementById('fib-canvas');
-            if (canvas && !isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle) {
+            if (canvas && !isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle && !waveDraft) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
             }
@@ -9026,7 +9552,7 @@
             isDrawingHorizontalLine = false;
             crosshairPos = null;
             const canvas = document.getElementById('fib-canvas');
-            if (canvas && !isDrawingFib && !isDrawingTrendline && !isDrawingRectangle) {
+            if (canvas && !isDrawingFib && !isDrawingTrendline && !isDrawingRectangle && !waveDraft) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
             }
@@ -9055,7 +9581,7 @@
             isDrawingHorizontalLine = false;
             crosshairPos = null;
             const canvas = document.getElementById('fib-canvas');
-            if (canvas && !isDrawingFib && !isDrawingTrendline && !isDrawingRectangle) {
+            if (canvas && !isDrawingFib && !isDrawingTrendline && !isDrawingRectangle && !waveDraft) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
             }
@@ -9095,7 +9621,7 @@
             crosshairPos = null;
             globalAngleLock = false;
             const canvas = document.getElementById('fib-canvas');
-            if (canvas && !isDrawingFib && !isDrawingHorizontalLine && !isDrawingRectangle) {
+            if (canvas && !isDrawingFib && !isDrawingHorizontalLine && !isDrawingRectangle && !waveDraft) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
             }
@@ -9156,7 +9682,7 @@
             tempRectangleP2 = null;
             crosshairPos = null;
             const canvas = document.getElementById('fib-canvas');
-            if (canvas && !isDrawingFib && !isDrawingHorizontalLine && !isDrawingTrendline) {
+            if (canvas && !isDrawingFib && !isDrawingHorizontalLine && !isDrawingTrendline && !waveDraft) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
             }
@@ -9188,11 +9714,91 @@
             notifyRectanglesChanged();
         }
 
+        function setWaveCanvasIdle() {
+            const canvas = document.getElementById('fib-canvas');
+            if (canvas && !isDrawingFib && !isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle) {
+                canvas.style.pointerEvents = 'none';
+                canvas.style.cursor = 'default';
+            }
+        }
+
+        /** Mulai menggambar Path / Elliott Wave; `kind` = `ChartDrawingTool.name` dari Flutter. */
+        function startWaveDrawing(kind) {
+            if (!WaveDrawings.isWaveKind(kind)) return;
+            if (isDrawingFib && (!fibPoint1 || !fibPoint2)) {
+                clearFibonacci();
+            }
+            isDrawingFib = false;
+            fibDrawState = 0;
+            isDrawingHorizontalLine = false;
+            selectedHorizontalLineIndex = -1;
+            selectedTrendlineIndex = -1;
+            selectedRectangleIndex = -1;
+            selectedWaveIndex = -1;
+            isFibSelected = false;
+            cancelTrendlineDrawing();
+            cancelRectangleDrawing();
+            hideTrendlineToolbar();
+            waveDraft = { kind, points: [] };
+            const canvas = document.getElementById('fib-canvas');
+            if (canvas) {
+                canvas.style.pointerEvents = 'auto';
+                canvas.style.cursor = 'crosshair';
+            }
+            renderFib();
+        }
+
+        function cancelWaveDrawing() {
+            if (!waveDraft) return;
+            waveDraft = null;
+            crosshairPos = null;
+            isPointerDown = false;
+            setWaveCanvasIdle();
+            if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
+            renderFib();
+        }
+
+        /** Simpan draft jadi wave baru lalu langsung masuk Edit Mode (seperti drawing lain). */
+        function finishWaveDraft() {
+            if (!waveDraft || waveDraft.points.length < WaveDrawings.minPoints(waveDraft.kind)) return;
+            waves.push(WaveDrawings.createWave(waveDraft.kind, waveDraft.points));
+            waveDraft = null;
+            crosshairPos = null;
+            isPointerDown = false;
+            setWaveCanvasIdle();
+            if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
+            showWaveToolbar(waves.length - 1);
+            renderFib();
+            notifyWavesChanged();
+        }
+
+        function setWaves(wavesInput) {
+            const list = typeof wavesInput === 'string' ? JSON.parse(wavesInput) : wavesInput;
+            waves = (Array.isArray(list) ? list : []).map(item => WaveDrawings.normalizeWave(item)).filter(Boolean);
+            if (selectedWaveIndex >= waves.length) {
+                selectedWaveIndex = -1;
+                hideTrendlineToolbar();
+            } else if (selectedWaveIndex >= 0) {
+                showWaveToolbar(selectedWaveIndex);
+            }
+            renderFib();
+        }
+
+        function clearWaves() {
+            waves = [];
+            selectedWaveIndex = -1;
+            hideTrendlineToolbar();
+            cancelWaveDrawing();
+            renderFib();
+            notifyWavesChanged();
+        }
+
         function clearAllDrawings() {
             clearFibonacci();
             clearHorizontalLines();
             clearTrendlines();
             clearRectangles();
+            clearWaves();
         }
 
         function initChart(upColor, downColor, gridColor, interactive, crosshairColor) {

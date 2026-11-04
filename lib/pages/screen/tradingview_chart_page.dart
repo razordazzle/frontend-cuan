@@ -290,6 +290,9 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
                       onRectangleAdded: (_) =>
                           _drawings.finishDrawing(ChartDrawingTool.rectangle),
                       onRectanglesChanged: _drawings.setRectangles,
+                      waves: _drawings.waves,
+                      drawingWave: _drawings.drawingWave,
+                      onWavesChanged: _drawings.setWaves,
                       upColor: upColor,
                       downColor: downColor,
                       gridColor: cs.outline.withValues(alpha: .15),
@@ -382,6 +385,14 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
                                       'Ketuk titik 1 lalu titik 2 untuk menarik Trendline',
                                     ChartDrawingTool.rectangle =>
                                       'Ketuk sudut 1 lalu sudut 2 untuk membuat Box Area',
+                                    ChartDrawingTool.path =>
+                                      'Ketuk untuk menaruh titik Path, ketuk titik terakhir lagi untuk selesai',
+                                    ChartDrawingTool.elliottImpulse =>
+                                      'Ketuk 6 titik berurutan (0-1-2-3-4-5) untuk Elliott Impulse Wave',
+                                    ChartDrawingTool.elliottCorrection =>
+                                      'Ketuk 4 titik berurutan (0-A-B-C) untuk Elliott Correction Wave',
+                                    ChartDrawingTool.elliottTriangle =>
+                                      'Ketuk 6 titik berurutan (0-A-B-C-D-E) untuk Elliott Triangle Wave',
                                     ChartDrawingTool.fibonacci || null =>
                                       'Tarik dari titik asal ke puncak untuk Fibonacci',
                                   },
