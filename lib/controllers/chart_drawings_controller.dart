@@ -2,7 +2,23 @@ import 'package:flutter/foundation.dart';
 
 import 'persisted_favorites.dart';
 
-enum ChartDrawingTool { fibonacci, horizontalLine, trendline, rectangle }
+enum ChartDrawingTool {
+  fibonacci,
+  horizontalLine,
+  trendline,
+  rectangle,
+  path,
+  elliottImpulse,
+  elliottCorrection,
+  elliottTriangle;
+
+  /// Path & Elliott Wave: polyline multi-titik di chart, satu keluarga "wave"
+  /// (`assets/charts/wave_drawings.js`) dengan [name] sebagai jenisnya.
+  bool get isWave => switch (this) {
+    path || elliottImpulse || elliottCorrection || elliottTriangle => true,
+    fibonacci || horizontalLine || trendline || rectangle => false,
+  };
+}
 
 /// State drawing tools di halaman chart TradingView (saham & IHSG).
 ///
@@ -16,6 +32,7 @@ class ChartDrawingsController extends ChangeNotifier {
   List<Map<String, dynamic>> _horizontalLines = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _trendlines = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _rectangles = const <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _waves = const <Map<String, dynamic>>[];
   final PersistedFavorites<ChartDrawingTool> _favoriteTools =
       PersistedFavorites<ChartDrawingTool>(
         storageKey: 'chart.drawingFavorites',
@@ -43,15 +60,23 @@ class ChartDrawingsController extends ChangeNotifier {
   List<Map<String, dynamic>> get trendlines => _trendlines;
   List<Map<String, dynamic>> get rectangles => _rectangles;
 
+  /// Path & Elliott Wave yang sudah digambar (semua jenis wave dalam satu list).
+  List<Map<String, dynamic>> get waves => _waves;
+
   bool isDrawing(ChartDrawingTool tool) => _activeTool == tool;
   bool get isDrawingAny => _activeTool != null;
   bool get isToolbarActive => _isToolbarVisible || isDrawingAny;
+
+  /// Tool wave yang sedang digambar; null kalau tidak ada atau tool aktif bukan wave.
+  ChartDrawingTool? get drawingWave =>
+      (_activeTool?.isWave ?? false) ? _activeTool : null;
 
   bool get hasDrawings =>
       _showFibonacci ||
       _horizontalLines.isNotEmpty ||
       _trendlines.isNotEmpty ||
-      _rectangles.isNotEmpty;
+      _rectangles.isNotEmpty ||
+      _waves.isNotEmpty;
 
   void startDrawing(ChartDrawingTool tool) {
     _activeTool = tool;
@@ -94,12 +119,19 @@ class ChartDrawingsController extends ChangeNotifier {
     _syncObjects(ChartDrawingTool.rectangle);
   }
 
+  /// Wave baru hanya dikirim chart setelah selesai digambar, jadi mode gambar wave ikut berakhir.
+  void setWaves(List<Map<String, dynamic>> waves) {
+    _waves = List<Map<String, dynamic>>.unmodifiable(waves);
+    _syncObjects(drawingWave);
+  }
+
   void clearAll() {
     _activeTool = null;
     _showFibonacci = false;
     _horizontalLines = const <Map<String, dynamic>>[];
     _trendlines = const <Map<String, dynamic>>[];
     _rectangles = const <Map<String, dynamic>>[];
+    _waves = const <Map<String, dynamic>>[];
     notifyListeners();
   }
 
@@ -127,8 +159,8 @@ class ChartDrawingsController extends ChangeNotifier {
   }
 
   /// Objek dari [tool] baru di-update oleh chart, jadi mode gambar tool itu diakhiri.
-  void _syncObjects(ChartDrawingTool tool) {
-    if (isDrawing(tool)) _activeTool = null;
+  void _syncObjects(ChartDrawingTool? tool) {
+    if (tool != null && isDrawing(tool)) _activeTool = null;
     notifyListeners();
   }
 }

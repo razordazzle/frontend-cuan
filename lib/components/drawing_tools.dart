@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../controllers/chart_drawings_controller.dart';
@@ -5,6 +7,7 @@ import '../controllers/chart_drawings_controller.dart';
 enum _DrawingCategory {
   trend('TREND TOOLS'),
   gannFibonacci('GANN AND FIBONACCI'),
+  patterns('PATTERNS'),
   shapes('GEOMETRIC SHAPES');
 
   const _DrawingCategory(this.label);
@@ -16,6 +19,7 @@ enum _DrawingFilter {
   all('Tools'),
   trend('Trend tools', _DrawingCategory.trend),
   gannFibonacci('Gann and...', _DrawingCategory.gannFibonacci),
+  patterns('Patterns', _DrawingCategory.patterns),
   shapes('Shapes', _DrawingCategory.shapes);
 
   const _DrawingFilter(this.label, [this.category]);
@@ -31,18 +35,35 @@ enum _DrawingFilter {
 }
 
 extension _ChartDrawingToolUi on ChartDrawingTool {
+  /// Nama lengkap ala TradingView (tooltip & pencarian).
   String get _title => switch (this) {
     ChartDrawingTool.trendline => 'Trendline',
     ChartDrawingTool.horizontalLine => 'Horizontal line',
     ChartDrawingTool.fibonacci => 'Fib retracement',
     ChartDrawingTool.rectangle => 'Rectangle',
+    ChartDrawingTool.path => 'Path',
+    ChartDrawingTool.elliottImpulse => 'Elliott Impulse Wave',
+    ChartDrawingTool.elliottCorrection => 'Elliott Correction Wave',
+    ChartDrawingTool.elliottTriangle => 'Elliott Triangle Wave',
+  };
+
+  /// Label kartu katalog; nama Elliott Wave dipersingkat supaya muat satu baris.
+  String get _cardLabel => switch (this) {
+    ChartDrawingTool.elliottImpulse => 'Impulse Wave',
+    ChartDrawingTool.elliottCorrection => 'Correction Wave',
+    ChartDrawingTool.elliottTriangle => 'Triangle Wave',
+    _ => _title,
   };
 
   _DrawingCategory get _category => switch (this) {
     ChartDrawingTool.trendline ||
     ChartDrawingTool.horizontalLine => _DrawingCategory.trend,
     ChartDrawingTool.fibonacci => _DrawingCategory.gannFibonacci,
-    ChartDrawingTool.rectangle => _DrawingCategory.shapes,
+    ChartDrawingTool.elliottImpulse ||
+    ChartDrawingTool.elliottCorrection ||
+    ChartDrawingTool.elliottTriangle => _DrawingCategory.patterns,
+    ChartDrawingTool.rectangle ||
+    ChartDrawingTool.path => _DrawingCategory.shapes,
   };
 
   Widget _icon(Color color) => switch (this) {
@@ -50,6 +71,23 @@ extension _ChartDrawingToolUi on ChartDrawingTool {
     ChartDrawingTool.horizontalLine => _HLineVectorIcon(color: color),
     ChartDrawingTool.fibonacci => _FibVectorIcon(color: color),
     ChartDrawingTool.rectangle => _RectVectorIcon(color: color),
+    ChartDrawingTool.path => _PolylineVectorIcon(
+      color: color,
+      points: _PolylineVectorIcon.path,
+      endArrow: true,
+    ),
+    ChartDrawingTool.elliottImpulse => _PolylineVectorIcon(
+      color: color,
+      points: _PolylineVectorIcon.elliottImpulse,
+    ),
+    ChartDrawingTool.elliottCorrection => _PolylineVectorIcon(
+      color: color,
+      points: _PolylineVectorIcon.elliottCorrection,
+    ),
+    ChartDrawingTool.elliottTriangle => _PolylineVectorIcon(
+      color: color,
+      points: _PolylineVectorIcon.elliottTriangle,
+    ),
   };
 }
 
@@ -81,7 +119,11 @@ class _DrawingToolsSheetState extends State<DrawingToolsSheet> {
     ChartDrawingTool.trendline,
     ChartDrawingTool.horizontalLine,
     ChartDrawingTool.fibonacci,
+    ChartDrawingTool.elliottImpulse,
+    ChartDrawingTool.elliottCorrection,
+    ChartDrawingTool.elliottTriangle,
     ChartDrawingTool.rectangle,
+    ChartDrawingTool.path,
   ];
   static const Color _starColor = Color(0xFFF7A600); // TradingView Amber Star
   static const Color _selectedColor = Color(0xFF2962FF);
@@ -660,7 +702,7 @@ class _DrawingToolsSheetState extends State<DrawingToolsSheet> {
               tool._icon(isSelected ? _selectedColor : iconColor),
               // Tool Name
               Text(
-                tool._title,
+                tool._cardLabel,
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -1195,4 +1237,105 @@ class _RectPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _RectPainter oldDelegate) =>
       oldDelegate.color != color;
+}
+
+/// Ikon Path & Elliott Wave: polyline melewati [points] (grid 24x24) dengan titik di
+/// setiap belokan, dan mata panah di titik terakhir kalau [endArrow].
+class _PolylineVectorIcon extends StatelessWidget {
+  static const List<Offset> path = <Offset>[
+    Offset(3, 19),
+    Offset(8, 10),
+    Offset(12.5, 14.5),
+    Offset(20, 5),
+  ];
+  static const List<Offset> elliottImpulse = <Offset>[
+    Offset(2.5, 20),
+    Offset(6.5, 13),
+    Offset(9.5, 16.5),
+    Offset(14, 7),
+    Offset(17, 11),
+    Offset(21.5, 4),
+  ];
+  static const List<Offset> elliottCorrection = <Offset>[
+    Offset(3, 19),
+    Offset(9, 7),
+    Offset(14, 13),
+    Offset(21, 4),
+  ];
+
+  /// Segitiga kontraksi: amplitudo gelombang A-B-C-D-E makin mengecil.
+  static const List<Offset> elliottTriangle = <Offset>[
+    Offset(2.5, 12),
+    Offset(6, 4),
+    Offset(10, 20),
+    Offset(13.5, 7.5),
+    Offset(17, 16),
+    Offset(21, 10.5),
+  ];
+
+  final Color color;
+  final List<Offset> points;
+  final bool endArrow;
+
+  const _PolylineVectorIcon({
+    required this.color,
+    required this.points,
+    this.endArrow = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: const Size(24, 24),
+      painter: _PolylinePainter(color, points, endArrow),
+    );
+  }
+}
+
+class _PolylinePainter extends CustomPainter {
+  final Color color;
+  final List<Offset> points;
+  final bool endArrow;
+  _PolylinePainter(this.color, this.points, this.endArrow);
+
+  static const double _arrowSize = 5;
+  static const double _arrowHalfAngle = math.pi / 6;
+  static const double _vertexRadius = 1.6;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint linePaint = Paint()
+      ..color = color
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(Path()..addPolygon(points, false), linePaint);
+
+    final Paint vertexPaint = Paint()..color = color;
+    final Iterable<Offset> vertices = endArrow
+        ? points.take(points.length - 1)
+        : points;
+    for (final Offset vertex in vertices) {
+      canvas.drawCircle(vertex, _vertexRadius, vertexPaint);
+    }
+
+    if (!endArrow) return;
+    final Offset tip = points.last;
+    final double angle = (tip - points[points.length - 2]).direction;
+    canvas.drawPath(
+      Path()..addPolygon(<Offset>[
+        tip - Offset.fromDirection(angle - _arrowHalfAngle, _arrowSize),
+        tip,
+        tip - Offset.fromDirection(angle + _arrowHalfAngle, _arrowSize),
+      ], false),
+      linePaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _PolylinePainter oldDelegate) =>
+      oldDelegate.color != color ||
+      oldDelegate.points != points ||
+      oldDelegate.endArrow != endArrow;
 }
