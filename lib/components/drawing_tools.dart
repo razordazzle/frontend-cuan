@@ -47,14 +47,6 @@ extension _ChartDrawingToolUi on ChartDrawingTool {
     ChartDrawingTool.elliottTriangle => 'Elliott Triangle Wave',
   };
 
-  /// Label kartu katalog; nama Elliott Wave dipersingkat supaya muat satu baris.
-  String get _cardLabel => switch (this) {
-    ChartDrawingTool.elliottImpulse => 'Impulse Wave',
-    ChartDrawingTool.elliottCorrection => 'Correction Wave',
-    ChartDrawingTool.elliottTriangle => 'Triangle Wave',
-    _ => _title,
-  };
-
   _DrawingCategory get _category => switch (this) {
     ChartDrawingTool.trendline ||
     ChartDrawingTool.horizontalLine => _DrawingCategory.trend,
@@ -71,22 +63,21 @@ extension _ChartDrawingToolUi on ChartDrawingTool {
     ChartDrawingTool.horizontalLine => _HLineVectorIcon(color: color),
     ChartDrawingTool.fibonacci => _FibVectorIcon(color: color),
     ChartDrawingTool.rectangle => _RectVectorIcon(color: color),
-    ChartDrawingTool.path => _PolylineVectorIcon(
+    ChartDrawingTool.path => _WaveVectorIcon(
       color: color,
-      points: _PolylineVectorIcon.path,
-      endArrow: true,
+      shape: _WaveIconShape.path,
     ),
-    ChartDrawingTool.elliottImpulse => _PolylineVectorIcon(
+    ChartDrawingTool.elliottImpulse => _WaveVectorIcon(
       color: color,
-      points: _PolylineVectorIcon.elliottImpulse,
+      shape: _WaveIconShape.elliottImpulse,
     ),
-    ChartDrawingTool.elliottCorrection => _PolylineVectorIcon(
+    ChartDrawingTool.elliottCorrection => _WaveVectorIcon(
       color: color,
-      points: _PolylineVectorIcon.elliottCorrection,
+      shape: _WaveIconShape.elliottCorrection,
     ),
-    ChartDrawingTool.elliottTriangle => _PolylineVectorIcon(
+    ChartDrawingTool.elliottTriangle => _WaveVectorIcon(
       color: color,
-      points: _PolylineVectorIcon.elliottTriangle,
+      shape: _WaveIconShape.elliottTriangle,
     ),
   };
 }
@@ -667,7 +658,7 @@ class _DrawingToolsSheetState extends State<DrawingToolsSheet> {
         borderRadius: BorderRadius.circular(12),
         child: Container(
           width: 104,
-          height: 76,
+          height: 86,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
           decoration: BoxDecoration(
             color: cardBg,
@@ -702,12 +693,14 @@ class _DrawingToolsSheetState extends State<DrawingToolsSheet> {
               tool._icon(isSelected ? _selectedColor : iconColor),
               // Tool Name
               Text(
-                tool._cardLabel,
+                tool._title,
                 textAlign: TextAlign.center,
-                maxLines: 1,
+                // Nama panjang (mis. "Elliott Correction Wave") turun ke baris kedua, seperti TradingView.
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 10.5,
+                  height: 1.15,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: isSelected ? _selectedColor : textColor,
                 ),
@@ -1239,103 +1232,149 @@ class _RectPainter extends CustomPainter {
       oldDelegate.color != color;
 }
 
-/// Ikon Path & Elliott Wave: polyline melewati [points] (grid 24x24) dengan titik di
-/// setiap belokan, dan mata panah di titik terakhir kalau [endArrow].
-class _PolylineVectorIcon extends StatelessWidget {
-  static const List<Offset> path = <Offset>[
-    Offset(3, 19),
-    Offset(8, 10),
-    Offset(12.5, 14.5),
-    Offset(20, 5),
-  ];
-  static const List<Offset> elliottImpulse = <Offset>[
-    Offset(2.5, 20),
-    Offset(6.5, 13),
-    Offset(9.5, 16.5),
-    Offset(14, 7),
-    Offset(17, 11),
-    Offset(21.5, 4),
-  ];
-  static const List<Offset> elliottCorrection = <Offset>[
-    Offset(3, 19),
-    Offset(9, 7),
-    Offset(14, 13),
-    Offset(21, 4),
-  ];
-
-  /// Segitiga kontraksi: amplitudo gelombang A-B-C-D-E makin mengecil.
-  static const List<Offset> elliottTriangle = <Offset>[
-    Offset(2.5, 12),
-    Offset(6, 4),
-    Offset(10, 20),
-    Offset(13.5, 7.5),
-    Offset(17, 16),
-    Offset(21, 10.5),
-  ];
-
-  final Color color;
+/// Bentuk ikon Path & Elliott Wave ala TradingView (grid 24x24): zigzag dengan lingkaran
+/// berongga di setiap titik. Path tanpa lingkaran di titik awal dan berpanah di titik akhir;
+/// Elliott Wave diberi label gelombang di atas titik ke-2 & titik terakhir.
+@immutable
+class _WaveIconShape {
   final List<Offset> points;
   final bool endArrow;
 
-  const _PolylineVectorIcon({
-    required this.color,
-    required this.points,
-    this.endArrow = false,
-  });
+  /// Label di atas titik ke-2 & titik terakhir; null = tanpa label.
+  final (String, String)? labels;
+
+  const _WaveIconShape(this.points, {this.endArrow = false, this.labels});
+
+  static const _WaveIconShape path = _WaveIconShape(<Offset>[
+    Offset(2, 16),
+    Offset(7.8, 9.5),
+    Offset(14.2, 15.2),
+    Offset(22, 7.5),
+  ], endArrow: true);
+
+  static const List<Offset> _elliottPoints = <Offset>[
+    Offset(2.5, 20.5),
+    Offset(9, 14),
+    Offset(15, 20.5),
+    Offset(21.5, 14),
+  ];
+  static const _WaveIconShape elliottImpulse = _WaveIconShape(
+    _elliottPoints,
+    labels: ('1', '5'),
+  );
+  static const _WaveIconShape elliottCorrection = _WaveIconShape(
+    _elliottPoints,
+    labels: ('A', 'C'),
+  );
+  static const _WaveIconShape elliottTriangle = _WaveIconShape(
+    _elliottPoints,
+    labels: ('A', 'E'),
+  );
+
+  bool hasRing(int index) =>
+      !endArrow || (index > 0 && index < points.length - 1);
+}
+
+class _WaveVectorIcon extends StatelessWidget {
+  final Color color;
+  final _WaveIconShape shape;
+
+  const _WaveVectorIcon({required this.color, required this.shape});
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
       size: const Size(24, 24),
-      painter: _PolylinePainter(color, points, endArrow),
+      painter: _WavePainter(color, shape),
     );
   }
 }
 
-class _PolylinePainter extends CustomPainter {
+class _WavePainter extends CustomPainter {
   final Color color;
-  final List<Offset> points;
-  final bool endArrow;
-  _PolylinePainter(this.color, this.points, this.endArrow);
+  final _WaveIconShape shape;
+  _WavePainter(this.color, this.shape);
 
+  // Lingkaran kecil & garis tipis supaya segmen antar titik tetap terlihat panjang (seperti TradingView).
+  static const double _ringRadius = 1.7;
+  static const double _strokeWidth = 1.5;
   static const double _arrowSize = 5;
   static const double _arrowHalfAngle = math.pi / 6;
-  static const double _vertexRadius = 1.6;
+  static const double _labelFontSize = 7.5;
+
+  /// Jarak dasar label ke tepi atas lingkaran titiknya.
+  static const double _labelGap = 1.5;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint linePaint = Paint()
+    final Paint strokePaint = Paint()
       ..color = color
-      ..strokeWidth = 1.8
+      ..strokeWidth = _strokeWidth
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(Path()..addPolygon(points, false), linePaint);
+    final List<Offset> points = shape.points;
 
-    final Paint vertexPaint = Paint()..color = color;
-    final Iterable<Offset> vertices = endArrow
-        ? points.take(points.length - 1)
-        : points;
-    for (final Offset vertex in vertices) {
-      canvas.drawCircle(vertex, _vertexRadius, vertexPaint);
+    // Segmen berhenti di tepi lingkaran supaya tidak masuk ke rongganya.
+    for (int i = 1; i < points.length; i++) {
+      final Offset from = points[i - 1];
+      final Offset to = points[i];
+      final Offset unit = (to - from) / (to - from).distance;
+      canvas.drawLine(
+        shape.hasRing(i - 1) ? from + unit * _ringRadius : from,
+        shape.hasRing(i) ? to - unit * _ringRadius : to,
+        strokePaint,
+      );
+    }
+    for (int i = 0; i < points.length; i++) {
+      if (shape.hasRing(i)) {
+        canvas.drawCircle(points[i], _ringRadius, strokePaint);
+      }
     }
 
-    if (!endArrow) return;
-    final Offset tip = points.last;
-    final double angle = (tip - points[points.length - 2]).direction;
-    canvas.drawPath(
-      Path()..addPolygon(<Offset>[
-        tip - Offset.fromDirection(angle - _arrowHalfAngle, _arrowSize),
-        tip,
-        tip - Offset.fromDirection(angle + _arrowHalfAngle, _arrowSize),
-      ], false),
-      linePaint,
+    if (shape.endArrow) {
+      final Offset tip = points.last;
+      final double angle = (tip - points[points.length - 2]).direction;
+      canvas.drawPath(
+        Path()..addPolygon(<Offset>[
+          tip - Offset.fromDirection(angle - _arrowHalfAngle, _arrowSize),
+          tip,
+          tip - Offset.fromDirection(angle + _arrowHalfAngle, _arrowSize),
+        ], false),
+        strokePaint,
+      );
+    }
+
+    if (shape.labels case (final String first, final String last)) {
+      _drawLabel(canvas, first, points[1]);
+      _drawLabel(canvas, last, points.last);
+    }
+  }
+
+  void _drawLabel(Canvas canvas, String text, Offset point) {
+    final TextPainter label = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: color,
+          fontSize: _labelFontSize,
+          fontWeight: FontWeight.w700,
+          height: 1,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    label.paint(
+      canvas,
+      Offset(
+        point.dx - label.width / 2,
+        point.dy - _ringRadius - _labelGap - label.height,
+      ),
     );
+    label.dispose();
   }
 
   @override
-  bool shouldRepaint(covariant _PolylinePainter oldDelegate) =>
-      oldDelegate.color != color ||
-      oldDelegate.points != points ||
-      oldDelegate.endArrow != endArrow;
+  bool shouldRepaint(covariant _WavePainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.shape != shape;
 }

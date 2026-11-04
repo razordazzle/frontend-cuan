@@ -5237,13 +5237,54 @@
             }
         }
 
-        // Ikon object tree per jenis wave (garis zigzag 18x18, sama gayanya dengan ikon drawing lain).
-        const WAVE_TREE_ICON_PATHS = Object.freeze({
-            path: 'M2.5 14.5L6.5 8.5l3.5 4 5.5-8M12 4.5h3.5V8',
-            elliottImpulse: 'M1.5 15.5l3-6 2 3 4-8.5 2 3 4-5',
-            elliottCorrection: 'M2 15l5-9 3.5 5 5.5-8',
-            elliottTriangle: 'M1.5 9l3-5.5 3 11 3-8.5 3 6 3-3.5',
+        // Ikon object tree ala TradingView (18x18), sama bentuknya dengan ikon di sheet drawing Flutter:
+        // zigzag dengan lingkaran berongga di tiap titik. Path: titik awal polos & berpanah di akhir;
+        // Elliott Wave: label gelombang di atas titik ke-2 & titik terakhir.
+        const WAVE_TREE_ELLIOTT_POINTS = [[1.5, 16], [6.5, 11], [11.5, 16], [16.5, 11]];
+        const WAVE_TREE_ICON_SHAPES = Object.freeze({
+            path: { points: [[1, 15.5], [6.2, 9], [11, 13.8], [16.8, 7.5]], endArrow: true, labels: null },
+            elliottImpulse: { points: WAVE_TREE_ELLIOTT_POINTS, endArrow: false, labels: ['1', '5'] },
+            elliottCorrection: { points: WAVE_TREE_ELLIOTT_POINTS, endArrow: false, labels: ['A', 'C'] },
+            elliottTriangle: { points: WAVE_TREE_ELLIOTT_POINTS, endArrow: false, labels: ['A', 'E'] },
         });
+
+        function buildWaveTreeIconSvg({ points, endArrow, labels }) {
+            // Lingkaran kecil supaya segmen antar titik tetap terlihat panjang (seperti TradingView).
+            const ringRadius = 1.3;
+            const round = v => +v.toFixed(2);
+            const hasRing = i => !endArrow || (i > 0 && i < points.length - 1);
+            // Segmen berhenti di tepi lingkaran supaya tidak masuk ke rongganya.
+            let d = points.slice(1).map(([bx, by], k) => {
+                const [ax, ay] = points[k];
+                const len = Math.hypot(bx - ax, by - ay);
+                const ux = (bx - ax) / len;
+                const uy = (by - ay) / len;
+                const startInset = hasRing(k) ? ringRadius : 0;
+                const endInset = hasRing(k + 1) ? ringRadius : 0;
+                return `M${round(ax + ux * startInset)} ${round(ay + uy * startInset)}L${round(bx - ux * endInset)} ${round(by - uy * endInset)}`;
+            }).join('');
+            if (endArrow) {
+                const [[fx, fy], [tx, ty]] = points.slice(-2);
+                const wings = WaveDrawings.arrowHead({ x: fx, y: fy }, { x: tx, y: ty }, 4);
+                if (wings) d += `M${round(wings[0].x)} ${round(wings[0].y)}L${tx} ${ty}L${round(wings[1].x)} ${round(wings[1].y)}`;
+            }
+            const rings = points
+                .filter((_, i) => hasRing(i))
+                .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="${ringRadius}" />`)
+                .join('');
+            const text = (labels || [])
+                .map((label, k) => {
+                    const [x, y] = k === 0 ? points[1] : points[points.length - 1];
+                    return `<text x="${x}" y="${round(y - ringRadius - 1.5)}" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor" stroke="none">${label}</text>`;
+                })
+                .join('');
+            return `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="${d}" />${rings}${text}</svg>`;
+        }
+
+        // Dibuat sekali saat halaman dimuat; baris object tree cukup memakai string jadinya.
+        const WAVE_TREE_ICONS = Object.freeze(Object.fromEntries(
+            Object.entries(WAVE_TREE_ICON_SHAPES).map(([kind, shape]) => [kind, buildWaveTreeIconSvg(shape)]),
+        ));
 
         function buildWaveTreeRow(wave, idx) {
             const isSelected = selectedWaveIndex === idx;
@@ -5251,11 +5292,7 @@
             row.className = 'tv-tree-item' + (isSelected ? ' selected' : '') + (wave.hidden ? ' hidden-item' : '');
             row.innerHTML = `
                 <div class="tv-tree-item-left">
-                    <div class="tv-tree-item-icon" style="color: var(--tv-label);">
-                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="${WAVE_TREE_ICON_PATHS[wave.kind]}" />
-                        </svg>
-                    </div>
+                    <div class="tv-tree-item-icon" style="color: var(--tv-label);">${WAVE_TREE_ICONS[wave.kind]}</div>
                     <span class="tv-tree-item-label">${WaveDrawings.KINDS[wave.kind].title}</span>
                 </div>
                 <div class="tv-tree-item-actions">
