@@ -2649,7 +2649,10 @@
 
         // Path & Elliott Wave: polyline multi-titik, model & geometrinya di wave_drawings.js.
         let waves = []; // Array of Wave (lihat wave_drawings.js)
-        let waveDraft = null; // { kind, points } selama menggambar wave baru; null = tidak sedang menggambar
+        // { kind, points, drag } selama menggambar wave baru; null = tidak sedang menggambar.
+        // Titik ditaruh di crosshair (crosshairPos); `drag` = { fromX, fromY, originX, originY } selama
+        // jari menggeser crosshair, null kalau tidak sedang ditekan.
+        let waveDraft = null;
         let selectedWaveIndex = -1; // -1: none, >= 0: wave index in edit mode
         let dragWaveIndex = -1;
         let dragWavePointIndex = -1; // >= 0: geser satu titik, -1: geser seluruh wave (dragWaveStartPos)
@@ -2660,6 +2663,21 @@
                 window.flutter_inappwebview.callHandler('onWavesChanged', waves);
             }
             window.parent?.postMessage(JSON.stringify({ type: 'onWavesChanged', payload: waves }), '*');
+        }
+
+        /** Tinggi pane harga utama (pane 0), satu-satunya area tempat drawing. */
+        function getMainPaneHeight() {
+            const canvas = document.getElementById('fib-canvas');
+            const paneHeight = chart?.panes?.()[0]?.getHeight();
+            return paneHeight > 0 ? paneHeight : (canvas ? canvas.getBoundingClientRect().height : 0);
+        }
+
+        /** Posisi dijepit ke area candle supaya titik di crosshair selalu punya waktu & harga. */
+        function clampToCandleArea(x, y) {
+            return {
+                x: Math.max(0, Math.min(x, getChartContentWidth())),
+                y: Math.max(0, Math.min(y, getMainPaneHeight())),
+            };
         }
 
         /** Koordinat layar titik-titik wave; null untuk titik yang di luar skala chart. */
@@ -6590,6 +6608,33 @@
             }
 
             /**
+             * Taruh titik draft di crosshair; Elliott Wave tersimpan begitu titiknya lengkap. Path diakhiri
+             * dengan mengetuk lagi tanpa menggeser crosshair dari titik terakhirnya.
+             */
+            function placeWavePoint() {
+                const { kind, points } = waveDraft;
+                const time = getTimeAtX(crosshairPos.x);
+                const price = getPriceAtY(crosshairPos.y);
+                if (!time || price === null) return;
+                const last = points.length > 0 ? waveScreenPoints([points[points.length - 1]])[0] : null;
+                if (WaveDrawings.KINDS[kind].openEnded
+                    && points.length >= WaveDrawings.minPoints(kind)
+                    && last
+                    && Math.hypot(crosshairPos.x - last.x, crosshairPos.y - last.y) <= TAP_MAX_DISTANCE) {
+                    finishWaveDraft();
+                    return;
+                }
+                const point = { time, price };
+                points.push(point);
+                if (WaveDrawings.isComplete(kind, points.length)) {
+                    finishWaveDraft();
+                    return;
+                }
+                // Crosshair ikut menempel ke titik (waktunya di-snap ke candle) supaya segmen berikutnya mulai dari sana.
+                crosshairPos = waveScreenPoints([point])[0] ?? crosshairPos;
+            }
+
+            /**
              * Sentuhan di wave. Wave yang belum terseleksi baru dipilih kalau gesturnya tap; wave terseleksi
              * langsung di-drag (satu titik atau seluruh wave). True kalau sentuhan dipakai wave terseleksi.
              */
@@ -7183,26 +7228,14 @@
                     return;
                 }
 
-                // 0.05 Path / Elliott Wave Placement: tiap ketukan menaruh satu titik (masih bisa digeser
-                // selama jari menempel). Path diakhiri dengan mengetuk titik terakhirnya lagi.
+                // 0.05 Path / Elliott Wave (ala TradingView mobile): geseran jari memindahkan crosshair
+                // secara relatif supaya titiknya tidak tertutup jari; ketukan menaruh titik di crosshair
+                // (onPointerUp). Mouse: crosshair langsung mengikuti kursor.
                 if (waveDraft) {
-                    const time = getTimeAtX(clampedX);
-                    const price = getPriceAtY(y);
-                    if (!time || price === null) return;
-                    const points = waveDraft.points;
-                    const lastPoint = points.length > 0 ? waveScreenPoints([points[points.length - 1]])[0] : null;
-                    if (WaveDrawings.KINDS[waveDraft.kind].openEnded
-                        && points.length >= WaveDrawings.minPoints(waveDraft.kind)
-                        && lastPoint
-                        && Math.hypot(clampedX - lastPoint.x, y - lastPoint.y) <= HITBOX_TL_ANCHOR) {
-                        finishWaveDraft();
-                        return;
-                    }
-                    points.push({ time, price });
+                    if (e.pointerType === 'mouse' || !crosshairPos) crosshairPos = clampToCandleArea(x, y);
+                    waveDraft.drag = { fromX: x, fromY: y, originX: crosshairPos.x, originY: crosshairPos.y };
                     isPointerDown = true;
-                    canvas.setPointerCapture?.(e.pointerId);
-                    if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
-                    renderFib();
+                    try { canvas.setPointerCapture?.(e.pointerId); } catch (_) {}
                     return;
                 }
 
@@ -7677,24 +7710,25 @@
                 const clampedX = Math.max(0, Math.min(x, maxContentX));
 
                 // Tracking crosshair position during drawing tools (S/R, Fib, Trendline, Rectangle)
-                if (isDrawingHorizontalLine || (isDrawingFib && fibDrawState > 0) || (isDrawingTrendline && trendlineDrawState > 0) || (isDrawingRectangle && rectangleDrawState > 0) || waveDraft) {
+                if (isDrawingHorizontalLine || (isDrawingFib && fibDrawState > 0) || (isDrawingTrendline && trendlineDrawState > 0) || (isDrawingRectangle && rectangleDrawState > 0)) {
                     crosshairPos = { x: clampedX, y };
                     if (isDrawingHorizontalLine || (isDrawingTrendline && trendlineDrawState === 1) || (isDrawingRectangle && rectangleDrawState === 1)) {
                         renderFib();
                         return;
                     }
-                } else if (crosshairPos !== null && dragHorizontalLineIndex === -1 && dragTrendlineIndex === -1 && dragRectangleIndex === -1) {
+                } else if (crosshairPos !== null && !waveDraft && dragHorizontalLineIndex === -1 && dragTrendlineIndex === -1 && dragRectangleIndex === -1) {
                     crosshairPos = null;
                 }
 
-                // Path / Elliott Wave draft: titik yang baru ditaruh mengikuti jari selama masih menempel;
-                // tanpa ditekan (mouse) cukup pratinjau segmen ke kursor.
+                // Path / Elliott Wave draft: crosshair bergeser sejauh geseran jari (lihat pointerdown 0.05).
                 if (waveDraft) {
-                    const points = waveDraft.points;
-                    if (isPointerDown && points.length > 0) {
-                        const time = getTimeAtX(clampedX);
-                        const price = getPriceAtY(y);
-                        if (time && price !== null) points[points.length - 1] = { time, price };
+                    const drag = waveDraft.drag;
+                    if (drag) {
+                        crosshairPos = clampToCandleArea(drag.originX + x - drag.fromX, drag.originY + y - drag.fromY);
+                    } else if (e.pointerType === 'mouse') {
+                        crosshairPos = clampToCandleArea(x, y);
+                    } else {
+                        return;
                     }
                     renderFib();
                     return;
@@ -8070,7 +8104,8 @@
             }
 
             canvas.addEventListener('pointerleave', () => {
-                if (crosshairPos !== null) {
+                // Crosshair draft wave tetap ada: di layar sentuh pointerleave muncul setiap jari diangkat.
+                if (crosshairPos !== null && !waveDraft) {
                     crosshairPos = null;
                     renderFib();
                 }
@@ -8111,15 +8146,16 @@
                     return;
                 }
 
-                // Titik draft wave selesai ditaruh; Elliott Wave otomatis tersimpan begitu titiknya lengkap.
+                // Draft wave: ketukan (tanpa geser) menaruh titik di crosshair; geseran cukup memindahkan crosshair.
                 if (waveDraft) {
+                    const drag = waveDraft.drag;
+                    waveDraft.drag = null;
                     isPointerDown = false;
                     try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
-                    if (WaveDrawings.isComplete(waveDraft.kind, waveDraft.points.length)) {
-                        finishWaveDraft();
-                    } else {
-                        renderFib();
+                    if (drag && e.type === 'pointerup' && Math.hypot(x - drag.fromX, y - drag.fromY) <= TAP_MAX_DISTANCE) {
+                        placeWavePoint();
                     }
+                    renderFib();
                     return;
                 }
 
@@ -9423,13 +9459,17 @@
                 drawWave(ctx, wave, screenPoints, i === selectedWaveIndex);
             });
 
-            if (!waveDraft || waveDraft.points.length === 0) return;
+            if (!waveDraft) return;
             const placed = waveScreenPoints(waveDraft.points).filter(Boolean);
-            // Pakai mouse (tidak sedang ditekan): segmen berikutnya mengikuti kursor.
-            const preview = !isPointerDown && crosshairPos ? [...placed, crosshairPos] : placed;
-            drawWave(ctx, WaveDrawings.createWave(waveDraft.kind, waveDraft.points), preview, false);
+            const cursorPrice = crosshairPos ? getPriceAtY(crosshairPos.y) : null;
+            // Crosshair = calon titik berikutnya: segmen, label gelombang, & panah Path ikut pratinjaunya.
+            if (placed.length > 0 && cursorPrice !== null) {
+                const preview = WaveDrawings.createWave(waveDraft.kind, [...waveDraft.points, { time: 0, price: cursorPrice }]);
+                drawWave(ctx, preview, [...placed, crosshairPos], false);
+            }
             ctx.save();
             placed.forEach(p => drawWaveDraftAnchor(ctx, p));
+            if (crosshairPos) drawWaveDraftAnchor(ctx, crosshairPos);
             ctx.restore();
         }
 
@@ -9739,7 +9779,10 @@
             cancelTrendlineDrawing();
             cancelRectangleDrawing();
             hideTrendlineToolbar();
-            waveDraft = { kind, points: [] };
+            waveDraft = { kind, points: [], drag: null };
+            // Crosshair mulai di tengah area candle; selama menggambar, geseran jari menggeser crosshair, bukan chart.
+            crosshairPos = clampToCandleArea(getChartContentWidth() / 2, getMainPaneHeight() / 2);
+            if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
             const canvas = document.getElementById('fib-canvas');
             if (canvas) {
                 canvas.style.pointerEvents = 'auto';
