@@ -7,6 +7,12 @@ class StockListItem {
   final double? changePct;
   final String? logoUrl;
 
+  /// Net asing dalam Rupiah (+ beli bersih, - jual bersih). Hanya terisi di Top Net Foreign.
+  final double? netForeignIdr;
+
+  /// Net asing sebagai % dari nilai transaksi saham itu.
+  final double? netForeignPct;
+
   StockListItem({
     required this.ticker,
     required this.companyName,
@@ -15,6 +21,8 @@ class StockListItem {
     this.changePoint,
     this.changePct,
     this.logoUrl,
+    this.netForeignIdr,
+    this.netForeignPct,
   });
 
   factory StockListItem.fromJson(Map<String, dynamic> json) {
@@ -26,6 +34,8 @@ class StockListItem {
       changePoint: (json['change_point'] as num?)?.toDouble(),
       changePct: (json['change_pct'] as num?)?.toDouble(),
       logoUrl: json['logo_url'] as String?,
+      netForeignIdr: (json['net_foreign_idr'] as num?)?.toDouble(),
+      netForeignPct: (json['net_foreign_pct'] as num?)?.toDouble(),
     );
   }
 
@@ -37,6 +47,8 @@ class StockListItem {
     'change_point': changePoint,
     'change_pct': changePct,
     'logo_url': logoUrl,
+    'net_foreign_idr': netForeignIdr,
+    'net_foreign_pct': netForeignPct,
   };
 
   // 👇 tambahin ini
@@ -55,6 +67,8 @@ class StockListItem {
       changePoint: changePoint ?? this.changePoint,
       changePct: changePct ?? this.changePct,
       logoUrl: logoUrl ?? this.logoUrl,
+      netForeignIdr: netForeignIdr,
+      netForeignPct: netForeignPct,
     );
   }
 }
