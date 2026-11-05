@@ -11,6 +11,7 @@ import 'package:cuan_app/pages/screen/tradingview_chart_page.dart';
 import 'package:cuan_app/pages/screen/stock_detail_page.dart';
 import 'package:cuan_app/providers/stocks_provider.dart';
 import 'package:cuan_app/utils/idx_session.dart';
+import 'package:cuan_app/utils/rupiah_compact.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -27,7 +28,7 @@ class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late StocksProvider _stocksProvider;
   late final TabController _tabController = TabController(
-    length: 4,
+    length: 6,
     vsync: this,
   )..addListener(_onTabChanged);
 
@@ -72,6 +73,8 @@ class _HomePageState extends State<HomePage>
         p.fetchGainers(),
         p.fetchLosers(),
         p.fetchVolume(),
+        p.fetchForeignBuy(),
+        p.fetchForeignSell(),
         p.fetchIndexCandles(),
       ]);
       if (chartWasStale) unawaited(p.refreshIndexQuietly());
@@ -534,8 +537,9 @@ class _HomePageState extends State<HomePage>
                 delegate: _SliverAppBarDelegate(
                   TabBar(
                     controller: _tabController,
-                    isScrollable: false,
-                    labelPadding: EdgeInsets.zero,
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 14),
                     indicatorSize: TabBarIndicatorSize.tab,
                     indicatorColor: cs.primary,
                     indicatorWeight: 2,
@@ -549,6 +553,8 @@ class _HomePageState extends State<HomePage>
                       Tab(text: 'Top Gainers'),
                       Tab(text: 'Top Losers'),
                       Tab(text: 'Top Volume'),
+                      Tab(text: 'Net Foreign Buy'),
+                      Tab(text: 'Net Foreign Sell'),
                     ],
                   ),
                   cs.surface, // Warna background tab bar saat terscroll
@@ -596,6 +602,28 @@ class _HomePageState extends State<HomePage>
                   caption: p.topAsOfLabel,
                   onRefresh: () async {
                     await p.fetchVolume(force: true);
+                    await _subscribeActiveTab();
+                  },
+                ),
+                _TabList(
+                  loading: p.loadingForeignBuy,
+                  error: p.errForeignBuy,
+                  data: p.topForeignBuy,
+                  caption: p.topAsOfLabel,
+                  foreign: true,
+                  onRefresh: () async {
+                    await p.fetchForeignBuy(force: true);
+                    await _subscribeActiveTab();
+                  },
+                ),
+                _TabList(
+                  loading: p.loadingForeignSell,
+                  error: p.errForeignSell,
+                  data: p.topForeignSell,
+                  caption: p.topAsOfLabel,
+                  foreign: true,
+                  onRefresh: () async {
+                    await p.fetchForeignSell(force: true);
                     await _subscribeActiveTab();
                   },
                 ),
@@ -669,12 +697,16 @@ class _TabList extends StatelessWidget {
 
   /// Keterangan di atas daftar, mis. "Data penutupan 27 Okt 2026" (null = tidak ditampilkan).
   final String? caption;
+
+  /// true = tab Net Foreign: kolom kanan menampilkan net asing (Rp) di atas harga.
+  final bool foreign;
   const _TabList({
     required this.loading,
     required this.error,
     required this.data,
     required this.onRefresh,
     this.caption,
+    this.foreign = false,
   });
 
   @override
@@ -701,7 +733,7 @@ class _TabList extends StatelessWidget {
             child: Align(
               alignment: Alignment.centerRight,
               child: Text(
-                'Harga',
+                foreign ? 'Net Asing' : 'Harga',
                 style: t.labelMedium?.copyWith(
                   color: cs.onSurface.withOpacity(.6),
                 ),
@@ -812,9 +844,23 @@ class _TabList extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              if (foreign)
+                Text(
+                  formatRupiahCompact(s.netForeignIdr, withSign: true),
+                  style: t.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: (s.netForeignIdr ?? 0) >= 0
+                        ? const Color(0xFF21C07A)
+                        : Colors.red.shade600,
+                  ),
+                ),
               Text(
                 price > 0 ? price.toStringAsFixed(0) : '-',
-                style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                style: foreign
+                    ? t.labelSmall?.copyWith(
+                        color: cs.onSurface.withOpacity(.7),
+                      )
+                    : t.titleSmall?.copyWith(fontWeight: FontWeight.w700),
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,

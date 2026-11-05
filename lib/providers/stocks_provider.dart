@@ -40,13 +40,22 @@ class StocksProvider extends ChangeNotifier {
   bool loadingWatch = false,
       loadingGainers = false,
       loadingLosers = false,
-      loadingVolume = false;
-  String? errWatch, errGainers, errLosers, errVolume;
+      loadingVolume = false,
+      loadingForeignBuy = false,
+      loadingForeignSell = false;
+  String? errWatch,
+      errGainers,
+      errLosers,
+      errVolume,
+      errForeignBuy,
+      errForeignSell;
 
   List<StockListItem>? watchlist;
   List<StockListItem>? topGainers;
   List<StockListItem>? topLosers;
   List<StockListItem>? topVolume;
+  List<StockListItem>? topForeignBuy;
+  List<StockListItem>? topForeignSell;
 
   /// Tanggal bursa data Top Gainers/Losers/Volume (data penutupan, bukan harga live).
   DateTime? topAsOf;
@@ -326,6 +335,40 @@ class StocksProvider extends ChangeNotifier {
       errVolume = 'Gagal memuat top volume';
     } finally {
       loadingVolume = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchForeignBuy({bool force = false}) async {
+    if (topForeignBuy != null && !force) return;
+    loadingForeignBuy = true;
+    errForeignBuy = null;
+    notifyListeners();
+    try {
+      final r = await _svc.listTop(filter: 'top_foreign_buy', limit: 50);
+      topForeignBuy = r.items;
+      topAsOf = r.asOf ?? topAsOf;
+    } catch (e) {
+      errForeignBuy = 'Gagal memuat net foreign buy';
+    } finally {
+      loadingForeignBuy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchForeignSell({bool force = false}) async {
+    if (topForeignSell != null && !force) return;
+    loadingForeignSell = true;
+    errForeignSell = null;
+    notifyListeners();
+    try {
+      final r = await _svc.listTop(filter: 'top_foreign_sell', limit: 50);
+      topForeignSell = r.items;
+      topAsOf = r.asOf ?? topAsOf;
+    } catch (e) {
+      errForeignSell = 'Gagal memuat net foreign sell';
+    } finally {
+      loadingForeignSell = false;
       notifyListeners();
     }
   }

@@ -3,6 +3,7 @@ import 'package:cuan_app/data/model/stock_list_item.dart';
 import 'package:cuan_app/pages/screen/market_search_page.dart';
 import 'package:cuan_app/providers/market_provider.dart';
 import 'package:cuan_app/providers/stocks_provider.dart';
+import 'package:cuan_app/utils/rupiah_compact.dart';
 import 'package:flutter/material.dart';
 import 'package:cuan_app/pages/screen/stock_detail_page.dart';
 import 'package:provider/provider.dart';
@@ -15,7 +16,8 @@ class MarketPage extends StatefulWidget {
 }
 
 class _MarketPageState extends State<MarketPage> {
-  int _segIndex = 0; // 0=Gainers, 1=Losers, 2=Top Volume
+  int _segIndex =
+      0; // 0=Gainers, 1=Losers, 2=Top Volume, 3=Net Foreign Buy, 4=Net Foreign Sell
 
   // ===== Dummy data saham (samakan dengan HomePage agar konsisten) =====
 
@@ -113,10 +115,20 @@ class _MarketPageState extends State<MarketPage> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _Segmented3(
-                labels: const ['Top Gainers', 'Top Losers', 'Top Volume'],
+                labels: const [
+                  'Top Gainers',
+                  'Top Losers',
+                  'Top Volume',
+                  'Net Foreign Buy',
+                  'Net Foreign Sell',
+                ],
                 index: _segIndex,
                 onChanged: (i) {
                   setState(() => _segIndex = i);
+                  // Daftar net asing dimuat saat pertama dibuka (sudah di-cache kalau Home memuatnya)
+                  final sp = context.read<StocksProvider>();
+                  if (i == 3) sp.fetchForeignBuy();
+                  if (i == 4) sp.fetchForeignSell();
                   _syncWsSymbols(context.read<MarketProvider>());
                 },
               ),
@@ -142,7 +154,7 @@ class _MarketPageState extends State<MarketPage> {
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: Text(
-                        'Harga',
+                        _segIndex >= 3 ? 'Net Asing' : 'Harga',
                         style: t.textTheme.labelMedium?.copyWith(
                           color: cs.onSurface.withValues(alpha: .6),
                         ),
@@ -165,13 +177,19 @@ class _MarketPageState extends State<MarketPage> {
                     // return p.volume;
                     if (_segIndex == 0) return p.topGainers ?? [];
                     if (_segIndex == 1) return p.topLosers ?? [];
-                    return p.topVolume ?? [];
+                    if (_segIndex == 2) return p.topVolume ?? [];
+                    if (_segIndex == 3) return p.topForeignBuy ?? [];
+                    return p.topForeignSell ?? [];
                   }
 
                   // Cek loading status dari masing-masing list
-                  bool isLoading = _segIndex == 0
-                      ? p.loadingGainers
-                      : (_segIndex == 1 ? p.loadingLosers : p.loadingVolume);
+                  bool isLoading = switch (_segIndex) {
+                    0 => p.loadingGainers,
+                    1 => p.loadingLosers,
+                    2 => p.loadingVolume,
+                    3 => p.loadingForeignBuy,
+                    _ => p.loadingForeignSell,
+                  };
 
                   if (isLoading && current().isEmpty) {
                     return const Center(child: CircularProgressIndicator());
@@ -218,7 +236,9 @@ class _MarketPageState extends State<MarketPage> {
                       return switch (_segIndex) {
                         0 => sp.fetchGainers(force: true),
                         1 => sp.fetchLosers(force: true),
-                        _ => sp.fetchVolume(force: true),
+                        2 => sp.fetchVolume(force: true),
+                        3 => sp.fetchForeignBuy(force: true),
+                        _ => sp.fetchForeignSell(force: true),
                       };
                     },
                     child: ListView.separated(
@@ -315,15 +335,41 @@ class _MarketPageState extends State<MarketPage> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
+                                if (_segIndex >= 3)
+                                  Text(
+                                    formatRupiahCompact(
+                                      s.netForeignIdr,
+                                      withSign: true,
+                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          color: (s.netForeignIdr ?? 0) >= 0
+                                              ? const Color(0xFF21C07A)
+                                              : Colors.red.shade600,
+                                        ),
+                                  ),
                                 Text(
                                   s.lastPrice?.toStringAsFixed(0) ?? '-',
-                                  style: Theme.of(context).textTheme.titleSmall
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        color: Theme.of(
+                                  style: _segIndex >= 3
+                                      ? Theme.of(
                                           context,
-                                        ).colorScheme.onSurface,
-                                      ),
+                                        ).textTheme.labelSmall?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: .7),
+                                        )
+                                      : Theme.of(
+                                          context,
+                                        ).textTheme.titleSmall?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                        ),
                                 ),
                                 FittedBox(
                                   fit: BoxFit.scaleDown,
@@ -411,12 +457,14 @@ class _Segmented3 extends StatelessWidget {
 
     Widget item(String text, int i) {
       final on = i == index;
-      return Expanded(
+      return Padding(
+        padding: const EdgeInsets.only(right: 8),
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
           onTap: () => onChanged(i),
           child: Container(
             height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: on
@@ -441,14 +489,12 @@ class _Segmented3 extends StatelessWidget {
       );
     }
 
-    return Row(
-      children: [
-        item(labels[0], 0),
-        const SizedBox(width: 8),
-        item(labels[1], 1),
-        const SizedBox(width: 8),
-        item(labels[2], 2),
-      ],
+    // Lima segmen tidak muat sebaris di HP kecil, jadi bisa digeser ke samping.
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [for (var i = 0; i < labels.length; i++) item(labels[i], i)],
+      ),
     );
   }
 }
