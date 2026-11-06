@@ -6,7 +6,7 @@ class AppConfig {
   /// Kode paket membership yang dibeli dari app (SubscriptionPackage.code di backend).
   /// Sementara pakai paket WEEK yang ada di database; di V1 ganti jadi 'LIFETIME'.
   /// Satu-satunya tempat kode paket ditulis — semua halaman checkout membership pakai ini.
-  static const membershipPackageCode = 'WEEK';
+  static const membershipPackageCode = 'LIFETIME';
 
   // static const baseUrl = String.fromEnvironment(
   //   'API_BASE_URL',
