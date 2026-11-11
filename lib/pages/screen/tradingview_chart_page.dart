@@ -293,6 +293,9 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
                       waves: _drawings.waves,
                       drawingWave: _drawings.drawingWave,
                       onWavesChanged: _drawings.setWaves,
+                      texts: _drawings.texts,
+                      isDrawingText: _drawings.isDrawing(ChartDrawingTool.text),
+                      onTextsChanged: _drawings.setTexts,
                       upColor: upColor,
                       downColor: downColor,
                       gridColor: cs.outline.withValues(alpha: .15),
@@ -393,6 +396,8 @@ class _TradingViewChartPageState extends State<TradingViewChartPage> {
                                       'Geser untuk mengarahkan crosshair, ketuk untuk menaruh 4 titik (0-A-B-C)',
                                     ChartDrawingTool.elliottTriangle =>
                                       'Geser untuk mengarahkan crosshair, ketuk untuk menaruh 6 titik (0-A-B-C-D-E)',
+                                    ChartDrawingTool.text =>
+                                      'Geser untuk mengarahkan crosshair, ketuk untuk menaruh Text',
                                     ChartDrawingTool.fibonacci || null =>
                                       'Tarik dari titik asal ke puncak untuk Fibonacci',
                                   },

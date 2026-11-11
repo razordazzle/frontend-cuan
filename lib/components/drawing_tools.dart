@@ -8,7 +8,8 @@ enum _DrawingCategory {
   trend('TREND TOOLS'),
   gannFibonacci('GANN AND FIBONACCI'),
   patterns('PATTERNS'),
-  shapes('GEOMETRIC SHAPES');
+  shapes('GEOMETRIC SHAPES'),
+  annotations('ANNOTATION TOOLS');
 
   const _DrawingCategory(this.label);
   final String label;
@@ -20,7 +21,8 @@ enum _DrawingFilter {
   trend('Trend tools', _DrawingCategory.trend),
   gannFibonacci('Gann and...', _DrawingCategory.gannFibonacci),
   patterns('Patterns', _DrawingCategory.patterns),
-  shapes('Shapes', _DrawingCategory.shapes);
+  shapes('Shapes', _DrawingCategory.shapes),
+  annotations('Annotations', _DrawingCategory.annotations);
 
   const _DrawingFilter(this.label, [this.category]);
   final String label;
@@ -45,6 +47,7 @@ extension _ChartDrawingToolUi on ChartDrawingTool {
     ChartDrawingTool.elliottImpulse => 'Elliott Impulse Wave',
     ChartDrawingTool.elliottCorrection => 'Elliott Correction Wave',
     ChartDrawingTool.elliottTriangle => 'Elliott Triangle Wave',
+    ChartDrawingTool.text => 'Text',
   };
 
   _DrawingCategory get _category => switch (this) {
@@ -56,6 +59,7 @@ extension _ChartDrawingToolUi on ChartDrawingTool {
     ChartDrawingTool.elliottTriangle => _DrawingCategory.patterns,
     ChartDrawingTool.rectangle ||
     ChartDrawingTool.path => _DrawingCategory.shapes,
+    ChartDrawingTool.text => _DrawingCategory.annotations,
   };
 
   Widget _icon(Color color) => switch (this) {
@@ -79,6 +83,7 @@ extension _ChartDrawingToolUi on ChartDrawingTool {
       color: color,
       shape: _WaveIconShape.elliottTriangle,
     ),
+    ChartDrawingTool.text => _TextVectorIcon(color: color),
   };
 }
 
@@ -115,6 +120,7 @@ class _DrawingToolsSheetState extends State<DrawingToolsSheet> {
     ChartDrawingTool.elliottTriangle,
     ChartDrawingTool.rectangle,
     ChartDrawingTool.path,
+    ChartDrawingTool.text,
   ];
   static const Color _starColor = Color(0xFFF7A600); // TradingView Amber Star
   static const Color _selectedColor = Color(0xFF2962FF);
@@ -1229,6 +1235,49 @@ class _RectPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _RectPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+class _TextVectorIcon extends StatelessWidget {
+  final Color color;
+  const _TextVectorIcon({this.color = Colors.white});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: const Size(24, 24),
+      painter: _TextToolPainter(color),
+    );
+  }
+}
+
+/// Huruf "T" ala ikon Text TradingView: palang atas berkait, batang, dan kaki.
+class _TextToolPainter extends CustomPainter {
+  final Color color;
+  _TextToolPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(
+      Path()
+        ..moveTo(5, 7.5)
+        ..lineTo(5, 5)
+        ..lineTo(19, 5)
+        ..lineTo(19, 7.5),
+      paint,
+    );
+    canvas.drawLine(const Offset(12, 5), const Offset(12, 19), paint);
+    canvas.drawLine(const Offset(9.5, 19), const Offset(14.5, 19), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TextToolPainter oldDelegate) =>
       oldDelegate.color != color;
 }
 

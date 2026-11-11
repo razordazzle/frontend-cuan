@@ -10,13 +10,14 @@ enum ChartDrawingTool {
   path,
   elliottImpulse,
   elliottCorrection,
-  elliottTriangle;
+  elliottTriangle,
+  text;
 
   /// Path & Elliott Wave: polyline multi-titik di chart, satu keluarga "wave"
   /// (`assets/charts/wave_drawings.js`) dengan [name] sebagai jenisnya.
   bool get isWave => switch (this) {
     path || elliottImpulse || elliottCorrection || elliottTriangle => true,
-    fibonacci || horizontalLine || trendline || rectangle => false,
+    fibonacci || horizontalLine || trendline || rectangle || text => false,
   };
 }
 
@@ -33,6 +34,7 @@ class ChartDrawingsController extends ChangeNotifier {
   List<Map<String, dynamic>> _trendlines = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _rectangles = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _waves = const <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _texts = const <Map<String, dynamic>>[];
   final PersistedFavorites<ChartDrawingTool> _favoriteTools =
       PersistedFavorites<ChartDrawingTool>(
         storageKey: 'chart.drawingFavorites',
@@ -63,6 +65,9 @@ class ChartDrawingsController extends ChangeNotifier {
   /// Path & Elliott Wave yang sudah digambar (semua jenis wave dalam satu list).
   List<Map<String, dynamic>> get waves => _waves;
 
+  /// Drawing Text yang sudah ditaruh (format `TextDrawing` di text_drawings.js).
+  List<Map<String, dynamic>> get texts => _texts;
+
   bool isDrawing(ChartDrawingTool tool) => _activeTool == tool;
   bool get isDrawingAny => _activeTool != null;
   bool get isToolbarActive => _isToolbarVisible || isDrawingAny;
@@ -76,7 +81,8 @@ class ChartDrawingsController extends ChangeNotifier {
       _horizontalLines.isNotEmpty ||
       _trendlines.isNotEmpty ||
       _rectangles.isNotEmpty ||
-      _waves.isNotEmpty;
+      _waves.isNotEmpty ||
+      _texts.isNotEmpty;
 
   void startDrawing(ChartDrawingTool tool) {
     _activeTool = tool;
@@ -125,6 +131,11 @@ class ChartDrawingsController extends ChangeNotifier {
     _syncObjects(drawingWave);
   }
 
+  void setTexts(List<Map<String, dynamic>> texts) {
+    _texts = List<Map<String, dynamic>>.unmodifiable(texts);
+    _syncObjects(ChartDrawingTool.text);
+  }
+
   void clearAll() {
     _activeTool = null;
     _showFibonacci = false;
@@ -132,6 +143,7 @@ class ChartDrawingsController extends ChangeNotifier {
     _trendlines = const <Map<String, dynamic>>[];
     _rectangles = const <Map<String, dynamic>>[];
     _waves = const <Map<String, dynamic>>[];
+    _texts = const <Map<String, dynamic>>[];
     notifyListeners();
   }
 

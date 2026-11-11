@@ -331,6 +331,55 @@
             font-weight: 500;
         }
 
+        /* Toolbar drawing Text (ala TradingView): template, warna teks, ukuran font, hapus, lainnya. */
+        #tv-btn-font-size {
+            display: none;
+        }
+
+        .tv-toolbar-text #tv-btn-line-color,
+        .tv-toolbar-text #tv-btn-width,
+        .tv-toolbar-text #tv-btn-style,
+        .tv-toolbar-text #tv-btn-angle {
+            display: none !important;
+        }
+
+        .tv-toolbar-text #tv-btn-font-size {
+            display: flex !important;
+        }
+
+        /* Garis indikator ember saat background Text mati: pola kotak-kotak (transparan), seperti TradingView. */
+        .tv-toolbar-text #tv-indicator-fill-color.tv-indicator-empty {
+            background: repeating-conic-gradient(var(--tv-pressed) 0% 25%, transparent 0% 50%) 0 0 / 6px 6px !important;
+        }
+
+        /* Background (ember) sesudah T: tombol bertanda order 1 menyusul tombol lain sesuai urutan DOM. */
+        .tv-toolbar-text #tv-btn-fill-color,
+        .tv-toolbar-text #tv-btn-font-size,
+        .tv-toolbar-text #tv-btn-delete,
+        .tv-toolbar-text #tv-btn-more {
+            order: 1;
+        }
+
+        /* Editor Text langsung di chart: kotak biru tipis yang ukurannya mengikuti isi (lihat layoutInlineTextEditor). */
+        .tv-text-inline-editor {
+            position: absolute;
+            z-index: 20;
+            display: none;
+            box-sizing: border-box;
+            margin: 0;
+            border: 1px solid rgba(41, 98, 255, 0.6);
+            border-radius: 0;
+            outline: none;
+            resize: none;
+            overflow: hidden;
+            word-break: break-word;
+            caret-color: currentColor;
+        }
+
+        .tv-text-inline-editor::placeholder {
+            color: var(--tv-subtle);
+        }
+
         .tv-opacity-row {
             display: flex;
             align-items: center;
@@ -342,7 +391,6 @@
             flex: 1;
             height: 12px;
             border-radius: 6px;
-            overflow: hidden;
             background-image: repeating-linear-gradient(45deg, var(--tv-pressed) 25%, transparent 25%, transparent 75%, var(--tv-pressed) 75%, var(--tv-pressed)), repeating-linear-gradient(45deg, var(--tv-pressed) 25%, var(--tv-surface) 25%, var(--tv-surface) 75%, var(--tv-pressed) 75%, var(--tv-pressed));
             background-position: 0 0, 4px 4px;
             background-size: 8px 8px;
@@ -355,19 +403,44 @@
             left: 0;
             right: 0;
             bottom: 0;
+            border-radius: 6px;
             pointer-events: none;
         }
 
         .tv-opacity-input {
+            -webkit-appearance: none;
+            appearance: none;
             position: absolute;
-            top: -4px;
+            top: 0;
             left: 0;
             width: 100%;
-            height: 20px;
+            height: 100%;
             margin: 0;
-            opacity: 0;
+            background: transparent;
             cursor: pointer;
             z-index: 5;
+        }
+
+        .tv-opacity-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            border: 2px solid #000000;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+            cursor: pointer;
+        }
+
+        .tv-opacity-input::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            border: 2px solid #000000;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+            cursor: pointer;
         }
 
         .tv-opacity-val {
@@ -1737,12 +1810,14 @@
     <script src="lightweight-charts.standalone.production.js"></script>
     <script src="indicators.js"></script>
     <script src="wave_drawings.js"></script>
+    <script src="text_drawings.js"></script>
 </head>
 
 <body>
     <div id="chart-container" style="position: relative; width: 100vw; height: 100vh; overflow: hidden;">
         <div id="chart" style="width: 100%; height: 100%;"></div>
         <canvas id="fib-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></canvas>
+        <textarea id="tv-text-inline-editor" class="tv-text-inline-editor" placeholder="Add text" spellcheck="false" autocomplete="off"></textarea>
 
         <!-- Floating Trendline Edit Toolbar (TradingView Mobile Style) -->
         <div id="tv-trendline-toolbar" class="tv-floating-toolbar" style="display: none;">
@@ -1764,8 +1839,7 @@
                     <rect x="2.5" y="2.5" width="5" height="5" rx="1" />
                     <rect x="10.5" y="2.5" width="5" height="5" rx="1" />
                     <rect x="2.5" y="10.5" width="5" height="5" rx="1" />
-                    <rect x="10.5" y="10.5" width="5" height="5" rx="1" />
-                    <path d="M13 11.5v3M11.5 13h3" stroke-linecap="round" />
+                    <path d="M13 10v6M10 13h6" stroke-linecap="round" />
                 </svg>
             </button>
 
@@ -1798,6 +1872,11 @@
                     <span class="tv-t-icon">T</span>
                     <div id="tv-indicator-text-color" class="tv-color-underline" style="background-color: #FFFFFF;"></div>
                 </div>
+            </button>
+
+            <!-- Font Size Button (khusus Text, mis. 14) -->
+            <button class="tv-tb-btn tv-tb-text-btn" id="tv-btn-font-size" title="Ukuran Teks">
+                <span id="tv-label-font-size">14</span>
             </button>
 
             <!-- Stroke Width Button (e.g. 4px) -->
@@ -1882,6 +1961,9 @@
                 <span>4px</span>
             </div>
         </div>
+
+        <!-- Font Size Dropdown Popover (khusus Text; item dibuat dari TEXT_FONT_SIZES) -->
+        <div id="tv-popover-font-size" class="tv-popover tv-menu-list" style="display: none;"></div>
 
         <!-- Line Style Dropdown Popover -->
         <div id="tv-popover-style" class="tv-popover tv-menu-list" style="display: none;">
@@ -2015,6 +2097,34 @@
 
                 <!-- Textarea -->
                 <textarea id="tv-text-content-input" class="tv-settings-textarea" placeholder="Add text"></textarea>
+
+                <!-- Khusus drawing Text (diisi populateTextBoxOptions): background, border, & text wrap -->
+                <div id="tv-text-box-options" style="display: none;">
+                    <div class="tv-fib-setting-row">
+                        <label class="tv-fib-checkbox-label">
+                            <input type="checkbox" id="tv-text-bg-check" class="tv-checkbox">
+                            <span>Background</span>
+                        </label>
+                        <div class="tv-fib-setting-right">
+                            <button type="button" id="tv-text-bg-color" class="tv-fib-swatch-btn" title="Warna Background"></button>
+                        </div>
+                    </div>
+                    <div class="tv-fib-setting-row">
+                        <label class="tv-fib-checkbox-label">
+                            <input type="checkbox" id="tv-text-border-check" class="tv-checkbox">
+                            <span>Border</span>
+                        </label>
+                        <div class="tv-fib-setting-right">
+                            <button type="button" id="tv-text-border-color" class="tv-fib-swatch-btn" title="Warna Border"></button>
+                        </div>
+                    </div>
+                    <div class="tv-fib-setting-row">
+                        <label class="tv-fib-checkbox-label">
+                            <input type="checkbox" id="tv-text-wrap-check" class="tv-checkbox">
+                            <span>Text wrap</span>
+                        </label>
+                    </div>
+                </div>
 
                 <!-- Alignment Row -->
                 <div class="tv-align-row">
@@ -2649,10 +2759,10 @@
 
         // Path & Elliott Wave: polyline multi-titik, model & geometrinya di wave_drawings.js.
         let waves = []; // Array of Wave (lihat wave_drawings.js)
-        // { kind, points, drag } selama menggambar wave baru; null = tidak sedang menggambar.
-        // Titik ditaruh di crosshair (crosshairPos); `drag` = { fromX, fromY, originX, originY } selama
-        // jari menggeser crosshair, null kalau tidak sedang ditekan.
-        let waveDraft = null;
+        // { kind, points, drag } selama menaruh drawing baru dengan crosshair (kind = jenis wave atau 'text');
+        // null = tidak sedang menaruh. Titik ditaruh di crosshair (crosshairPos); `drag` = { fromX, fromY,
+        // originX, originY } selama jari menggeser crosshair, null kalau tidak sedang ditekan.
+        let placementDraft = null;
         let selectedWaveIndex = -1; // -1: none, >= 0: wave index in edit mode
         let dragWaveIndex = -1;
         let dragWavePointIndex = -1; // >= 0: geser satu titik, -1: geser seluruh wave (dragWaveStartPos)
@@ -2688,6 +2798,381 @@
                 const x = chart.timeScale().timeToCoordinate(p.time);
                 const y = series.priceToCoordinate(p.price);
                 return x === null || y === null ? null : { x, y };
+            });
+        }
+
+        // ===== Text: drawing satu titik (pojok kiri-atas kotak teks), model & tata letaknya di text_drawings.js =====
+        let texts = []; // Array of TextDrawing (lihat text_drawings.js)
+        let selectedTextIndex = -1; // -1: none, >= 0: text index in edit mode
+        let dragTextIndex = -1;
+        let dragTextPart = null; // 'body' (geser) | 'resize' (ubah lebar text wrap)
+        let dragTextStartPos = null; // { x, y, origPoint } saat Text mulai digeser
+        // Opsi kotak (background, border, wrap) Text yang sedang diedit di modal settings; diterapkan saat OK.
+        let pendingTextBox = null;
+        let editingTextIndex = -1; // >= 0: Text yang sedang diketik langsung di chart (inline editor)
+        const TEXT_TOUCH_PADDING = 8;
+        const TEXT_SELECTION_COLOR = 'rgba(41, 98, 255, 0.45)';
+        /** Pilihan ukuran font di toolbar Text (sama dengan TradingView). */
+        const TEXT_FONT_SIZES = Object.freeze([10, 11, 12, 14, 16, 20, 24, 28, 32, 40]);
+        /** Canvas terpisah untuk mengukur teks, supaya state font canvas chart tidak ikut berubah. */
+        const textMeasureCtx = document.createElement('canvas').getContext('2d');
+
+        function notifyTextsChanged() {
+            if (window.flutter_inappwebview?.callHandler) {
+                window.flutter_inappwebview.callHandler('onTextsChanged', texts);
+            }
+            window.parent?.postMessage(JSON.stringify({ type: 'onTextsChanged', payload: texts }), '*');
+        }
+
+        /** Posisi layar titik Text (pojok kiri-atas kotak); null kalau di luar skala chart. */
+        function textScreenAnchor(point) {
+            return waveScreenPoints([point])[0];
+        }
+
+        function textLayoutOf(drawing) {
+            textMeasureCtx.font = TextDrawings.fontOf(drawing);
+            return TextDrawings.layoutText(drawing, line => textMeasureCtx.measureText(line).width);
+        }
+
+        /** Warna crosshair penempatan = warna default tool yang sedang ditaruh. */
+        function placementColor(kind) {
+            return kind === 'text' ? TextDrawings.DEFAULTS.textColor : WaveDrawings.KINDS[kind].color;
+        }
+
+        function startTextDrawing() {
+            beginPlacementDraft('text');
+        }
+
+        function cancelTextDrawing() {
+            if (placementDraft?.kind === 'text') endPlacementDraft();
+        }
+
+        /** Taruh Text (masih kosong) di crosshair, lalu langsung diketik di tempat (seperti TradingView). */
+        function placeTextAtCrosshair() {
+            const time = getTimeAtX(crosshairPos.x);
+            const price = getPriceAtY(crosshairPos.y);
+            if (!time || price === null) return;
+            texts.push(TextDrawings.createText({ time, price }));
+            endPlacementDraft();
+            showTextToolbar(texts.length - 1);
+            renderFib();
+            notifyTextsChanged();
+            startInlineTextEdit(texts.length - 1);
+        }
+
+        /** Ketik isi Text langsung di chart: textarea di posisi Text, keyboard HP langsung muncul. */
+        function startInlineTextEdit(index) {
+            const editor = document.getElementById('tv-text-inline-editor');
+            const t = texts[index];
+            if (!editor || !t) return;
+            editingTextIndex = index;
+            editor.value = t.text;
+            editor.oninput = () => {
+                t.text = editor.value;
+                renderFib();
+            };
+            editor.onblur = finishInlineTextEdit;
+            editor.onkeydown = (e) => {
+                if (e.key === 'Escape') editor.blur();
+            };
+            renderFib(); // Text di canvas disembunyikan, editor ditaruh di tempatnya
+            editor.focus();
+            editor.setSelectionRange(editor.value.length, editor.value.length);
+        }
+
+        /** Selesai mengetik (editor kehilangan fokus): Text kosong dihapus, selain itu disimpan. */
+        function finishInlineTextEdit() {
+            const index = editingTextIndex;
+            if (index < 0) return;
+            editingTextIndex = -1;
+            const editor = document.getElementById('tv-text-inline-editor');
+            if (editor) {
+                editor.onblur = null;
+                editor.style.display = 'none';
+                editor.blur();
+            }
+            const t = texts[index];
+            if (t && !t.text.trim()) {
+                texts.splice(index, 1);
+                if (selectedTextIndex === index) {
+                    selectedTextIndex = -1;
+                    hideTrendlineToolbar();
+                } else if (selectedTextIndex > index) {
+                    selectedTextIndex--;
+                }
+            }
+            renderFib();
+            if (t) notifyTextsChanged();
+        }
+
+        /** Posisi & ukuran editor = kotak Text di canvas (isi, atau placeholder selama masih kosong). */
+        function layoutInlineTextEditor(t, anchor) {
+            const editor = document.getElementById('tv-text-inline-editor');
+            const layout = textLayoutOf({ ...t, text: editor.value || editor.placeholder });
+            // Geser 1px & tambah 2px untuk border editor, +2px lagi supaya caret di ujung baris tetap terlihat.
+            Object.assign(editor.style, {
+                display: 'block',
+                left: `${anchor.x - 1}px`,
+                top: `${anchor.y - 1}px`,
+                width: `${layout.width + 4}px`,
+                height: `${layout.height + 2}px`,
+                padding: `${TextDrawings.PADDING}px`,
+                font: TextDrawings.fontOf(t),
+                lineHeight: `${layout.lineHeight}px`,
+                color: hexToRgba(t.textColor, t.textOpacity),
+                backgroundColor: t.showBackground ? hexToRgba(t.fillColor, t.fillOpacity) : 'transparent',
+                whiteSpace: t.wrap ? 'pre-wrap' : 'pre',
+            });
+        }
+
+        function setTexts(textsInput) {
+            const list = typeof textsInput === 'string' ? JSON.parse(textsInput) : textsInput;
+            texts = (Array.isArray(list) ? list : []).map(item => TextDrawings.normalizeText(item)).filter(Boolean);
+            if (selectedTextIndex >= texts.length) {
+                selectedTextIndex = -1;
+                hideTrendlineToolbar();
+            } else if (selectedTextIndex >= 0) {
+                showTextToolbar(selectedTextIndex);
+            }
+            renderFib();
+        }
+
+        function clearTexts() {
+            finishInlineTextEdit();
+            texts = [];
+            selectedTextIndex = -1;
+            hideTrendlineToolbar();
+            cancelTextDrawing();
+            renderFib();
+            notifyTextsChanged();
+        }
+
+        /** Toolbar Text (ala TradingView): template, warna teks, background, ukuran font, hapus, lainnya. */
+        function showTextToolbar(index) {
+            const t = texts[index];
+            const toolbar = document.getElementById('tv-trendline-toolbar');
+            if (!t || !toolbar) {
+                hideTrendlineToolbar();
+                return;
+            }
+            selectedTextIndex = index;
+            selectedHorizontalLineIndex = -1;
+            selectedTrendlineIndex = -1;
+            selectedRectangleIndex = -1;
+            selectedWaveIndex = -1;
+            isFibSelected = false;
+            ensureTextFontSizePopover();
+
+            // Mode Text menyembunyikan tombol garis/ketebalan/gaya/sudut & mengatur urutan tombol lewat CSS (.tv-toolbar-text).
+            ['tv-btn-clone', 'tv-btn-text-color', 'tv-btn-fill-color'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) btn.style.display = 'flex';
+            });
+            const textInd = document.getElementById('tv-indicator-text-color');
+            if (textInd) textInd.style.backgroundColor = hexToRgba(t.textColor, t.textOpacity);
+            const fillInd = document.getElementById('tv-indicator-fill-color');
+            if (fillInd) {
+                fillInd.classList.toggle('tv-indicator-empty', !t.showBackground);
+                if (t.showBackground) fillInd.style.backgroundColor = hexToRgba(t.fillColor, t.fillOpacity);
+            }
+            const sizeLabel = document.getElementById('tv-label-font-size');
+            if (sizeLabel) sizeLabel.textContent = String(t.textSize);
+
+            const rainbowSwatch = document.getElementById('tv-fib-rainbow-swatch');
+            if (rainbowSwatch) rainbowSwatch.style.display = 'none';
+
+            updateLockSheetUI(t.isLocked);
+            toolbar.classList.add('tv-toolbar-text');
+            toolbar.style.display = 'flex';
+        }
+
+        /** Isi popover ukuran font toolbar Text (sekali saja) & pasang aksinya. */
+        function ensureTextFontSizePopover() {
+            const popover = document.getElementById('tv-popover-font-size');
+            const button = document.getElementById('tv-btn-font-size');
+            if (!popover || !button || popover.childElementCount > 0) return;
+            popover.innerHTML = TEXT_FONT_SIZES
+                .map(size => `<div class="tv-menu-item" data-font-size="${size}"><span>${size}</span></div>`)
+                .join('');
+            popover.querySelectorAll('.tv-menu-item').forEach(item => {
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    applySelectedTextSize(Number(item.dataset.fontSize));
+                };
+            });
+            popover.onpointerdown = (e) => e.stopPropagation();
+            popover.ontouchstart = (e) => e.stopPropagation();
+            button.onclick = (e) => {
+                e.stopPropagation();
+                if (popover.style.display === 'block') {
+                    hideAllPopovers();
+                    return;
+                }
+                hideAllPopovers();
+                button.classList.add('active');
+                const size = texts[selectedTextIndex]?.textSize;
+                popover.querySelectorAll('.tv-menu-item').forEach(item => {
+                    item.classList.toggle('selected', Number(item.dataset.fontSize) === size);
+                });
+                positionPopover(popover, button);
+            };
+        }
+
+        function applySelectedTextSize(size) {
+            const t = texts[selectedTextIndex];
+            if (!t) return;
+            t.textSize = size;
+            hideAllPopovers();
+            showTextToolbar(selectedTextIndex);
+            renderFib();
+            notifyTextsChanged();
+        }
+
+        /** Warna dari color picker toolbar: T = warna teks, ember = background (sekaligus menyalakannya). */
+        function applyTextDrawingColor(t, colorHex, opacityVal) {
+            let activeColor;
+            if (activeColorPickerTarget === 'fill') {
+                if (colorHex) t.fillColor = colorHex;
+                if (opacityVal !== undefined) t.fillOpacity = opacityVal;
+                t.showBackground = true;
+                activeColor = t.fillColor;
+            } else {
+                if (colorHex) t.textColor = colorHex;
+                if (opacityVal !== undefined) t.textOpacity = opacityVal;
+                activeColor = t.textColor;
+            }
+            updateSliderGradient(activeColor);
+            document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
+                sw.classList.toggle('selected', sw.getAttribute('data-color')?.toUpperCase() === activeColor.toUpperCase());
+            });
+            showTextToolbar(selectedTextIndex);
+            renderFib();
+            notifyTextsChanged();
+        }
+
+        /** Isi baris Background / Border / Text wrap di modal settings dari Text `t` (khusus drawing Text). */
+        function populateTextBoxOptions(t) {
+            pendingTextBox = {
+                showBackground: t.showBackground,
+                fillColor: t.fillColor,
+                fillOpacity: t.fillOpacity,
+                showBorder: t.showBorder,
+                borderColor: t.borderColor,
+                wrap: t.wrap,
+            };
+            const bindCheck = (checkId, flag) => {
+                const check = document.getElementById(checkId);
+                check.checked = pendingTextBox[flag];
+                check.onchange = () => {
+                    pendingTextBox[flag] = check.checked;
+                };
+            };
+            bindCheck('tv-text-bg-check', 'showBackground');
+            bindCheck('tv-text-border-check', 'showBorder');
+            bindCheck('tv-text-wrap-check', 'wrap');
+
+            // Warna background (dengan opacity) & border; memilih warna sekaligus mencentang opsinya.
+            const bindColor = (buttonId, checkId, flag, colorKey, opacityKey) => {
+                const button = document.getElementById(buttonId);
+                const opacity = () => (opacityKey ? pendingTextBox[opacityKey] : 1);
+                const paint = () => {
+                    button.style.backgroundColor = hexToRgba(pendingTextBox[colorKey], opacity());
+                };
+                paint();
+                button.onclick = (e) => {
+                    e.stopPropagation();
+                    openFibColorPicker(button, pendingTextBox[colorKey], opacity(), (color, newOpacity) => {
+                        pendingTextBox[colorKey] = color;
+                        if (opacityKey) pendingTextBox[opacityKey] = newOpacity;
+                        pendingTextBox[flag] = true;
+                        document.getElementById(checkId).checked = true;
+                        paint();
+                    });
+                };
+            };
+            bindColor('tv-text-bg-color', 'tv-text-bg-check', 'showBackground', 'fillColor', 'fillOpacity');
+            bindColor('tv-text-border-color', 'tv-text-border-check', 'showBorder', 'borderColor', null);
+        }
+
+        /** Gambar Text: background, border, teks; saat terseleksi + kotak biru tipis & handle lebar wrap. */
+        function drawTextDrawing(ctx, t, anchor, isSelected) {
+            const layout = textLayoutOf(t);
+            const padding = TextDrawings.PADDING;
+            ctx.save();
+            if (t.showBackground) {
+                ctx.fillStyle = hexToRgba(t.fillColor, t.fillOpacity);
+                ctx.fillRect(anchor.x, anchor.y, layout.width, layout.height);
+            }
+            if (t.showBorder || isSelected) {
+                ctx.strokeStyle = t.showBorder ? t.borderColor : TEXT_SELECTION_COLOR;
+                ctx.lineWidth = 1;
+                ctx.strokeRect(anchor.x + 0.5, anchor.y + 0.5, layout.width - 1, layout.height - 1);
+            }
+            ctx.font = TextDrawings.fontOf(t);
+            ctx.fillStyle = hexToRgba(t.textColor, t.textOpacity);
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            layout.lines.forEach((line, i) => {
+                ctx.fillText(line, anchor.x + padding, anchor.y + padding + (i + 0.5) * layout.lineHeight);
+            });
+            if (isSelected && t.wrap) {
+                drawWaveEditAnchor(ctx, TextDrawings.resizeHandle(anchor, layout), DRAWING_COLORS.trendline);
+            }
+            ctx.restore();
+        }
+
+        function renderTexts(ctx) {
+            texts.forEach((t, i) => {
+                if (t.hidden) return;
+                const anchor = textScreenAnchor(t.point);
+                if (!anchor) return;
+                // Text yang sedang diketik ditampilkan oleh editor-nya, bukan canvas.
+                if (i === editingTextIndex) {
+                    layoutInlineTextEditor(t, anchor);
+                } else {
+                    drawTextDrawing(ctx, t, anchor, i === selectedTextIndex);
+                }
+            });
+        }
+
+        /** Geser Text utuh, atau ubah lebar text wrap lewat handle tepi kanan. */
+        function moveDraggedText(t, x, y, maxContentX) {
+            const origin = textScreenAnchor(dragTextStartPos.origPoint);
+            if (!origin) return;
+            if (dragTextPart === 'resize') {
+                t.wrapWidth = TextDrawings.wrapWidthAt(origin.x, x);
+            } else {
+                const targetX = Math.max(0, Math.min(maxContentX, origin.x + x - dragTextStartPos.x));
+                const time = getTimeAtX(targetX);
+                const price = getPriceAtY(origin.y + y - dragTextStartPos.y);
+                if (!time || price === null) return;
+                t.point = { time, price };
+            }
+            renderFib();
+        }
+
+        function buildTextTreeRow(t, idx) {
+            return buildDrawingTreeRow({
+                item: t,
+                iconSvg: '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5V3.5h11v2M9 3.5v11M6.5 14.5h5" /></svg>',
+                label: `Text ("${t.text.replace(/\s+/g, ' ')}")`,
+                isSelected: selectedTextIndex === idx,
+                select: () => showTextToolbar(idx),
+                deselect: () => {
+                    selectedTextIndex = -1;
+                    hideTrendlineToolbar();
+                },
+                remove: () => {
+                    texts.splice(idx, 1);
+                    if (selectedTextIndex === idx) {
+                        selectedTextIndex = -1;
+                        hideTrendlineToolbar();
+                    } else if (selectedTextIndex > idx) {
+                        selectedTextIndex--;
+                    }
+                },
+                notify: notifyTextsChanged,
             });
         }
 
@@ -2956,6 +3441,7 @@
             selectedTrendlineIndex = -1;
             selectedRectangleIndex = -1;
             selectedWaveIndex = -1;
+            selectedTextIndex = -1;
             isFibSelected = false;
 
             const h = horizontalLines[index];
@@ -3013,6 +3499,7 @@
 
             updateLockSheetUI(!!h.isLocked);
 
+            toolbar.classList.remove('tv-toolbar-text');
             toolbar.style.display = 'flex';
         }
 
@@ -3025,6 +3512,7 @@
             selectedHorizontalLineIndex = -1;
             selectedRectangleIndex = -1;
             selectedWaveIndex = -1;
+            selectedTextIndex = -1;
             isFibSelected = false;
 
             const t = trendlines[index];
@@ -3083,6 +3571,7 @@
 
             updateLockSheetUI(!!t.isLocked);
 
+            toolbar.classList.remove('tv-toolbar-text');
             toolbar.style.display = 'flex';
         }
 
@@ -3095,6 +3584,7 @@
             selectedTrendlineIndex = -1;
             selectedHorizontalLineIndex = -1;
             selectedWaveIndex = -1;
+            selectedTextIndex = -1;
             isFibSelected = false;
 
             const r = rectangles[index];
@@ -3159,6 +3649,7 @@
 
             updateLockSheetUI(!!r.isLocked);
 
+            toolbar.classList.remove('tv-toolbar-text');
             toolbar.style.display = 'flex';
         }
 
@@ -3172,6 +3663,7 @@
             selectedTrendlineIndex = -1;
             selectedRectangleIndex = -1;
             selectedWaveIndex = -1;
+            selectedTextIndex = -1;
 
             const toolbar = document.getElementById('tv-trendline-toolbar');
             if (!toolbar) return;
@@ -3223,6 +3715,7 @@
 
             updateLockSheetUI(!!fibIsLocked);
 
+            toolbar.classList.remove('tv-toolbar-text');
             toolbar.style.display = 'flex';
         }
 
@@ -3234,6 +3727,7 @@
                 return;
             }
             selectedWaveIndex = index;
+            selectedTextIndex = -1;
             selectedHorizontalLineIndex = -1;
             selectedTrendlineIndex = -1;
             selectedRectangleIndex = -1;
@@ -3266,6 +3760,7 @@
 
             updateLockSheetUI(w.isLocked);
 
+            toolbar.classList.remove('tv-toolbar-text');
             toolbar.style.display = 'flex';
         }
 
@@ -3300,7 +3795,9 @@
             }
             if (popWidth) popWidth.style.display = 'none';
             if (popStyle) popStyle.style.display = 'none';
-            ['tv-btn-line-color', 'tv-btn-fill-color', 'tv-btn-text-color', 'tv-btn-width', 'tv-btn-style', 'tv-btn-more'].forEach(id => {
+            const popFontSize = document.getElementById('tv-popover-font-size');
+            if (popFontSize) popFontSize.style.display = 'none';
+            ['tv-btn-line-color', 'tv-btn-fill-color', 'tv-btn-text-color', 'tv-btn-font-size', 'tv-btn-width', 'tv-btn-style', 'tv-btn-more'].forEach(id => {
                 const btn = document.getElementById(id);
                 if (btn) btn.classList.remove('active');
             });
@@ -3318,6 +3815,9 @@
             }
             if (selectedWaveIndex >= 0 && selectedWaveIndex < waves.length) {
                 return { drawing: waves[selectedWaveIndex], isHLine: false, isRect: false, isFib: false, isWave: true, index: selectedWaveIndex, type: 'wave' };
+            }
+            if (selectedTextIndex >= 0 && selectedTextIndex < texts.length) {
+                return { drawing: texts[selectedTextIndex], isHLine: false, isRect: false, isFib: false, isText: true, index: selectedTextIndex, type: 'text' };
             }
             if (isFibSelected && currentShowFib && fibPoint1 && fibPoint2) {
                 return {
@@ -3347,6 +3847,8 @@
                 isLocked = !!rectangles[selectedRectangleIndex].isLocked;
             } else if (selectedWaveIndex >= 0 && waves[selectedWaveIndex]) {
                 isLocked = waves[selectedWaveIndex].isLocked;
+            } else if (selectedTextIndex >= 0 && texts[selectedTextIndex]) {
+                isLocked = texts[selectedTextIndex].isLocked;
             } else if (isFibSelected && currentShowFib && fibPoint1 && fibPoint2) {
                 isLocked = !!fibIsLocked;
             } else {
@@ -3395,6 +3897,7 @@
         }
 
         let modalPendingTextColor = null; // null = ikut tema
+        let modalPendingTextOpacity = 1; // hanya dipakai drawing Text
 
         function toggleSizeDropdown(e) {
             if (e) {
@@ -3575,6 +4078,9 @@
             } else if (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]) {
                 drawing = rectangles[selectedRectangleIndex];
                 drawingTitle = 'Rectangle';
+            } else if (selectedTextIndex >= 0 && texts[selectedTextIndex]) {
+                drawing = texts[selectedTextIndex];
+                drawingTitle = 'Text';
             } else {
                 return;
             }
@@ -3603,8 +4109,9 @@
 
             // Populate current values
             modalPendingTextColor = drawing.textColor || null;
+            modalPendingTextOpacity = drawing.textOpacity ?? 1;
             const colorPreview = document.getElementById('tv-text-color-preview');
-            if (colorPreview) colorPreview.style.backgroundColor = modalPendingTextColor || defaultDrawingTextColor();
+            if (colorPreview) colorPreview.style.backgroundColor = hexToRgba(modalPendingTextColor || defaultDrawingTextColor(), modalPendingTextOpacity);
 
             const curSize = drawing.textSize || 14;
             const sizeVal = document.getElementById('tv-text-size-val');
@@ -3621,6 +4128,12 @@
             const isRect = (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]);
             updateValignDropdownSelection(drawing.textValign || (isRect ? 'middle' : 'top'));
             updateHalignDropdownSelection(drawing.textHalign || 'center');
+
+            // Drawing Text: opsi kotak (background, border, wrap) tampil, perataan teks tidak berlaku.
+            const isTextDrawing = drawing === texts[selectedTextIndex];
+            modal.querySelector('.tv-align-row').style.display = isTextDrawing ? 'none' : '';
+            document.getElementById('tv-text-box-options').style.display = isTextDrawing ? '' : 'none';
+            if (isTextDrawing) populateTextBoxOptions(drawing);
 
             backdrop.style.display = 'block';
             modal.style.display = 'flex';
@@ -3659,6 +4172,7 @@
             let drawing = null;
             let isHLine = false;
             let isRect = false;
+            let isTextDrawing = false;
             if (selectedHorizontalLineIndex >= 0 && horizontalLines[selectedHorizontalLineIndex]) {
                 drawing = horizontalLines[selectedHorizontalLineIndex];
                 isHLine = true;
@@ -3668,6 +4182,9 @@
             } else if (selectedRectangleIndex >= 0 && rectangles[selectedRectangleIndex]) {
                 drawing = rectangles[selectedRectangleIndex];
                 isRect = true;
+            } else if (selectedTextIndex >= 0 && texts[selectedTextIndex]) {
+                drawing = texts[selectedTextIndex];
+                isTextDrawing = true;
             } else {
                 return;
             }
@@ -3691,11 +4208,22 @@
             if (textInd) textInd.style.backgroundColor = drawing.textColor || defaultDrawingTextColor();
 
             closeTrendlineSettingsModal();
+            if (isTextDrawing) {
+                // Text yang isinya dikosongkan tidak terlihat & tidak bisa disentuh lagi, jadi dihapus.
+                if (!drawing.text.trim()) {
+                    deleteSelectedDrawing();
+                    return;
+                }
+                Object.assign(drawing, pendingTextBox, { textOpacity: modalPendingTextOpacity });
+                showTextToolbar(selectedTextIndex);
+            }
             renderFib();
             if (isHLine) {
                 notifyHorizontalLinesChanged();
             } else if (isRect) {
                 notifyRectanglesChanged();
+            } else if (isTextDrawing) {
+                notifyTextsChanged();
             } else {
                 notifyTrendlinesChanged();
             }
@@ -4764,7 +5292,8 @@
             let totalDrawings = (trendlines ? trendlines.length : 0) +
                                 (rectangles ? rectangles.length : 0) +
                                 (horizontalLines ? horizontalLines.length : 0) +
-                                waves.length;
+                                waves.length +
+                                texts.length;
 
             if (totalDrawings === 0) {
                 const empty = document.createElement('div');
@@ -5007,6 +5536,9 @@
 
             // 3.5 Path & Elliott Wave
             waves.forEach((wave, wIdx) => body.appendChild(buildWaveTreeRow(wave, wIdx)));
+
+            // 3.6 Text
+            texts.forEach((t, tIdx) => body.appendChild(buildTextTreeRow(t, tIdx)));
 
             // 4. Horizontal Lines
             if (horizontalLines && horizontalLines.length > 0) {
@@ -5286,81 +5818,98 @@
             Object.entries(WAVE_TREE_ICON_SHAPES).map(([kind, shape]) => [kind, buildWaveTreeIconSvg(shape)]),
         ));
 
-        function buildWaveTreeRow(wave, idx) {
-            const isSelected = selectedWaveIndex === idx;
+        /**
+         * Baris object tree untuk drawing berbasis list (Path / Elliott Wave, Text): pilih, lock, hide, hapus.
+         * `select`/`deselect`/`remove` mengatur list & index seleksi drawing-nya, `notify` mengabari Flutter.
+         */
+        function buildDrawingTreeRow({ item, iconSvg, label, isSelected, select, deselect, remove, notify }) {
             const row = document.createElement('div');
-            row.className = 'tv-tree-item' + (isSelected ? ' selected' : '') + (wave.hidden ? ' hidden-item' : '');
+            row.className = 'tv-tree-item' + (isSelected ? ' selected' : '') + (item.hidden ? ' hidden-item' : '');
             row.innerHTML = `
                 <div class="tv-tree-item-left">
-                    <div class="tv-tree-item-icon" style="color: var(--tv-label);">${WAVE_TREE_ICONS[wave.kind]}</div>
-                    <span class="tv-tree-item-label">${WaveDrawings.KINDS[wave.kind].title}</span>
+                    <div class="tv-tree-item-icon" style="color: var(--tv-label);">${iconSvg}</div>
+                    <span class="tv-tree-item-label"></span>
                 </div>
                 <div class="tv-tree-item-actions">
-                    <button class="tv-tree-action-btn tv-tree-btn-lock ${wave.isLocked ? 'active-action' : ''}" title="${wave.isLocked ? 'Unlock' : 'Lock'}">
+                    <button class="tv-tree-action-btn tv-tree-btn-lock ${item.isLocked ? 'active-action' : ''}" title="${item.isLocked ? 'Unlock' : 'Lock'}">
                         <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
                             <rect x="4" y="9" width="12" height="8" rx="2" />
-                            <path d="${wave.isLocked ? 'M7 9V6a3 3 0 0 1 6 0v3' : 'M7 9V6a3 3 0 0 1 6 0'}" />
+                            <path d="${item.isLocked ? 'M7 9V6a3 3 0 0 1 6 0v3' : 'M7 9V6a3 3 0 0 1 6 0'}" />
                         </svg>
                     </button>
-                    <button class="tv-tree-action-btn tv-tree-btn-eye ${wave.hidden ? 'dimmed-action' : ''}" title="${wave.hidden ? 'Show / Unhide' : 'Hide'}">
-                        ${getMaterialEyeSvg(wave.hidden, 18)}
+                    <button class="tv-tree-action-btn tv-tree-btn-eye ${item.hidden ? 'dimmed-action' : ''}" title="${item.hidden ? 'Show / Unhide' : 'Hide'}">
+                        ${getMaterialEyeSvg(item.hidden, 18)}
                     </button>
                     <button class="tv-tree-action-btn tv-tree-btn-delete danger" title="Remove">
                         ${getMaterialDeleteSvg(18)}
                     </button>
                 </div>
             `;
+            // Lewat textContent (bukan innerHTML) supaya isi Text aman dari karakter HTML.
+            row.querySelector('.tv-tree-item-label').textContent = label;
 
             // Setiap aksi: perbarui chart, kabari Flutter (kecuali seleksi), lalu gambar ulang tree.
             const commit = (changed) => {
                 renderFib();
-                if (changed) notifyWavesChanged();
+                if (changed) notify();
                 refreshObjectTree();
             };
 
             row.onclick = (e) => {
                 e.stopPropagation();
-                if (wave.hidden) {
-                    selectedWaveIndex = idx;
-                    hideTrendlineToolbar();
-                } else {
-                    showWaveToolbar(idx);
-                }
+                if (!item.hidden) select();
                 commit(false);
             };
 
             row.querySelector('.tv-tree-btn-lock').onclick = (e) => {
                 e.stopPropagation();
-                wave.isLocked = !wave.isLocked;
-                if (isSelected) updateLockSheetUI(wave.isLocked);
+                item.isLocked = !item.isLocked;
+                if (isSelected) updateLockSheetUI(item.isLocked);
                 commit(true);
             };
 
             row.querySelector('.tv-tree-btn-eye').onclick = (e) => {
                 e.stopPropagation();
-                wave.hidden = !wave.hidden;
-                if (!wave.hidden) {
-                    showWaveToolbar(idx);
+                item.hidden = !item.hidden;
+                if (!item.hidden) {
+                    select();
                 } else if (isSelected) {
-                    selectedWaveIndex = -1;
-                    hideTrendlineToolbar();
+                    deselect();
                 }
                 commit(true);
             };
 
             row.querySelector('.tv-tree-btn-delete').onclick = (e) => {
                 e.stopPropagation();
-                waves.splice(idx, 1);
-                if (isSelected) {
-                    selectedWaveIndex = -1;
-                    hideTrendlineToolbar();
-                } else if (selectedWaveIndex > idx) {
-                    selectedWaveIndex--;
-                }
+                remove();
                 commit(true);
             };
 
             return row;
+        }
+
+        function buildWaveTreeRow(wave, idx) {
+            return buildDrawingTreeRow({
+                item: wave,
+                iconSvg: WAVE_TREE_ICONS[wave.kind],
+                label: WaveDrawings.KINDS[wave.kind].title,
+                isSelected: selectedWaveIndex === idx,
+                select: () => showWaveToolbar(idx),
+                deselect: () => {
+                    selectedWaveIndex = -1;
+                    hideTrendlineToolbar();
+                },
+                remove: () => {
+                    waves.splice(idx, 1);
+                    if (selectedWaveIndex === idx) {
+                        selectedWaveIndex = -1;
+                        hideTrendlineToolbar();
+                    } else if (selectedWaveIndex > idx) {
+                        selectedWaveIndex--;
+                    }
+                },
+                notify: notifyWavesChanged,
+            });
         }
 
         function positionPopover(popover, targetBtn) {
@@ -5395,6 +5944,10 @@
         }
 
         function applySelectedColor(colorHex, opacityVal) {
+            if (selectedTextIndex >= 0 && texts[selectedTextIndex]) {
+                applyTextDrawingColor(texts[selectedTextIndex], colorHex, opacityVal);
+                return;
+            }
             if (isFibSelected && currentShowFib && fibPoint1 && fibPoint2) {
                 if (colorHex) {
                     fibCustomColor = colorHex;
@@ -5667,6 +6220,15 @@
                 refreshObjectTree();
                 return;
             }
+            if (selectedTextIndex >= 0 && selectedTextIndex < texts.length) {
+                texts.splice(selectedTextIndex, 1);
+                selectedTextIndex = -1;
+                hideTrendlineToolbar();
+                renderFib();
+                notifyTextsChanged();
+                refreshObjectTree();
+                return;
+            }
             if (selectedWaveIndex >= 0 && selectedWaveIndex < waves.length) {
                 waves.splice(selectedWaveIndex, 1);
                 selectedWaveIndex = -1;
@@ -5816,6 +6378,20 @@
                 showRectangleToolbar(selectedRectangleIndex);
                 renderFib();
                 notifyRectanglesChanged();
+                refreshObjectTree();
+                return;
+            }
+            if (selectedTextIndex >= 0 && selectedTextIndex < texts.length) {
+                // Clone digeser 24px ke bawah, sama seperti drawing lain.
+                const src = texts[selectedTextIndex];
+                const series = candleSeries || areaSeries;
+                const y = series ? series.priceToCoordinate(src.point.price) : null;
+                const shiftedPrice = y === null ? null : series.coordinateToPrice(y + 24);
+                const price = shiftedPrice !== null && !isNaN(shiftedPrice) ? shiftedPrice : src.point.price * 0.995;
+                texts.push(TextDrawings.normalizeText({ ...src, id: '', point: { time: src.point.time, price }, hidden: false }));
+                showTextToolbar(texts.length - 1);
+                renderFib();
+                notifyTextsChanged();
                 refreshObjectTree();
                 return;
             }
@@ -6043,6 +6619,9 @@
                     if (active) {
                         const d = active.drawing;
                         const curColor = d.textColor || defaultDrawingTextColor();
+                        const curOp = Math.round((d.textOpacity ?? 1) * 100);
+                        if (opSlider) opSlider.value = curOp;
+                        if (opVal) opVal.textContent = curOp + '%';
                         updateSliderGradient(curColor);
 
                         document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
@@ -6223,6 +6802,8 @@
                             notifyRectanglesChanged();
                         } else if (active.isWave) {
                             notifyWavesChanged();
+                        } else if (active.isText) {
+                            notifyTextsChanged();
                         } else {
                             notifyTrendlinesChanged();
                         }
@@ -6247,6 +6828,7 @@
                         selectedTrendlineIndex = -1;
                         selectedRectangleIndex = -1;
                         selectedWaveIndex = -1;
+                        selectedTextIndex = -1;
                         hideTrendlineToolbar();
                         closeMoreBottomSheet();
                         renderFib();
@@ -6256,6 +6838,8 @@
                             notifyRectanglesChanged();
                         } else if (active.isWave) {
                             notifyWavesChanged();
+                        } else if (active.isText) {
+                            notifyTextsChanged();
                         } else {
                             notifyTrendlinesChanged();
                         }
@@ -6313,7 +6897,7 @@
                     if (e.target && !e.target.closest('#tv-fib-levels-width-dropdown, #tv-fib-levels-width-btn, #tv-fib-levels-style-dropdown, #tv-fib-levels-style-btn')) {
                         closeFibLevelsDropdowns();
                     }
-                    if (e.target && !e.target.closest('#tv-fib-color-picker-popover, .tv-fib-swatch-btn')) {
+                    if (e.target && !e.target.closest('#tv-fib-color-picker-popover, .tv-fib-swatch-btn, #tv-text-color-btn')) {
                         closeFibColorPickerPopover();
                     }
                     if (e.target && !e.target.closest('.tv-size-dropdown-overlay, .tv-fib-select-btn, .tv-fmt-size-btn, #tv-fib-levels-width-dropdown, #tv-fib-levels-width-btn, #tv-fib-levels-style-dropdown, #tv-fib-levels-style-btn, #tv-fib-trendline-popover, #tv-fib-trendline-pill-btn, #tv-fib-color-picker-popover')) {
@@ -6460,23 +7044,18 @@
                 };
             }
 
-            if (btnTextColorModal && popColor) {
+            if (btnTextColorModal) {
+                // Color picker yang sama dengan swatch lain di modal: tertutup saat tap di luar, slider opacity ber-thumb.
+                // Warna baru berlaku saat OK; opacity hanya disimpan untuk drawing Text.
                 btnTextColorModal.onclick = (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    if (popColor.style.display === 'block' && activeColorPickerTarget === 'text') {
-                        hideAllPopovers();
-                        return;
-                    }
-                    hideAllPopovers();
-                    activeColorPickerTarget = 'text';
-                    popColor.style.zIndex = '1070';
-                    const curColor = modalPendingTextColor || defaultDrawingTextColor();
-                    updateSliderGradient(curColor);
-                    document.querySelectorAll('#tv-palette-grid .tv-color-swatch').forEach(sw => {
-                        sw.classList.toggle('selected', sw.getAttribute('data-color')?.toUpperCase() === curColor.toUpperCase());
+                    openFibColorPicker(btnTextColorModal, modalPendingTextColor || defaultDrawingTextColor(), modalPendingTextOpacity, (color, opacity) => {
+                        modalPendingTextColor = color;
+                        modalPendingTextOpacity = opacity;
+                        const preview = document.getElementById('tv-text-color-preview');
+                        if (preview) preview.style.backgroundColor = hexToRgba(color, opacity);
                     });
-                    positionPopover(popColor, btnTextColorModal);
                 };
             }
 
@@ -6644,12 +7223,61 @@
                 return null;
             }
 
+            function selectTextAt(index) {
+                showTextToolbar(index);
+                renderFib();
+            }
+
+            /** Text yang kena sentuhan di (x, y): Text terseleksi lebih dulu, lalu dari yang paling atas. */
+            function hitTestTexts(x, y) {
+                const order = texts.map((_, i) => texts.length - 1 - i);
+                if (selectedTextIndex >= 0) order.unshift(selectedTextIndex);
+                for (const index of order) {
+                    const t = texts[index];
+                    if (!t || t.hidden) continue;
+                    const anchor = textScreenAnchor(t.point);
+                    if (!anchor) continue;
+                    const part = TextDrawings.hitTest(anchor, textLayoutOf(t), x, y, {
+                        touchPadding: TEXT_TOUCH_PADDING,
+                        handleRadius: HITBOX_TL_ANCHOR,
+                        canResize: index === selectedTextIndex && t.wrap && !t.isLocked,
+                    });
+                    if (part) return { index, part };
+                }
+                return null;
+            }
+
+            /**
+             * Sentuhan di Text. Text yang belum terseleksi baru dipilih kalau gesturnya tap; Text terseleksi
+             * langsung digeser (atau diubah lebar wrap-nya). True kalau sentuhan dipakai Text terseleksi.
+             */
+            function handleTextPointerDown(e, x, y, captureTarget) {
+                const target = hitTestTexts(x, y);
+                if (!target) return false;
+                if (target.index !== selectedTextIndex) {
+                    queueTapSelection(() => selectTextAt(target.index));
+                    return false;
+                }
+                const t = texts[target.index];
+                showTextToolbar(target.index);
+                if (!t.isLocked) {
+                    dragTextIndex = target.index;
+                    dragTextPart = target.part;
+                    dragTextStartPos = { x, y, origPoint: { ...t.point } };
+                    isPointerDown = true;
+                    try { captureTarget.setPointerCapture?.(e.pointerId); } catch (_) {}
+                    if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
+                }
+                renderFib();
+                return true;
+            }
+
             /**
              * Taruh titik draft di crosshair; Elliott Wave tersimpan begitu titiknya lengkap. Path diakhiri
              * dengan mengetuk lagi tanpa menggeser crosshair dari titik terakhirnya.
              */
             function placeWavePoint() {
-                const { kind, points } = waveDraft;
+                const { kind, points } = placementDraft;
                 const time = getTimeAtX(crosshairPos.x);
                 const price = getPriceAtY(crosshairPos.y);
                 if (!time || price === null) return;
@@ -6705,7 +7333,7 @@
 
             // Hover detection to allow grabbing existing anchor handles, trendlines, & horizontal lines on desktop
             function updateHoverState(e) {
-                if (isDrawingHorizontalLine || isDrawingTrendline || isDrawingRectangle || isDrawingFib || waveDraft || fibDrawState !== 0 || trendlineDrawState !== 0 || rectangleDrawState !== 0 || isPointerDown || dragHorizontalLineIndex !== -1 || dragTrendlineIndex !== -1 || dragRectangleIndex !== -1 || dragWaveIndex !== -1 || dragMode !== 0) {
+                if (isDrawingHorizontalLine || isDrawingTrendline || isDrawingRectangle || isDrawingFib || placementDraft || fibDrawState !== 0 || trendlineDrawState !== 0 || rectangleDrawState !== 0 || isPointerDown || dragHorizontalLineIndex !== -1 || dragTrendlineIndex !== -1 || dragRectangleIndex !== -1 || dragWaveIndex !== -1 || dragTextIndex !== -1 || dragMode !== 0) {
                     return;
                 }
 
@@ -6831,6 +7459,21 @@
                     return;
                 }
 
+                // 2.7 Check proximity to Text (box or wrap resize handle)
+                const textTarget = hitTestTexts(x, y);
+                if (textTarget) {
+                    const t = texts[textTarget.index];
+                    canvas.style.pointerEvents = 'auto';
+                    if (textTarget.index !== selectedTextIndex) {
+                        canvas.style.cursor = 'pointer';
+                    } else if (t.isLocked) {
+                        canvas.style.cursor = 'default';
+                    } else {
+                        canvas.style.cursor = textTarget.part === 'resize' ? 'ew-resize' : 'move';
+                    }
+                    return;
+                }
+
                 // 3. Check proximity to Fibonacci anchors
                 if (currentShowFib && fibPoint1 && fibPoint2 && chart && activeSeries) {
                     const x1 = chart.timeScale().timeToCoordinate(fibPoint1.time);
@@ -6855,7 +7498,7 @@
 
             if (chartContainer) {
                 chartContainer.addEventListener('pointermove', (e) => {
-                    if (e.target && e.target.closest && e.target.closest('#tv-trendline-toolbar, .tv-popover, #tv-more-bottom-sheet, #tv-more-sheet-backdrop, #tv-settings-modal, #tv-settings-backdrop, #tv-object-tree-modal, #tv-object-tree-backdrop')) {
+                    if (e.target && e.target.closest && e.target.closest('#tv-trendline-toolbar, .tv-popover, #tv-more-bottom-sheet, #tv-more-sheet-backdrop, #tv-settings-modal, #tv-settings-backdrop, #tv-object-tree-modal, #tv-object-tree-backdrop, #tv-text-inline-editor')) {
                         return;
                     }
                     updateHoverState(e);
@@ -6865,12 +7508,12 @@
                 // Intercepts touches on drawing elements BEFORE LightweightCharts can handle them as pan/scroll!
                 chartContainer.addEventListener('pointerdown', (e) => {
                     // If touch was on the floating toolbar, popover, bottom sheet, settings modal, or object tree, DO NOT INTERCEPT AT ALL!
-                    if (e.target && e.target.closest && e.target.closest('#tv-trendline-toolbar, .tv-popover, #tv-more-bottom-sheet, #tv-more-sheet-backdrop, #tv-settings-modal, #tv-settings-backdrop, #tv-object-tree-modal, #tv-object-tree-backdrop')) {
+                    if (e.target && e.target.closest && e.target.closest('#tv-trendline-toolbar, .tv-popover, #tv-more-bottom-sheet, #tv-more-sheet-backdrop, #tv-settings-modal, #tv-settings-backdrop, #tv-object-tree-modal, #tv-object-tree-backdrop, #tv-text-inline-editor')) {
                         return;
                     }
 
                     // If user is placing a brand new tool, let canvas handle placement
-                    if (isDrawingHorizontalLine || isDrawingTrendline || isDrawingRectangle || isDrawingFib || waveDraft || fibDrawState !== 0 || trendlineDrawState !== 0 || rectangleDrawState !== 0) {
+                    if (isDrawingHorizontalLine || isDrawingTrendline || isDrawingRectangle || isDrawingFib || placementDraft || fibDrawState !== 0 || trendlineDrawState !== 0 || rectangleDrawState !== 0) {
                         return;
                     }
 
@@ -7174,6 +7817,14 @@
                         }
                     }
 
+                    // 4.5 TEXT HIT TEST (box or wrap resize handle; Text digambar paling atas)
+                    if (handleTextPointerDown(e, x, y, chartContainer)) {
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                        e.preventDefault();
+                        return;
+                    }
+
                     // 5. PATH & ELLIOTT WAVE HIT TEST (points and segments)
                     if (handleWavePointerDown(e, x, y, chartContainer)) {
                         e.stopPropagation();
@@ -7188,6 +7839,10 @@
                     let needsDeselect = false;
                     if (selectedWaveIndex !== -1) {
                         selectedWaveIndex = -1;
+                        needsDeselect = true;
+                    }
+                    if (selectedTextIndex !== -1) {
+                        selectedTextIndex = -1;
                         needsDeselect = true;
                     }
                     if (selectedTrendlineIndex !== -1) {
@@ -7268,9 +7923,10 @@
                 // 0.05 Path / Elliott Wave (ala TradingView mobile): geseran jari memindahkan crosshair
                 // secara relatif supaya titiknya tidak tertutup jari; ketukan menaruh titik di crosshair
                 // (onPointerUp). Mouse: crosshair langsung mengikuti kursor.
-                if (waveDraft) {
+                if (placementDraft) {
+                    e.preventDefault();
                     if (e.pointerType === 'mouse' || !crosshairPos) crosshairPos = clampToCandleArea(x, y);
-                    waveDraft.drag = { fromX: x, fromY: y, originX: crosshairPos.x, originY: crosshairPos.y };
+                    placementDraft.drag = { fromX: x, fromY: y, originX: crosshairPos.x, originY: crosshairPos.y };
                     isPointerDown = true;
                     try { canvas.setPointerCapture?.(e.pointerId); } catch (_) {}
                     return;
@@ -7614,6 +8270,13 @@
                     }
                 }
 
+                // 0.34 Check if clicking on an existing Text (box or wrap resize handle)
+                if (handleTextPointerDown(e, x, y, canvas)) {
+                    e.preventDefault();
+                    if (dragTextIndex >= 0) canvas.style.cursor = dragTextPart === 'resize' ? 'ew-resize' : 'move';
+                    return;
+                }
+
                 // 0.35 Check if clicking on an existing Path / Elliott Wave (points or segments)
                 if (handleWavePointerDown(e, x, y, canvas)) {
                     if (dragWaveIndex >= 0) canvas.style.cursor = dragWavePointIndex >= 0 ? 'grabbing' : 'move';
@@ -7704,8 +8367,9 @@
 
                 // If tapped on empty canvas space outside all drawings:
                 let canvasNeedsDeselect = false;
-                if (selectedWaveIndex !== -1) {
+                if (selectedWaveIndex !== -1 || selectedTextIndex !== -1) {
                     selectedWaveIndex = -1;
+                    selectedTextIndex = -1;
                     hideTrendlineToolbar();
                     canvasNeedsDeselect = true;
                 }
@@ -7735,7 +8399,7 @@
             });
 
             const onPointerMove = (e) => {
-                if (!isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle && !isDrawingFib && !waveDraft && fibDrawState === 0 && trendlineDrawState === 0 && rectangleDrawState === 0 && !isPointerDown && dragHorizontalLineIndex === -1 && dragTrendlineIndex === -1 && dragRectangleIndex === -1 && dragWaveIndex === -1 && dragMode === 0) {
+                if (!isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle && !isDrawingFib && !placementDraft && fibDrawState === 0 && trendlineDrawState === 0 && rectangleDrawState === 0 && !isPointerDown && dragHorizontalLineIndex === -1 && dragTrendlineIndex === -1 && dragRectangleIndex === -1 && dragWaveIndex === -1 && dragTextIndex === -1 && dragMode === 0) {
                     updateHoverState(e);
                     return;
                 }
@@ -7753,13 +8417,13 @@
                         renderFib();
                         return;
                     }
-                } else if (crosshairPos !== null && !waveDraft && dragHorizontalLineIndex === -1 && dragTrendlineIndex === -1 && dragRectangleIndex === -1) {
+                } else if (crosshairPos !== null && !placementDraft && dragHorizontalLineIndex === -1 && dragTrendlineIndex === -1 && dragRectangleIndex === -1) {
                     crosshairPos = null;
                 }
 
                 // Path / Elliott Wave draft: crosshair bergeser sejauh geseran jari (lihat pointerdown 0.05).
-                if (waveDraft) {
-                    const drag = waveDraft.drag;
+                if (placementDraft) {
+                    const drag = placementDraft.drag;
                     if (drag) {
                         crosshairPos = clampToCandleArea(drag.originX + x - drag.fromX, drag.originY + y - drag.fromY);
                     } else if (e.pointerType === 'mouse') {
@@ -7768,6 +8432,13 @@
                         return;
                     }
                     renderFib();
+                    return;
+                }
+
+                // Dragging Text (geser utuh atau ubah lebar wrap)
+                if (dragTextIndex >= 0 && texts[dragTextIndex]) {
+                    crosshairPos = null;
+                    moveDraggedText(texts[dragTextIndex], x, y, maxContentX);
                     return;
                 }
 
@@ -8142,11 +8813,11 @@
 
             canvas.addEventListener('pointerleave', () => {
                 // Crosshair draft wave tetap ada: di layar sentuh pointerleave muncul setiap jari diangkat.
-                if (crosshairPos !== null && !waveDraft) {
+                if (crosshairPos !== null && !placementDraft) {
                     crosshairPos = null;
                     renderFib();
                 }
-                if (!isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle && !isDrawingFib && !waveDraft && !isPointerDown) {
+                if (!isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle && !isDrawingFib && !placementDraft && !isPointerDown) {
                     canvas.style.pointerEvents = 'none';
                     canvas.style.cursor = 'default';
                 }
@@ -8168,6 +8839,26 @@
                     return;
                 }
 
+                if (dragTextIndex >= 0) {
+                    // Tap (tanpa geser) di Text terseleksi = mulai mengetik ulang isinya, seperti TradingView.
+                    const tappedTextIndex = e.type === 'pointerup' && dragTextPart === 'body' && dist <= TAP_MAX_DISTANCE
+                        ? dragTextIndex
+                        : -1;
+                    dragTextIndex = -1;
+                    dragTextPart = null;
+                    dragTextStartPos = null;
+                    isPointerDown = false;
+                    try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
+                    try { chartContainer.releasePointerCapture?.(e.pointerId); } catch (_) {}
+                    if (chart) chart.applyOptions({ handleScroll: true, handleScale: true });
+                    canvas.style.cursor = 'default';
+                    canvas.style.pointerEvents = 'none';
+                    renderFib();
+                    notifyTextsChanged();
+                    if (tappedTextIndex >= 0) startInlineTextEdit(tappedTextIndex);
+                    return;
+                }
+
                 if (dragWaveIndex >= 0) {
                     dragWaveIndex = -1;
                     dragWavePointIndex = -1;
@@ -8183,14 +8874,18 @@
                     return;
                 }
 
-                // Draft wave: ketukan (tanpa geser) menaruh titik di crosshair; geseran cukup memindahkan crosshair.
-                if (waveDraft) {
-                    const drag = waveDraft.drag;
-                    waveDraft.drag = null;
+                // Draft penempatan: ketukan (tanpa geser) menaruh titik di crosshair; geseran cukup memindahkan crosshair.
+                if (placementDraft) {
+                    const drag = placementDraft.drag;
+                    placementDraft.drag = null;
                     isPointerDown = false;
                     try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
                     if (drag && e.type === 'pointerup' && Math.hypot(x - drag.fromX, y - drag.fromY) <= TAP_MAX_DISTANCE) {
-                        placeWavePoint();
+                        if (placementDraft.kind === 'text') {
+                            placeTextAtCrosshair();
+                        } else {
+                            placeWavePoint();
+                        }
                     }
                     renderFib();
                     return;
@@ -8448,13 +9143,13 @@
             try {
 
             // 0. Render Crosshair Guidelines during tool drawing (like TradingView)
-            if ((isDrawingHorizontalLine || (isDrawingFib && fibDrawState > 0) || (isDrawingTrendline && trendlineDrawState > 0) || (isDrawingRectangle && rectangleDrawState > 0) || waveDraft) && crosshairPos) {
+            if ((isDrawingHorizontalLine || (isDrawingFib && fibDrawState > 0) || (isDrawingTrendline && trendlineDrawState > 0) || (isDrawingRectangle && rectangleDrawState > 0) || placementDraft) && crosshairPos) {
                 const hx = crosshairPos.x;
                 const hy = crosshairPos.y;
                 const price = getPriceAtY(hy);
 
                 ctx.save();
-                ctx.strokeStyle = waveDraft ? hexToRgba(WaveDrawings.KINDS[waveDraft.kind].color, 0.85) : (isDrawingTrendline ? hexToRgba(lastTrendlineStyle.color || DRAWING_COLORS.trendline, 0.85) : (isDrawingRectangle ? hexToRgba(DRAWING_COLORS.rectangle, 0.85) : (currentCrosshairColor || 'rgba(255, 255, 255, 0.85)')));
+                ctx.strokeStyle = placementDraft ? hexToRgba(placementColor(placementDraft.kind), 0.85) : (isDrawingTrendline ? hexToRgba(lastTrendlineStyle.color || DRAWING_COLORS.trendline, 0.85) : (isDrawingRectangle ? hexToRgba(DRAWING_COLORS.rectangle, 0.85) : (currentCrosshairColor || 'rgba(255, 255, 255, 0.85)')));
                 ctx.lineWidth = 1;
                 ctx.setLineDash([6, 6]);
 
@@ -8997,6 +9692,9 @@
             // 1.9 Render Path & Elliott Wave, plus the draft being drawn
             renderWaves(ctx);
 
+            // 1.95 Render Text (paling atas di antara drawing)
+            renderTexts(ctx);
+
             // 2. Render Fibonacci Retracement(s) with Neutral Anchors
             const fibItemsToRender = [];
 
@@ -9352,7 +10050,7 @@
             }
 
             // Render live crosshair guideline price badge on price scale if active
-            if ((isDrawingHorizontalLine || (isDrawingFib && fibDrawState > 0) || (isDrawingTrendline && trendlineDrawState > 0) || (isDrawingRectangle && rectangleDrawState > 0) || waveDraft) && crosshairPos) {
+            if ((isDrawingHorizontalLine || (isDrawingFib && fibDrawState > 0) || (isDrawingTrendline && trendlineDrawState > 0) || (isDrawingRectangle && rectangleDrawState > 0) || placementDraft) && crosshairPos) {
                 const hy = crosshairPos.y;
                 const price = getPriceAtY(hy);
                 if (price !== null && hy >= 0 && hy <= pane0Height) {
@@ -9496,12 +10194,12 @@
                 drawWave(ctx, wave, screenPoints, i === selectedWaveIndex);
             });
 
-            if (!waveDraft) return;
-            const placed = waveScreenPoints(waveDraft.points).filter(Boolean);
+            if (!placementDraft) return;
+            const placed = waveScreenPoints(placementDraft.points).filter(Boolean);
             const cursorPrice = crosshairPos ? getPriceAtY(crosshairPos.y) : null;
             // Crosshair = calon titik berikutnya: segmen, label gelombang, & panah Path ikut pratinjaunya.
             if (placed.length > 0 && cursorPrice !== null) {
-                const preview = WaveDrawings.createWave(waveDraft.kind, [...waveDraft.points, { time: 0, price: cursorPrice }]);
+                const preview = WaveDrawings.createWave(placementDraft.kind, [...placementDraft.points, { time: 0, price: cursorPrice }]);
                 drawWave(ctx, preview, [...placed, crosshairPos], false);
             }
             ctx.save();
@@ -9578,7 +10276,7 @@
             tempFibP1 = null;
             tempFibP2 = null;
             const canvas = document.getElementById('fib-canvas');
-            if (canvas && !isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle && !waveDraft) {
+            if (canvas && !isDrawingHorizontalLine && !isDrawingTrendline && !isDrawingRectangle && !placementDraft) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
             }
@@ -9629,7 +10327,7 @@
             isDrawingHorizontalLine = false;
             crosshairPos = null;
             const canvas = document.getElementById('fib-canvas');
-            if (canvas && !isDrawingFib && !isDrawingTrendline && !isDrawingRectangle && !waveDraft) {
+            if (canvas && !isDrawingFib && !isDrawingTrendline && !isDrawingRectangle && !placementDraft) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
             }
@@ -9658,7 +10356,7 @@
             isDrawingHorizontalLine = false;
             crosshairPos = null;
             const canvas = document.getElementById('fib-canvas');
-            if (canvas && !isDrawingFib && !isDrawingTrendline && !isDrawingRectangle && !waveDraft) {
+            if (canvas && !isDrawingFib && !isDrawingTrendline && !isDrawingRectangle && !placementDraft) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
             }
@@ -9698,7 +10396,7 @@
             crosshairPos = null;
             globalAngleLock = false;
             const canvas = document.getElementById('fib-canvas');
-            if (canvas && !isDrawingFib && !isDrawingHorizontalLine && !isDrawingRectangle && !waveDraft) {
+            if (canvas && !isDrawingFib && !isDrawingHorizontalLine && !isDrawingRectangle && !placementDraft) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
             }
@@ -9759,7 +10457,7 @@
             tempRectangleP2 = null;
             crosshairPos = null;
             const canvas = document.getElementById('fib-canvas');
-            if (canvas && !isDrawingFib && !isDrawingHorizontalLine && !isDrawingTrendline && !waveDraft) {
+            if (canvas && !isDrawingFib && !isDrawingHorizontalLine && !isDrawingTrendline && !placementDraft) {
                 canvas.style.pointerEvents = 'none';
                 canvas.style.cursor = 'default';
             }
@@ -9801,7 +10499,15 @@
 
         /** Mulai menggambar Path / Elliott Wave; `kind` = `ChartDrawingTool.name` dari Flutter. */
         function startWaveDrawing(kind) {
-            if (!WaveDrawings.isWaveKind(kind)) return;
+            if (WaveDrawings.isWaveKind(kind)) beginPlacementDraft(kind);
+        }
+
+        function cancelWaveDrawing() {
+            if (placementDraft && placementDraft.kind !== 'text') endPlacementDraft();
+        }
+
+        /** Mulai menaruh drawing baru dengan crosshair; `kind` = jenis wave atau 'text'. */
+        function beginPlacementDraft(kind) {
             if (isDrawingFib && (!fibPoint1 || !fibPoint2)) {
                 clearFibonacci();
             }
@@ -9812,11 +10518,12 @@
             selectedTrendlineIndex = -1;
             selectedRectangleIndex = -1;
             selectedWaveIndex = -1;
+            selectedTextIndex = -1;
             isFibSelected = false;
             cancelTrendlineDrawing();
             cancelRectangleDrawing();
             hideTrendlineToolbar();
-            waveDraft = { kind, points: [], drag: null };
+            placementDraft = { kind, points: [], drag: null };
             // Crosshair mulai di tengah area candle; selama menggambar, geseran jari menggeser crosshair, bukan chart.
             crosshairPos = clampToCandleArea(getChartContentWidth() / 2, getMainPaneHeight() / 2);
             if (chart) chart.applyOptions({ handleScroll: false, handleScale: false });
@@ -9828,9 +10535,8 @@
             renderFib();
         }
 
-        function cancelWaveDrawing() {
-            if (!waveDraft) return;
-            waveDraft = null;
+        function endPlacementDraft() {
+            placementDraft = null;
             crosshairPos = null;
             isPointerDown = false;
             setWaveCanvasIdle();
@@ -9840,9 +10546,9 @@
 
         /** Simpan draft jadi wave baru lalu langsung masuk Edit Mode (seperti drawing lain). */
         function finishWaveDraft() {
-            if (!waveDraft || waveDraft.points.length < WaveDrawings.minPoints(waveDraft.kind)) return;
-            waves.push(WaveDrawings.createWave(waveDraft.kind, waveDraft.points));
-            waveDraft = null;
+            if (!placementDraft || placementDraft.points.length < WaveDrawings.minPoints(placementDraft.kind)) return;
+            waves.push(WaveDrawings.createWave(placementDraft.kind, placementDraft.points));
+            placementDraft = null;
             crosshairPos = null;
             isPointerDown = false;
             setWaveCanvasIdle();
@@ -9879,6 +10585,7 @@
             clearTrendlines();
             clearRectangles();
             clearWaves();
+            clearTexts();
         }
 
         function initChart(upColor, downColor, gridColor, interactive, crosshairColor) {

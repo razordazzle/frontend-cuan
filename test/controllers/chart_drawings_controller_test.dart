@@ -53,6 +53,23 @@ void main() {
     expect(controller.isDrawing(ChartDrawingTool.rectangle), isTrue);
   });
 
+  test(
+    'Text dari chart mengakhiri mode gambar Text & ikut dihapus clearAll',
+    () {
+      const Map<String, dynamic> text = <String, dynamic>{'id': 'text_1'};
+      controller.startDrawing(ChartDrawingTool.text);
+      controller.setTexts(<Map<String, dynamic>>[text]);
+
+      expect(controller.isDrawingAny, isFalse);
+      expect(controller.drawingWave, isNull);
+      expect(controller.texts, <Map<String, dynamic>>[text]);
+      expect(controller.hasDrawings, isTrue);
+
+      controller.clearAll();
+      expect(controller.texts, isEmpty);
+    },
+  );
+
   test('clearAll ikut menghapus wave', () {
     controller.setWaves(<Map<String, dynamic>>[_wave]);
     controller.clearAll();

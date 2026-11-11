@@ -78,6 +78,11 @@ class TvChartWidget extends StatefulWidget {
   /// Tool wave yang sedang digambar ([ChartDrawingTool.isWave]); null = tidak menggambar wave.
   final ChartDrawingTool? drawingWave;
   final ValueChanged<List<Map<String, dynamic>>>? onWavesChanged;
+
+  /// Drawing Text yang sudah ditaruh (format `TextDrawing` di text_drawings.js).
+  final List<Map<String, dynamic>> texts;
+  final bool isDrawingText;
+  final ValueChanged<List<Map<String, dynamic>>>? onTextsChanged;
   final String symbol;
   final String timeframe;
   final Color upColor;
@@ -117,6 +122,9 @@ class TvChartWidget extends StatefulWidget {
     this.waves = const <Map<String, dynamic>>[],
     this.drawingWave,
     this.onWavesChanged,
+    this.texts = const <Map<String, dynamic>>[],
+    this.isDrawingText = false,
+    this.onTextsChanged,
     required this.upColor,
     required this.downColor,
     required this.gridColor,
@@ -148,6 +156,7 @@ class _TvChartWidgetState extends State<TvChartWidget> {
   List<Map<String, dynamic>>? _lastReceivedTrendlines;
   List<Map<String, dynamic>>? _lastReceivedRectangles;
   List<Map<String, dynamic>>? _lastReceivedWaves;
+  List<Map<String, dynamic>>? _lastReceivedTexts;
 
   /// True setelah state awal pernah dikirim ke chart; sebelum itu perubahan cukup
   /// ditunggu karena [_pushAll] selalu mengirim state terbaru.
@@ -231,6 +240,8 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         }
       } else if (type == 'onWavesChanged') {
         _emitWaves(payload);
+      } else if (type == 'onTextsChanged') {
+        _emitTexts(payload);
       } else if (type == 'onCrosshair') {
         _emitCrosshair(payload);
       } else if (type == 'onChartModalStateChanged') {
@@ -256,15 +267,29 @@ class _TvChartWidgetState extends State<TvChartWidget> {
     });
   }
 
+  /// Payload JS: list objek drawing; null kalau bukan list.
+  static List<Map<String, dynamic>>? _drawingList(Object? payload) =>
+      payload is List
+      ? payload
+            .whereType<Map>()
+            .map((Map e) => Map<String, dynamic>.from(e))
+            .toList()
+      : null;
+
   /// Payload JS: list `Wave` (wave_drawings.js). Disimpan supaya tidak dikirim balik ke chart.
   void _emitWaves(Object? payload) {
-    if (payload is! List) return;
-    final List<Map<String, dynamic>> updated = payload
-        .whereType<Map>()
-        .map((Map e) => Map<String, dynamic>.from(e))
-        .toList();
+    final List<Map<String, dynamic>>? updated = _drawingList(payload);
+    if (updated == null) return;
     _lastReceivedWaves = updated;
     widget.onWavesChanged?.call(updated);
+  }
+
+  /// Payload JS: list `TextDrawing` (text_drawings.js). Disimpan supaya tidak dikirim balik ke chart.
+  void _emitTexts(Object? payload) {
+    final List<Map<String, dynamic>>? updated = _drawingList(payload);
+    if (updated == null) return;
+    _lastReceivedTexts = updated;
+    widget.onTextsChanged?.call(updated);
   }
 
   /// Payload JS: JSON string `{ time, open, high, low, close }`, atau null saat crosshair keluar.
@@ -336,6 +361,7 @@ class _TvChartWidgetState extends State<TvChartWidget> {
   String get _rectanglesScript =>
       'setRectangles(${jsonEncode(widget.rectangles)});';
   String get _wavesScript => 'setWaves(${jsonEncode(widget.waves)});';
+  String get _textsScript => 'setTexts(${jsonEncode(widget.texts)});';
 
   String get _waveDrawingScript => switch (widget.drawingWave) {
     final ChartDrawingTool wave => "startWaveDrawing('${wave.name}');",
@@ -390,6 +416,8 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         if (widget.isDrawingRectangle) 'startRectangleDrawing();',
         _wavesScript,
         if (widget.drawingWave != null) _waveDrawingScript,
+        _textsScript,
+        if (widget.isDrawingText) 'startTextDrawing();',
         'window.__cuanChartSynced = true;',
       ]);
       if (!_isSynced) _logTiming('first_render');
@@ -456,6 +484,11 @@ class _TvChartWidgetState extends State<TvChartWidget> {
         _wavesScript,
       // Tetap setelah perintah tool lain: membatalkan tool lama dulu baru mulai wave.
       if (old.drawingWave != widget.drawingWave) _waveDrawingScript,
+      if (!listEquals(old.texts, widget.texts) &&
+          !listEquals(widget.texts, _lastReceivedTexts))
+        _textsScript,
+      if (old.isDrawingText != widget.isDrawingText)
+        _drawingModeScript('Text', isDrawing: widget.isDrawingText),
       if (liveBar != null && old.liveBar?.close != liveBar.close)
         'updateBar(${jsonEncode(_barJson(liveBar))});',
     ]);
@@ -597,6 +630,13 @@ class _TvChartWidgetState extends State<TvChartWidget> {
           handlerName: 'onWavesChanged',
           callback: (List<dynamic> args) {
             if (args.isNotEmpty) _emitWaves(args[0]);
+            return null;
+          },
+        );
+        c.addJavaScriptHandler(
+          handlerName: 'onTextsChanged',
+          callback: (List<dynamic> args) {
+            if (args.isNotEmpty) _emitTexts(args[0]);
             return null;
           },
         );
